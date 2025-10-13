@@ -1,280 +1,110 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8"/>
-    <title>TimeDeck — TapeDeck Time Machine</title>
+    <meta charset="utf-8" />
+    <title>TapeDeck Time Machine — Rewind the radio you grew up with</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
-    <link rel="icon" href="timedeck.svg" type="image/svg+xml">
+    <meta name="description" content="Pick a date, pick a scene, and hear what your radio might've sounded like. Simulated from historic charts + station patterns." />
     <style>
     :root{
-      --bg:#0B0F1A; --ink:#ECECF1; --muted:#9aa0bd;
-      --card:#0F1526; --line:#1d2340;
-      --mag:#FF2BD6; --cyn:#23F3FF; --ylw:#FFD34F;
-      --glow: 0 0 18px rgba(255,43,214,.35), 0 0 28px rgba(35,243,255,.2);
+      --bg:#0B0F1A; --card:#0f1424; --ink:#ECECF1; --muted:#9aa3b2;
+      --a:#8A5CF6; --b:#1EE3CF; --c:#F72585; --bd:#1d2340;
     }
-    html,body{height:100%} *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--ink);font-family:"Space Grotesk",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;overflow-x:hidden}
-    body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;background:
-      radial-gradient(1000px 600px at 50% 110%, rgba(255,43,214,.14), transparent 60%),
-      radial-gradient(800px 500px at 50% -10%, rgba(35,243,255,.18), transparent 55%)}
-    body::after{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:
-      linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
-      background-size:48px 48px;opacity:.15;transform:perspective(600px) rotateX(50deg) translateY(20vh);
-      transform-origin:top center;mask-image:linear-gradient(to top, rgba(0,0,0,.85), rgba(0,0,0,0))}
-    .wrap{max-width:1000px;margin:48px auto;padding:0 20px}
-    .brand{display:flex;align-items:center;gap:14px;margin-bottom:22px}
-    .logo-icon{width:60px;height:60px;border-radius:14px;display:block;box-shadow:var(--glow);outline:1px solid rgba(255,255,255,.08)}
-    h1{font:700 36px/1.1 "Archivo",sans-serif;margin:0;letter-spacing:.3px}
-    .tag{font-weight:600;color:var(--muted)} .tag em{color:var(--cyn);font-style:normal}
-
-    .card{position:relative;background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)),var(--card);
-      border:1px solid var(--line);border-radius:16px;box-shadow:0 8px 30px rgba(2,5,12,.45);padding:18px 18px 12px;margin:18px 0}
-    .card::before{content:"";position:absolute;inset:0;border-radius:16px;pointer-events:none;
-      box-shadow:inset 0 0 80px rgba(255,43,214,.06), inset 0 0 80px rgba(35,243,255,.05)}
-    .section-title{font:700 13px/1 "Archivo",sans-serif;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 10px 4px}
-
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
-    label{font-size:12px;color:var(--muted);display:block;margin:4px 2px}
-    input,select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#0b1120;color:var(--ink);
-      font:600 14px/1.2 "Space Grotesk",sans-serif;outline:none;box-shadow:inset 0 0 0 9999px rgba(255,255,255,.01)}
-    select:disabled, option[disabled]{color:#6a6f8e}
-
-    .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    button{padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:#0b1120;cursor:pointer;
-      font:700 14px/1 "Archivo",sans-serif;color:var(--ink);transition:transform .05s ease, box-shadow .2s ease, color .2s ease;width:auto}
-    button.primary{background:linear-gradient(135deg, rgba(255,43,214,.18), rgba(35,243,255,.18));border-color:transparent;color:#fff;box-shadow:var(--glow)}
-    button:disabled{opacity:.6;cursor:not-allowed} button:active{transform:translateY(1px)} :focus-visible{outline:2px solid var(--cyn);outline-offset:2px}
-
-    table{width:100%;border-collapse:collapse;margin-top:8px}
-    th,td{padding:10px 8px;border-bottom:1px solid var(--line);font-size:14px}
-    thead th{position:sticky;top:0;background:var(--card)} th{font:700 12px/1 "Archivo";text-transform:uppercase;color:var(--muted)}
-
-    #log{white-space:pre-wrap;background:#0b1120;border:1px dashed var(--line);border-radius:12px;padding:12px;margin-top:10px;color:#c7cbe0}
-    .banner{margin-top:8px;padding:10px 12px;border-radius:10px;border:1px solid #562045;background:#1a0f1a;color:#f7b2e3;display:none}
-
-    .site-footer{margin:28px 0 60px;opacity:.95}
-    .footer-inner{display:flex;align-items:center;gap:16px;padding:14px 18px;border-radius:16px;border:1px solid var(--line);
-      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,0)), var(--card);box-shadow:0 8px 30px rgba(2,5,12,.35)}
-    .foot-notes{color:var(--muted);font-size:14px}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(1200px 600px at 20% -10%, rgba(138,92,246,.25), transparent 60%),
+                     radial-gradient(1000px 500px at 110% 10%, rgba(31,227,207,.18), transparent 55%),
+                     var(--bg);
+         color:var(--ink);font:15px/1.6 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+    .wrap{max-width:1100px;margin:0 auto;padding:28px}
+    header{display:flex;align-items:center;gap:14px}
+    .logo{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--a),var(--c));
+          display:grid;place-items:center;box-shadow:0 10px 30px rgba(138,92,246,.25)}
+    .logo svg{width:26px;height:26px;fill:white}
+    nav a{color:var(--ink);text-decoration:none;opacity:.8;margin-left:18px}
+    nav a:hover{opacity:1}
+    .hero{display:grid;grid-template-columns:1.2fr .8fr;gap:28px;align-items:center;margin:34px 0 18px}
+    .card{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:22px;
+          box-shadow:0 20px 60px rgba(2,5,12,.45)}
+    h1{font-size:40px;line-height:1.15;margin:8px 0 10px}
+    .tag{display:inline-block;padding:6px 10px;border:1px solid var(--bd);border-radius:999px;font-weight:600;
+         background:#0b1120;color:#CDE3FF;letter-spacing:.2px}
+    p{color:#d6d9e1}
+    .cta{display:inline-flex;gap:12px;align-items:center;margin-top:12px}
+    .btn{appearance:none;border:1px solid var(--bd);background:#0b1120;color:var(--ink);
+         padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer;text-decoration:none}
+    .btn.primary{background:linear-gradient(135deg,var(--a),var(--c));border:none}
+    .pill{font-size:12px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:8px}
+    h3{margin:8px 0}
+    footer{opacity:.8;color:var(--muted);margin:36px 0 8px}
+    @media (max-width:900px){.hero{grid-template-columns:1fr}.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
 <div class="wrap">
-    <!-- Brand -->
-    <div class="brand">
-        <img class="logo-icon" src="timedeck.svg" alt="TimeDeck logo" width="60" height="60"/>
-        <div>
-            <h1>TimeDeck</h1>
-            <div class="tag">TapeDeck Time Machine · <em>Rewind the radio you grew up with.</em></div>
+    <header>
+        <div class="logo" aria-label="TapeDeck">
+            <!-- cassette + clocks glyph -->
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true"><path d="M3 7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-1.2l-1.4 2H8.6l-1.4-2H6a3 3 0 0 1-3-3V7zm3 7h12a1 1 0 0 0 1-1V8H5v5a1 1 0 0 0 1 1zm2.25-3.5a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5zm9.5 0a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5zM9 15h6l-1 1.5H10L9 15z"/></svg>
         </div>
-    </div>
+        <strong style="font-size:18px">TapeDeck Time Machine</strong>
+        <nav style="margin-left:auto">
+            <a href="#why">Why</a>
+            <a href="#how">How it works</a>
+            <a href="app.html">Open App</a>
+        </nav>
+    </header>
 
-    <!-- Apple Music auth -->
-    <div class="card">
-        <div class="section-title">Apple Music</div>
-        <div class="controls">
-            <button id="signin" class="primary">Sign in to Apple Music</button>
-            <span id="status" class="pill">Not signed in</span>
-            <span class="pill" title="Catalog region">Storefront: <b id="sf">us</b></span>
+    <section class="hero">
+        <div class="card">
+            <span class="tag">Rewind the radio you grew up with</span>
+            <h1>Pick a date. Pick a scene.<br/>Hear your old station come alive.</h1>
+            <p>
+                TapeDeck uses historical charts, rotation models, and our audio ID cache to
+                simulate what your local alt/rock/top-40 station would’ve played on a given day.
+                It’s nostalgia, but actually listenable.
+            </p>
+            <div class="cta">
+                <a class="btn primary" href="app.html">Open the App</a>
+                <a class="btn" href="#how">How it works</a>
+            </div>
+            <div class="pill">No downloads. Streams via YouTube / Apple Music / Spotify.</div>
         </div>
-        <div id="banner" class="banner"></div>
-    </div>
+        <div class="card">
+            <h3 style="margin-top:0">Why does this exist?</h3>
+            <p>
+                Curated playlists miss the messy magic of real radio. We recreate the flow:
+                currents, recurrents, gold, and the occasional weird deep cut—grounded by the
+                songs that actually charted. The result feels familiar, not generic.
+            </p>
+            <p>
+                Your privacy matters. We don’t proxy audio or scrape your accounts. Playback
+                happens through official embeds and your own subscriptions.
+            </p>
+        </div>
+    </section>
 
-    <!-- Simulation -->
-    <div class="card">
-        <div class="section-title">Simulation</div>
+    <section id="how" class="card">
+        <h2 style="margin:0 0 6px">How it works</h2>
         <div class="grid">
             <div>
-                <label>Date</label>
-                <input id="date" type="date" required>
+                <h3>1) Simulate</h3>
+                <p>Choose date + genre. We build a day’s worth of spins from the chart week using radio-style rotations.</p>
             </div>
             <div>
-                <label>Hours</label>
-                <input id="hours" type="number" min="0.5" step="0.5" value="3">
+                <h3>2) Resolve</h3>
+                <p>We map tracks to playable sources. Our cache finds official videos fast; search fills gaps.</p>
             </div>
             <div>
-                <label>Genre</label>
-                <select id="genre">
-                    <option value="">(choose)</option>
-                    <option value="hot100">hot100</option>
-                    <option value="top40">top40</option>
-                    <option value="chr">chr</option>
-                    <option value="pop">pop</option>
-                    <option value="alternative">alternative</option>
-                    <option value="mainstream-rock">mainstream-rock</option>
-                    <option value="rock">rock</option>
-                    <option value="country">country</option>
-                    <option value="hiphop">hiphop</option>
-                    <option value="rnb">rnb</option>
-                    <option value="latin">latin</option>
-                    <!-- only valid ≥ 2008 -->
-                    <option value="aaa" data-requires-2008>aaa</option>
-                    <option value="adult-alternative" data-requires-2008>adult-alternative</option>
-                </select>
+                <h3>3) Play & Export</h3>
+                <p>Listen in the browser via YouTube. Apple/Spotify tabs let subscribers stream and export the playlist.</p>
             </div>
         </div>
+    </section>
 
-        <div class="grid" style="margin-top:10px">
-            <div>
-                <label>Playlist name</label>
-                <input id="plist" placeholder="TimeDeck - 2002-07-07 - alternative">
-            </div>
-            <div>
-                <label>&nbsp;</label>
-                <button class="primary" id="simulate">Simulate</button>
-            </div>
-            <div>
-                <label>Downloads</label>
-                <div class="controls">
-                    <button id="downloadCsv" disabled>CSV</button>
-                    <button id="downloadM3u" disabled>M3U</button>
-                    <span id="meta" style="margin-left:auto;color:var(--muted);white-space:nowrap;"></span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Preview -->
-    <div class="card">
-        <div class="section-title">Preview (first 25)</div>
-        <div id="preview"></div>
-    </div>
-
-    <!-- Create -->
-    <div class="card">
-        <div class="section-title">Create in Apple Music</div>
-        <div class="controls">
-            <button class="primary" id="create">Create Playlist</button>
-        </div>
-        <div id="log"></div>
-    </div>
-
-    <!-- Footer lockup -->
-    <footer class="site-footer">
-        <div class="footer-inner">
-            <img src="timedeck-lockup.svg" alt="TimeDeck — TapeDeck Time Machine" height="64"/>
-            <div class="foot-notes">
-                <span>Built for nostalgia-heads. Weekly charts → radio-style playlists in Apple Music.</span>
-            </div>
-        </div>
+    <footer>
+        Content via YouTube / Apple Music / Spotify. We don’t host audio. © TapeDeck Time Machine.
     </footer>
 </div>
-
-<script>
-/* ---------- API base detection (for GitHub Pages + remote API) ---------- */
-const API_BASE =
-  new URLSearchParams(location.search).get("api") ||
-  window.API_BASE || ""; // default: same-origin (local dev)
-
-/* ---------- Globals ---------- */
-let devToken=null, music=null, simData=null;
-
-function log(msg){ document.querySelector('#log').textContent += msg + "\\n"; }
-function showErr(msg){ const b=document.getElementById('banner'); b.textContent=msg; b.style.display='block'; }
-function hideErr(){ const b=document.getElementById('banner'); b.style.display='none'; }
-function blobDownload(text, name, type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text], {type})); a.download=name; a.click(); }
-
-async function fetchDevToken(){
-  const r = await fetch(`${API_BASE}/dev-token`); const j = await r.json();
-  devToken = j.token; document.querySelector('#sf').textContent = j.storefront || 'us';
-}
-
-async function withBusy(btn, fn){
-  const old = btn.textContent; btn.disabled = true; btn.textContent = 'Working…';
-  try { await fn(); } catch(e){ showErr(e.message || String(e)); } finally { btn.disabled = false; btn.textContent = old; }
-}
-
-/* Disable AAA before 2008 */
-function enforceAAACutoff(){
-  const dateVal = document.querySelector('#date').value;
-  const cutoff = new Date('2008-01-01');
-  const current = dateVal ? new Date(dateVal+'T00:00:00') : null;
-  const needs2008 = document.querySelectorAll('[data-requires-2008]');
-  const disable = current && current < cutoff;
-  needs2008.forEach(opt => opt.disabled = !!disable);
-}
-
-/* Auto-fill default playlist name */
-function fillDefaultNameIfEmpty(){
-  const g = document.querySelector('#genre').value || 'mix';
-  const d = document.querySelector('#date').value || 'YYYY-MM-DD';
-  const field = document.querySelector('#plist');
-  if(!field.value){ field.value = `TimeDeck - ${d} - ${g}`; }
-}
-
-document.querySelector('#date').addEventListener('change', ()=>{ hideErr(); enforceAAACutoff(); fillDefaultNameIfEmpty(); });
-document.querySelector('#genre').addEventListener('change', ()=>{ hideErr(); fillDefaultNameIfEmpty(); });
-
-/* Sign in */
-document.querySelector('#signin').onclick = ()=> withBusy(document.querySelector('#signin'), async ()=>{
-  await fetchDevToken();
-  await MusicKit.configure({developerToken: devToken, app:{name:'TimeDeck', build:'1.0'}});
-  music = MusicKit.getInstance();
-  try{
-    await music.authorize();
-    const s = document.querySelector('#status'); s.textContent = 'Signed in ✔'; s.style.color = 'var(--ylw)';
-  }catch(e){ throw new Error('Authorize failed.'); }
-});
-
-/* Simulate */
-document.querySelector('#simulate').onclick = ()=> withBusy(document.querySelector('#simulate'), async ()=>{
-  hideErr();
-  const date = document.querySelector('#date').value;
-  const hours = parseFloat(document.querySelector('#hours').value);
-  const genre = document.querySelector('#genre').value || null;
-  if(!date) throw new Error('Pick a date.');
-  if(!genre) throw new Error('Choose a genre.');
-
-  const r = await fetch(`${API_BASE}/simulate`, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ date, hours, genre, station:null, min_gap:90 })
-  });
-  simData = await r.json();
-  if(!r.ok){ console.error(simData); throw new Error(simData.detail || 'Simulate failed.'); }
-
-  document.querySelector('#meta').textContent =
-    `Chart week ${simData.meta.chart_week} • ${simData.meta.used} titles • ${simData.spins.length} spins`;
-
-  fillDefaultNameIfEmpty();
-
-  const rows = simData.spins.slice(0, 25).map(s => {
-    const hhmm = new Date(s.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-    return `<tr><td>${hhmm}</td><td>${s.artist}</td><td>${s.title}</td><td>${s.source_rank}</td></tr>`;
-  }).join('');
-  document.querySelector('#preview').innerHTML =
-    `<table><thead><tr><th>Time</th><th>Artist</th><th>Title</th><th>Rank</th></tr></thead><tbody>${rows}</tbody></table>`;
-
-  document.querySelector('#downloadCsv').disabled=false;
-  document.querySelector('#downloadM3u').disabled=false;
-});
-
-/* Downloads */
-document.querySelector('#downloadCsv').onclick = ()=> blobDownload(simData.csv, 'timedeck_playlist.csv', 'text/csv');
-document.querySelector('#downloadM3u').onclick = ()=> blobDownload(simData.m3u, 'timedeck_playlist.m3u', 'audio/x-mpegurl');
-
-/* Create in Apple Music */
-document.querySelector('#create').onclick = ()=> withBusy(document.querySelector('#create'), async ()=>{
-  hideErr();
-  if(!music || !music.musicUserToken) throw new Error('Sign in to Apple Music first.');
-  if(!simData) throw new Error('Run a simulation first.');
-  const name = document.querySelector('#plist').value ||
-               `TimeDeck - ${document.querySelector('#date').value || 'date'} - ${(document.querySelector('#genre').value || 'mix')}`;
-
-  const r = await fetch(`${API_BASE}/create-from-sim`, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ userToken: music.musicUserToken, name, spins: simData.spins,
-                           storefront: document.querySelector('#sf').textContent || 'us' })
-  });
-  const j = await r.json(); log(JSON.stringify(j, null, 2));
-  if(!r.ok){ throw new Error(j.detail || 'Create failed.'); }
-  alert(`Done! Added ${j.added} tracks`);
-});
-
-/* init */
-enforceAAACutoff();
-</script>
 </body>
 </html>
