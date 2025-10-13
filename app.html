@@ -1,300 +1,320 @@
 <!doctype html>
 <html lang="en">
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>TapeDeck Time Machine</title>
 <style>
-  :root { --bg:#0b0f1a; --card:#121829; --ink:#e8eaf3; --muted:#9aa3b2; --accent:#a855f7; --accent2:#22d3ee; }
-  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif}
-  .wrap{max-width:1100px;margin:40px auto;padding:0 16px}
-  .row{display:flex;gap:16px;flex-wrap:wrap}
-  .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.00)),var(--card);
-        border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:16px}
-  .hdr{display:flex;align-items:center;gap:12px;font-weight:800;font-size:22px;margin-bottom:10px}
-  .tip{opacity:.7;font-size:12px}
-  label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
-  input,select{background:#0d1324;border:1px solid #1d2542;color:var(--ink);padding:10px 12px;border-radius:12px;outline:none;width:100%}
-  button{background:linear-gradient(90deg,var(--accent),var(--accent2));color:white;border:0;border-radius:12px;padding:10px 14px;
-         font-weight:700;cursor:pointer;box-shadow:0 10px 30px rgba(168,85,247,.25)}
-  .tabs{display:flex;gap:10px;margin:10px 0 8px}
-  .tab{background:#171e34;border:1px solid #242c4b;border-radius:12px;padding:9px 12px;cursor:pointer}
-  .tab.active{outline:2px solid #6d28d9}
-  .cols{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
-  .tracklist{border:1px dashed #283255;border-radius:14px;padding:12px;min-height:260px}
-  .tr{display:flex;justify-content:space-between;border-bottom:1px solid #202743;padding:10px 4px}
-  .tr:last-child{border-bottom:0}
-  .meta{font-size:12px;color:var(--muted)}
-  iframe{width:100%;height:360px;border:0;border-radius:12px;background:#0d1324}
-  .btn{display:inline-block;background:#0d1324;border:1px solid #273055;color:var(--ink);padding:10px 12px;border-radius:12px;
-       font-weight:700;text-decoration:none}
-  .status{font-size:12px;color:var(--muted);margin-top:6px}
+  :root{
+    --bg:#0a0f17; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#8b5cf6; --accent2:#22d3ee;
+    --br:14px; --shadow:0 12px 48px rgba(2,10,20,.45);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(1200px 600px at 10% -10%, #0e1630 0%, transparent 60%),
+                  radial-gradient(700px 400px at 120% 10%, #06101f 0%, transparent 60%), var(--bg);
+       color:var(--text); font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;}
+  .wrap{max-width:1100px;margin:40px auto;padding:0 18px}
+  .bar{display:flex;align-items:center;gap:14px}
+  .logo{width:36px;height:36px;border-radius:12px;background:
+        linear-gradient(135deg,#8b5cf6 0%,#22d3ee 55%,#16a34a 120%); display:grid;place-items:center;
+        color:white;font-weight:800;box-shadow:var(--shadow)}
+  h1{font-size:22px;margin:0}
+  .panel{background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.12);
+         border-radius:18px;padding:16px 16px;box-shadow:var(--shadow)}
+  .grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr auto; gap:12px; align-items:end}
+  label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
+  input,select,button{width:100%;padding:12px 12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
+    background:#0c1422;color:var(--text);outline:none}
+  button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700}
+  .tabs{display:flex;gap:10px;margin:14px 0 8px}
+  .tab{padding:9px 14px;border-radius:999px;border:1px solid rgba(148,163,184,.2);
+       background:#0c1422;color:var(--text);cursor:pointer}
+  .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
+  .cols{display:grid;grid-template-columns:1.05fr .95fr; gap:16px}
+  .box{min-height:380px}
+  iframe{width:100%;height:360px;border:0;border-radius:12px;box-shadow:var(--shadow)}
+  .btn{display:inline-block;margin-top:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);
+       background:#0c1422;color:var(--text);text-decoration:none;font-weight:700}
+  .list{padding:12px 8px;max-height:420px;overflow:auto}
+  .row{display:grid;grid-template-columns:110px 1fr;gap:14px; padding:10px 6px;border-bottom:1px dashed rgba(148,163,184,.12)}
+  .ts{font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+  .err{color:#fda4af;margin-top:6px}
+  .ok{color:#86efac;margin-top:6px}
+  .muted{color:var(--muted)}
 </style>
 
 <div class="wrap">
-  <div class="hdr">
-    <div style="width:36px;height:36px;background:#1c2444;border-radius:9px;display:grid;place-items:center">⏺️</div>
-    TapeDeck Time Machine
-    <div class="tip" style="margin-left:auto">Tip: append <code>?api=YOUR_API_URL</code> to use your backend</div>
+  <div class="bar" style="margin-bottom:14px">
+    <div class="logo">TD</div>
+    <h1>TapeDeck Time Machine</h1>
+    <div class="muted" style="margin-left:auto;font-size:12px">Tip: append <code>?api=YOUR_API_URL</code> to use your backend</div>
   </div>
 
-  <div class="card">
-    <div class="row">
-      <div style="flex:1;min-width:220px">
+  <!-- Controls -->
+  <div class="panel">
+    <div class="grid">
+      <div>
         <label>Date</label>
-        <input id="date" type="text" placeholder="mm/dd/yyyy" />
+        <input id="date" placeholder="mm/dd/yyyy" value="07/07/2002">
       </div>
-      <div style="flex:1;min-width:220px">
+      <div>
         <label>Genre</label>
         <select id="genre">
-          <option value="alternative">Alternative</option>
-          <option value="hot-100">Hot 100</option>
-          <option value="rock">Rock</option>
-          <option value="adult-alternative">Adult Alternative</option>
+          <option>Alternative</option>
+          <option>Hot-100</option>
+          <option>Rock</option>
+          <option>Country</option>
+          <option>R&B/Hip-Hop</option>
+          <option>Dance/Electronic</option>
         </select>
       </div>
-      <div style="width:140px">
+      <div>
         <label>Hours</label>
         <select id="hours">
-          <option>1</option><option selected>4</option><option>8</option>
+          <option>3</option><option selected>4</option><option>6</option><option>12</option>
         </select>
       </div>
-      <div style="width:180px">
+      <div>
         <label>Repeat gap (min)</label>
-        <input id="gap" type="number" value="90" />
+        <input id="gap" type="number" value="90">
       </div>
-      <div style="width:220px">
+      <div>
         <label>Seed (opt)</label>
-        <input id="seed" placeholder="e.g. 20020707" />
+        <input id="seed" placeholder="e.g. 20020707">
       </div>
-      <div style="align-self:flex-end">
-        <button id="go">Generate</button>
+      <div>
+        <label>&nbsp;</label>
+        <button id="go" class="primary">Generate</button>
       </div>
     </div>
 
     <div class="tabs">
-      <div class="tab active" data-tab="yt">YouTube</div>
-      <div class="tab" data-tab="am">Apple Music</div>
-      <div class="tab" data-tab="sp">Spotify</div>
+      <button class="tab active" data-tab="yt">YouTube</button>
+      <button class="tab" data-tab="am">Apple Music</button>
+      <button class="tab" data-tab="sp" disabled title="Coming soon">Spotify</button>
     </div>
 
     <div class="cols">
-      <div id="panel-left" class="card">
-        <div id="yt-wrap">
-          <iframe id="yt-embed" allow="autoplay; encrypted-media" allowfullscreen></iframe>
-          <div style="display:flex;gap:10px;margin-top:10px">
-            <a id="open-yt" class="btn" target="_blank" rel="noopener">Open in YouTube</a>
-            <span id="yt-status" class="status"></span>
-          </div>
-        </div>
-
-        <div id="am-wrap" style="display:none">
-          <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
-            <button id="am-sign">Sign in to Apple Music</button>
-            <div id="am-user" class="status">Not signed in</div>
-          </div>
-          <div style="display:flex;gap:10px">
-            <button id="am-create" disabled>Create Playlist</button>
-            <span id="am-status" class="status"></span>
-          </div>
-        </div>
-
-        <div id="sp-wrap" style="display:none">
-          <div class="status">Spotify export coming soon.</div>
+      <!-- Left: player area -->
+      <div class="panel box" id="pane-yt">
+        <div id="ytWrap">
+          <div class="muted" id="ytStatus">Waiting for a simulation…</div>
+          <iframe id="ytp" allow="autoplay; encrypted-media" allowfullscreen style="display:none"></iframe>
+          <a class="btn" id="ytOpen" href="#" target="_blank" rel="noopener" style="display:none">Open in YouTube</a>
+          <div id="ytErr" class="err"></div>
         </div>
       </div>
 
-      <div class="tracklist" id="list"></div>
+      <div class="panel box" id="pane-am" style="display:none">
+        <div id="amWrap">
+          <div class="muted" style="margin-bottom:8px">Sign in with Apple Music to create a playlist from the simulation.</div>
+          <button class="btn" id="amSign">Sign in to Apple Music</button>
+          <button class="btn" id="amCreate" style="display:none">Create Playlist</button>
+          <div id="amMsg" class="muted" style="margin-top:8px"></div>
+        </div>
+      </div>
     </div>
+  </div>
+
+  <!-- Tracklist -->
+  <div class="panel" style="margin-top:16px">
+    <div class="muted" style="margin-bottom:6px">Tracklist will appear here.</div>
+    <div id="list" class="list"></div>
   </div>
 </div>
 
 <script>
-const API = new URLSearchParams(location.search).get('api') || '';
-const $ = sel => document.querySelector(sel);
-const fmtDate = (d) => {
-  const dt = new Date(d);
-  const y = dt.getFullYear(), m = String(dt.getMonth()+1).padStart(2,'0'), da = String(dt.getDate()).padStart(2,'0');
-  return `${y}-${m}-${da}`;
-};
+  // ======= helpers =======
+  const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
+  const qs = sel => document.querySelector(sel);
 
-let lastTracks = [];   // [{artist,title,year}]
-let ytIds = [];
-
-function setTab(tab){
-  for (const el of document.querySelectorAll('.tab')) el.classList.toggle('active', el.dataset.tab===tab);
-  $('#yt-wrap').style.display = tab==='yt'?'block':'none';
-  $('#am-wrap').style.display = tab==='am'?'block':'none';
-  $('#sp-wrap').style.display = tab==='sp'?'block':'none';
-}
-document.querySelectorAll('.tab').forEach(t => t.onclick = () => setTab(t.dataset.tab));
-
-function renderList(rows){
-  const box = $('#list');
-  if (!rows || !rows.length){ box.innerHTML = '<div class="status">Tracklist will appear here.</div>'; return; }
-  box.innerHTML = rows.map(r => `
-    <div class="tr">
-      <div>
-        <div>${r.artist} — <b>${r.title}</b></div>
-        <div class="meta">${r.timestamp || ''}${r.year? ' • '+r.year : ''}</div>
-      </div>
-    </div>
-  `).join('');
-}
-
-function setYT(ids){
-  ytIds = ids || [];
-  const link = 'https://www.youtube.com/watch_videos?video_ids=' + ytIds.join(',');
-  $('#open-yt').href = link;
-  // embed: cue the first ID as a playlist if we have any
-  const first = ytIds[0] || '';
-  const src = first
-    ? `https://www.youtube.com/embed/${first}?enablejsapi=1&playsinline=1&modestbranding=1&rel=0&playlist=${ytIds.slice(1).join(',')}`
-    : 'about:blank';
-  $('#yt-embed').src = src;
-}
-
-async function simulate(){
-  const date = $('#date').value.trim();
-  const payload = {
-    date: fmtDate(date),
-    genre: $('#genre').value,
-    hours: parseInt($('#hours').value,10),
-    repeat_gap_min: parseInt($('#gap').value,10),
-    seed: $('#seed').value || undefined
-  };
-  const r = await fetch(`${API}/v1/simulate`, {
-    method:'POST', headers:{'content-type':'application/json'},
-    body: JSON.stringify(payload)
-  });
-  if (!r.ok){
-    $('#list').innerHTML = `<div class="status">Simulation failed: ${r.status}</div>`;
-    return [];
+  function toISO(mmddyyyy){
+    const [mm,dd,yyyy] = mmddyyyy.split('/');
+    return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
   }
-  const data = await r.json();
-  // expect data.rows like [{timestamp,artist,title,year}]
-  const rows = data.rows || data || [];
-  renderList(rows);
-  lastTracks = rows.map(x => ({artist: x.artist, title: x.title, year: x.year || null}));
-  return rows;
-}
 
-async function resolveYouTube(tracks){
-  $('#yt-status').textContent = 'Building…';
-  // 1) cache-only fast pass
-  let fast;
-  try {
-    fast = await fetch(`${API}/v1/resolve_batch_fast?region=US`, {
-      method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify(tracks)
-    }).then(r=>r.json());
-  } catch(e){
-    $('#yt-status').textContent = 'Error contacting backend.';
-    return;
+  function setTab(id){
+    document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
+    qs('#pane-yt').style.display = id==='yt' ? '' : 'none';
+    qs('#pane-am').style.display = id==='am' ? '' : 'none';
   }
-  const cached = (fast.items||[]).map(x => x.videoId).filter(Boolean);
-  setYT(cached);
-  $('#yt-status').textContent = `Ready (${cached.length} cached)… resolving more`;
-  // 2) background full resolve
-  const misses = tracks.filter((t,i)=> !(fast.items[i] && fast.items[i].videoId));
-  if (misses.length){
-    fetch(`${API}/v1/resolve_batch?region=US`, {
-      method:'POST', headers:{'content-type':'application/json'},
-      body: JSON.stringify({tracks: misses})
-    }).then(r=>r.json()).then(full => {
-      const news = (full.items||[]).map(x => x.videoId).filter(Boolean);
-      const merged = Array.from(new Set([...cached, ...news]));
-      setYT(merged);
-      $('#yt-status').textContent = `Playable: ${merged.length}`;
-    }).catch(()=>{
-      $('#yt-status').textContent = `Playable: ${cached.length}`;
-    });
-  } else {
-    $('#yt-status').textContent = `Playable: ${cached.length}`;
-  }
-}
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 
-$('#go').onclick = async () => {
-  const rows = await simulate();
-  if (rows.length) resolveYouTube(lastTracks);
-};
+  // ======= simulate -> render list -> build YouTube =======
+  let lastTracks = [];
 
-/* ---------- Apple Music (MusicKit) ---------- */
-let music = null, amSigned = false;
-async function getDevToken(){
-  const r = await fetch(`${API}/dev-token`).then(r=>r.json());
-  return r.token;
-}
-async function ensureMusicKit(){
-  if (window.MusicKit) return window.MusicKit;
-  await new Promise(res => {
-    const s = document.createElement('script');
-    s.src = "https://js-cdn.music.apple.com/musickit/v3/musickit.js";
-    s.onload = res;
-    document.head.appendChild(s);
-  });
-  return window.MusicKit;
-}
-async function amInit(){
-  const MK = await ensureMusicKit();
-  const devToken = await getDevToken();
-  MK.configure({ developerToken: devToken, app: { name: 'TimeDeck', build: '1.0' }});
-  music = MK.getInstance();
-}
-async function amSignIn(){
-  try{
-    if (!music) await amInit();
-    const userToken = await music.authorize();
-    amSigned = !!userToken;
-    $('#am-user').textContent = amSigned ? 'Signed in ✅' : 'Not signed in';
-    $('#am-create').disabled = !amSigned;
-  }catch(e){
-    $('#am-user').textContent = 'Sign-in failed';
-  }
-}
-$('#am-sign').onclick = amSignIn;
+  async function simulate(){
+    const body = {
+      date: toISO(qs('#date').value.trim()),
+      genre: qs('#genre').value,
+      hours: Number(qs('#hours').value || 3),
+      repeat_gap_min: Number(qs('#gap').value || 90),
+      seed: (qs('#seed').value.trim() || undefined) ? String(qs('#seed').value.trim()) : undefined,
+      limit: 500
+    };
 
-async function amCreate(){
-  if (!amSigned){ await amSignIn(); if(!amSigned) return; }
-  $('#am-status').textContent = 'Searching & creating…';
+    // UI state
+    qs('#ytStatus').textContent = 'Building…';
+    qs('#ytErr').textContent = '';
+    qs('#ytp').style.display = 'none';
+    qs('#ytOpen').style.display = 'none';
+    qs('#list').innerHTML = '';
 
-  // 1) create empty library playlist
-  const name = `TimeDeck — ${$('#date').value} — ${$('#genre').value}`;
-  const desc = 'Generated with TimeDeck.';
-  const payload = {
-    data: [{
-      type: 'library-playlists',
-      attributes: { name, description: desc }
-    }]
-  };
-  const pl = await music.api.v1.post('/me/library/playlists', payload);
-  const plId = pl?.data?.[0]?.id;
-  if (!plId){ $('#am-status').textContent = 'Create playlist failed'; return; }
-
-  // 2) search & collect catalog song IDs in small batches
-  const toAdd = [];
-  for (const t of lastTracks.slice(0, 100)) { // cap for demo
-    const term = `${t.artist} ${t.title}`;
+    // call simulate
+    let data;
     try{
-      const q = await music.api.v1.get('/catalog/us/search', { term, limit: 1, types: 'songs' });
-      const song = q?.results?.songs?.data?.[0];
-      if (song) toAdd.push({ id: song.id, type: 'songs' });
-    }catch(_){}
-    if (toAdd.length && toAdd.length % 20 === 0) {
-      await music.api.v1.post(`/me/library/playlists/${plId}/tracks`, { data: toAdd.splice(0) });
-      $('#am-status').textContent = `Added ${toAdd.length}…`;
+      const r = await fetch(`${API}/v1/simulate`, {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      if(!r.ok){
+        const txt = await r.text();
+        throw new Error(`simulate ${r.status}: ${txt}`);
+      }
+      data = await r.json();
+    }catch(err){
+      qs('#ytStatus').textContent = '';
+      qs('#ytErr').textContent = err.message;
+      console.error(err);
+      return;
+    }
+
+    lastTracks = data.tracks || [];
+    renderList(lastTracks);
+    buildYouTube(lastTracks);
+  }
+
+  function renderList(rows){
+    if(!rows?.length){ qs('#list').innerHTML = '<div class="muted">No tracks.</div>'; return; }
+    const frag = document.createDocumentFragment();
+    rows.slice(0,500).forEach(t=>{
+      const d = document.createElement('div');
+      d.className='row';
+      d.innerHTML = `<div class="ts">${t.timestamp.replace('T',' ')}</div>
+                     <div><strong>${t.artist}</strong> — <em>${t.title}</em> 
+                     <span class="muted">• ${t.source_rank ?? ''}</span></div>`;
+      frag.appendChild(d);
+    });
+    qs('#list').innerHTML = '';
+    qs('#list').appendChild(frag);
+  }
+
+  // ======= YouTube mini-player =======
+  // loads the iFrame API
+  (function(){
+    const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api";
+    document.head.appendChild(tag);
+  })();
+  let YTready=false, player=null;
+  window.onYouTubeIframeAPIReady=()=>{ YTready=true; if(player==null){ player=new YT.Player('ytp',{playerVars:{playsinline:1,rel:0,modestbranding:1}});} };
+
+  async function buildYouTube(tracks){
+    qs('#ytStatus').textContent = 'Resolving YouTube IDs…';
+    try{
+      const r = await fetch(`${API}/v1/yt/resolve`, {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ tracks: tracks.map(t=>({artist:t.artist,title:t.title})), region:'US', limit:50 })
+      });
+      if(!r.ok){
+        const txt = await r.text();
+        throw new Error(`yt/resolve ${r.status}: ${txt}`);
+      }
+      const data = await r.json();
+      const ids = (data.video_ids || []).filter(Boolean);
+      if(!ids.length){
+        qs('#ytStatus').textContent = 'No playable videos found (try another date/genre).';
+        return;
+      }
+      // cue playlist (no autoplay) and show "Open in YouTube"
+      const openUrl = `https://www.youtube.com/watch_videos?video_ids=${ids.join(',')}`;
+      qs('#ytOpen').href = openUrl;
+      qs('#ytOpen').style.display = 'inline-block';
+
+      if(YTready && player){
+        qs('#ytp').style.display = 'block';
+        player.cuePlaylist(ids, 0, 0);
+        qs('#ytStatus').textContent = `${ids.length} videos queued`;
+      }else{
+        qs('#ytStatus').textContent = 'Player not ready; use Open in YouTube.';
+      }
+    }catch(err){
+      qs('#ytErr').textContent = err.message;
+      qs('#ytStatus').textContent = '';
+      console.error(err);
     }
   }
-  if (toAdd.length){
-    await music.api.v1.post(`/me/library/playlists/${plId}/tracks`, { data: toAdd });
-  }
-  $('#am-status').textContent = `Done! Open Apple Music and look for “${name}”.`;
-}
-$('#am-create').onclick = amCreate;
 
-/* ---------- Init defaults ---------- */
-(function init(){
-  // set a nice default date
-  $('#date').value = '07/07/2002';
+  // ======= Apple Music =======
+  let mkInstance=null, amSignedIn=false;
+
+  async function amSignIn(){
+    try{
+      const tok = await fetch(`${API}/v1/apple/dev-token`).then(r=>r.json());
+      if(!tok || !tok.token) throw new Error('No dev token');
+      // load MusicKit JS once
+      if(!window.MusicKit){
+        await new Promise((res,rej)=>{
+          const s=document.createElement('script');
+          s.src="https://js-cdn.music.apple.com/musickit/v3/musickit.js";
+          s.onload=res; s.onerror=()=>rej(new Error('MusicKit load failed')); document.head.appendChild(s);
+        });
+      }
+      window.MusicKit.configure({
+        developerToken: tok.token,
+        app: { name: "TapeDeck Time Machine", build: "web" }
+      });
+      mkInstance = window.MusicKit.getInstance();
+      await mkInstance.authorize(); // user signs in
+      amSignedIn = true;
+      qs('#amMsg').textContent = 'Signed in.';
+      qs('#amCreate').style.display = 'inline-block';
+    }catch(e){
+      amSignedIn=false;
+      qs('#amMsg').textContent = 'Sign-in failed: ' + e.message;
+      console.error(e);
+    }
+  }
+
+  async function amCreatePlaylist(){
+    if(!amSignedIn || !mkInstance){ qs('#amMsg').textContent='Please sign in first.'; return; }
+    if(!lastTracks?.length){ qs('#amMsg').textContent='Generate a tracklist first.'; return; }
+    qs('#amMsg').textContent='Creating playlist… (searching tracks)';
+    try{
+      const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
+      // create empty playlist
+      const pl = await mkInstance.api.v3.post('/me/library/playlists', {
+        attributes: { name, description: 'Generated with TapeDeck Time Machine' }
+      });
+      const playlistId = pl?.data?.data?.[0]?.id;
+      if(!playlistId) throw new Error('Failed to create playlist');
+
+      // best-effort search & collect song ids (cap to 75 to be safe)
+      const want = lastTracks.slice(0,75);
+      const ids = [];
+      for(const t of want){
+        const q = `${t.artist} ${t.title}`;
+        const res = await mkInstance.api.v3.get('/catalog/us/search', { term:q, types:'songs', limit:5 });
+        const hit = res?.data?.results?.songs?.data?.find(s =>
+          s?.attributes?.artistName?.toLowerCase().includes(t.artist.toLowerCase()) &&
+          s?.attributes?.name?.toLowerCase().includes(t.title.toLowerCase())
+        ) || res?.data?.results?.songs?.data?.[0];
+        if(hit) ids.push({ id: hit.id, type: 'songs' });
+        await new Promise(r=>setTimeout(r,120)); // gentle pacing
+      }
+
+      if(!ids.length) throw new Error('No Apple Music matches found');
+      await mkInstance.api.v3.post(`/me/library/playlists/${playlistId}/tracks`, { data: ids });
+      qs('#amMsg').innerHTML = `Playlist created: <strong>${name}</strong> (${ids.length} tracks). Open Music app to view.`;
+    }catch(e){
+      qs('#amMsg').textContent = 'Create failed: ' + e.message;
+      console.error(e);
+    }
+  }
+
+  // events
+  qs('#go').onclick = simulate;
+  qs('#amSign').onclick = amSignIn;
+  qs('#amCreate').onclick = amCreatePlaylist;
+
+  // init
   setTab('yt');
-})();
 </script>
