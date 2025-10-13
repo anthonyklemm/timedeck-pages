@@ -1,253 +1,300 @@
 <!doctype html>
 <html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <title>TapeDeck — App</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <style>
-  :root{
-    --bg:#0B0F1A; --card:#0f1424; --ink:#ECECF1; --muted:#9aa3b2; --bd:#1d2340;
-    --a:#8A5CF6; --c:#F72585;
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif}
-  .wrap{max-width:1100px;margin:0 auto;padding:22px}
-  header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
-  .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--a),var(--c));display:grid;place-items:center}
-  .logo svg{width:22px;height:22px;fill:#fff}
-  .pane{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:16px;box-shadow:0 18px 50px rgba(2,5,12,.45)}
-  .controls{display:grid;grid-template-columns:repeat(5,1fr) auto;gap:10px}
-  label{font-size:12px;color:#CDE3FF}
-  input,select{width:100%;padding:10px;border-radius:10px;border:1px solid var(--bd);background:#0b1120;color:var(--ink)}
-  button{padding:12px 16px;border-radius:12px;border:1px solid var(--bd);background:#0b1120;color:var(--ink);font-weight:700;cursor:pointer}
-  button.primary{background:linear-gradient(135deg,var(--a),var(--c));border:none}
-  .tabs{display:flex;gap:8px;margin:14px 0}
-  .tab{padding:8px 10px;border-radius:10px;border:1px solid var(--bd);cursor:pointer;background:#0b1120}
-  .tab.active{background:linear-gradient(135deg,rgba(138,92,246,.2),rgba(247,37,133,.15));border-color:#2a335d}
-  .view{display:none}
-  .view.active{display:block}
-  iframe{width:100%;height:360px;border:0;border-radius:12px}
-  .hint{color:var(--muted);font-size:13px}
-  .split{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
-  @media(max-width:950px){.controls{grid-template-columns:1fr 1fr} .split{grid-template-columns:1fr}}
-  .openbtn{display:inline-block;margin-top:10px}
-  a.btn{display:inline-block;margin:10px 8px 0 0;padding:10px 14px;border-radius:10px;border:1px solid var(--bd);
-    background:#0b1120;color:#ECECF1;text-decoration:none;font-weight:700}
-  .list{max-height:360px;overflow:auto;border:1px solid var(--bd);border-radius:12px;padding:10px;background:#0b1120}
-  .row{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed #1a2140;padding:6px 0}
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>TapeDeck Time Machine</title>
+<style>
+  :root { --bg:#0b0f1a; --card:#121829; --ink:#e8eaf3; --muted:#9aa3b2; --accent:#a855f7; --accent2:#22d3ee; }
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  .wrap{max-width:1100px;margin:40px auto;padding:0 16px}
+  .row{display:flex;gap:16px;flex-wrap:wrap}
+  .card{background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.00)),var(--card);
+        border-radius:16px;box-shadow:0 10px 40px rgba(0,0,0,.35);padding:16px}
+  .hdr{display:flex;align-items:center;gap:12px;font-weight:800;font-size:22px;margin-bottom:10px}
+  .tip{opacity:.7;font-size:12px}
+  label{display:block;font-size:12px;color:var(--muted);margin:8px 0 6px}
+  input,select{background:#0d1324;border:1px solid #1d2542;color:var(--ink);padding:10px 12px;border-radius:12px;outline:none;width:100%}
+  button{background:linear-gradient(90deg,var(--accent),var(--accent2));color:white;border:0;border-radius:12px;padding:10px 14px;
+         font-weight:700;cursor:pointer;box-shadow:0 10px 30px rgba(168,85,247,.25)}
+  .tabs{display:flex;gap:10px;margin:10px 0 8px}
+  .tab{background:#171e34;border:1px solid #242c4b;border-radius:12px;padding:9px 12px;cursor:pointer}
+  .tab.active{outline:2px solid #6d28d9}
+  .cols{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
+  .tracklist{border:1px dashed #283255;border-radius:14px;padding:12px;min-height:260px}
+  .tr{display:flex;justify-content:space-between;border-bottom:1px solid #202743;padding:10px 4px}
+  .tr:last-child{border-bottom:0}
+  .meta{font-size:12px;color:var(--muted)}
+  iframe{width:100%;height:360px;border:0;border-radius:12px;background:#0d1324}
+  .btn{display:inline-block;background:#0d1324;border:1px solid #273055;color:var(--ink);padding:10px 12px;border-radius:12px;
+       font-weight:700;text-decoration:none}
+  .status{font-size:12px;color:var(--muted);margin-top:6px}
 </style>
-</head>
-<body>
+
 <div class="wrap">
-    <header>
-        <a href="index.html" class="logo" aria-label="Home">
-            <svg viewBox="0 0 24 24"><path d="M3 7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-1.2l-1.4 2H8.6l-1.4-2H6a3 3 0 0 1-3-3V7zm3 7h12a1 1 0 0 0 1-1V8H5v5a1 1 0 0 0 1 1zm2.25-3.5a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5zm9.5 0a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5zM9 15h6l-1 1.5H10L9 15z"/></svg>
-        </a>
-        <strong style="font-size:18px">TapeDeck Time Machine</strong>
-        <div style="margin-left:auto" class="hint">Tip: append <code>?api=YOUR_API_URL</code> to use your backend</div>
-    </header>
+  <div class="hdr">
+    <div style="width:36px;height:36px;background:#1c2444;border-radius:9px;display:grid;place-items:center">⏺️</div>
+    TapeDeck Time Machine
+    <div class="tip" style="margin-left:auto">Tip: append <code>?api=YOUR_API_URL</code> to use your backend</div>
+  </div>
 
-    <div class="pane">
-        <div class="controls">
-            <div>
-                <label for="date">Date</label>
-                <input id="date" type="date" value="2002-07-07" />
-            </div>
-            <div>
-                <label for="genre">Genre</label>
-                <select id="genre">
-                    <option value="alternative">Alternative</option>
-                    <option value="modern-rock">Modern Rock (legacy)</option>
-                    <option value="rock">Rock</option>
-                    <option value="hot-100">Hot 100</option>
-                    <option value="adult-top-40">Adult Top 40</option>
-                    <option value="pop-songs">Pop Songs</option>
-                    <option value="mainstream-rock">Mainstream Rock</option>
-                    <option value="rhythmic">Rhythmic</option>
-                </select>
-            </div>
-            <div>
-                <label for="hours">Hours</label>
-                <select id="hours">
-                    <option>3</option><option selected>4</option><option>6</option><option>12</option><option>24</option>
-                </select>
-            </div>
-            <div>
-                <label>Repeat gap (min)</label>
-                <input id="gap" type="number" value="90" min="45" max="240" />
-            </div>
-            <div>
-                <label for="seed">Seed (opt)</label>
-                <input id="seed" type="text" placeholder="e.g. 20020707" />
-            </div>
-            <div style="display:flex;align-items:flex-end">
-                <button class="primary" id="go">Generate</button>
-            </div>
-        </div>
-
-        <div class="tabs">
-            <div class="tab active" data-tab="yt">YouTube</div>
-            <div class="tab" data-tab="am">Apple Music</div>
-            <div class="tab" data-tab="sp">Spotify</div>
-        </div>
-
-        <div class="split">
-            <div>
-                <!-- VIEWS -->
-                <div class="view active" id="view-yt">
-                    <div id="yt-wrap" style="background:#0f1424;border-radius:12px;min-height:360px;display:flex;align-items:center;justify-content:center">
-                        <div class="hint">Generate a playlist to load the mini-player.</div>
-                    </div>
-                    <div id="yt-actions"></div>
-                </div>
-
-                <div class="view" id="view-am">
-                    <div class="hint" style="margin-bottom:8px">
-                        Apple Music mini-player requires a <strong>developer token</strong> and a <strong>user token</strong>.
-                        For now, this tab shows a placeholder and an auth button.
-                    </div>
-                    <button id="am-connect">Connect Apple Music (placeholder)</button>
-                    <div id="am-player" style="margin-top:10px" class="hint">Player will appear here after auth.</div>
-                </div>
-
-                <div class="view" id="view-sp">
-                    <div class="hint" style="margin-bottom:8px">
-                        Spotify Web Playback requires a Premium account + user OAuth. This is a placeholder flow.
-                    </div>
-                    <button id="sp-connect">Connect Spotify (placeholder)</button>
-                    <div id="sp-player" style="margin-top:10px" class="hint">Player will appear here after auth.</div>
-                </div>
-            </div>
-
-            <div>
-                <div class="list" id="tracklist"><div class="hint">Tracklist will appear here.</div></div>
-            </div>
-        </div>
+  <div class="card">
+    <div class="row">
+      <div style="flex:1;min-width:220px">
+        <label>Date</label>
+        <input id="date" type="text" placeholder="mm/dd/yyyy" />
+      </div>
+      <div style="flex:1;min-width:220px">
+        <label>Genre</label>
+        <select id="genre">
+          <option value="alternative">Alternative</option>
+          <option value="hot-100">Hot 100</option>
+          <option value="rock">Rock</option>
+          <option value="adult-alternative">Adult Alternative</option>
+        </select>
+      </div>
+      <div style="width:140px">
+        <label>Hours</label>
+        <select id="hours">
+          <option>1</option><option selected>4</option><option>8</option>
+        </select>
+      </div>
+      <div style="width:180px">
+        <label>Repeat gap (min)</label>
+        <input id="gap" type="number" value="90" />
+      </div>
+      <div style="width:220px">
+        <label>Seed (opt)</label>
+        <input id="seed" placeholder="e.g. 20020707" />
+      </div>
+      <div style="align-self:flex-end">
+        <button id="go">Generate</button>
+      </div>
     </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="yt">YouTube</div>
+      <div class="tab" data-tab="am">Apple Music</div>
+      <div class="tab" data-tab="sp">Spotify</div>
+    </div>
+
+    <div class="cols">
+      <div id="panel-left" class="card">
+        <div id="yt-wrap">
+          <iframe id="yt-embed" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+          <div style="display:flex;gap:10px;margin-top:10px">
+            <a id="open-yt" class="btn" target="_blank" rel="noopener">Open in YouTube</a>
+            <span id="yt-status" class="status"></span>
+          </div>
+        </div>
+
+        <div id="am-wrap" style="display:none">
+          <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
+            <button id="am-sign">Sign in to Apple Music</button>
+            <div id="am-user" class="status">Not signed in</div>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button id="am-create" disabled>Create Playlist</button>
+            <span id="am-status" class="status"></span>
+          </div>
+        </div>
+
+        <div id="sp-wrap" style="display:none">
+          <div class="status">Spotify export coming soon.</div>
+        </div>
+      </div>
+
+      <div class="tracklist" id="list"></div>
+    </div>
+  </div>
 </div>
 
 <script>
-  // --- Helpers ---
-  const $ = (s, d=document)=>d.querySelector(s);
-  const $$ = (s, d=document)=>Array.from(d.querySelectorAll(s));
-  const qp = new URLSearchParams(location.search);
-  const API = qp.get('api') || ''; // e.g. https://timedeck-api.onrender.com
+const API = new URLSearchParams(location.search).get('api') || '';
+const $ = sel => document.querySelector(sel);
+const fmtDate = (d) => {
+  const dt = new Date(d);
+  const y = dt.getFullYear(), m = String(dt.getMonth()+1).padStart(2,'0'), da = String(dt.getDate()).padStart(2,'0');
+  return `${y}-${m}-${da}`;
+};
 
-  // Tabs
-  $$('.tab').forEach(t=>{
-    t.onclick = ()=>{
-      $$('.tab').forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      const which = t.getAttribute('data-tab');
-      $$('.view').forEach(v=>v.classList.remove('active'));
-      $('#view-'+which).classList.add('active');
-    };
+let lastTracks = [];   // [{artist,title,year}]
+let ytIds = [];
+
+function setTab(tab){
+  for (const el of document.querySelectorAll('.tab')) el.classList.toggle('active', el.dataset.tab===tab);
+  $('#yt-wrap').style.display = tab==='yt'?'block':'none';
+  $('#am-wrap').style.display = tab==='am'?'block':'none';
+  $('#sp-wrap').style.display = tab==='sp'?'block':'none';
+}
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => setTab(t.dataset.tab));
+
+function renderList(rows){
+  const box = $('#list');
+  if (!rows || !rows.length){ box.innerHTML = '<div class="status">Tracklist will appear here.</div>'; return; }
+  box.innerHTML = rows.map(r => `
+    <div class="tr">
+      <div>
+        <div>${r.artist} — <b>${r.title}</b></div>
+        <div class="meta">${r.timestamp || ''}${r.year? ' • '+r.year : ''}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function setYT(ids){
+  ytIds = ids || [];
+  const link = 'https://www.youtube.com/watch_videos?video_ids=' + ytIds.join(',');
+  $('#open-yt').href = link;
+  // embed: cue the first ID as a playlist if we have any
+  const first = ytIds[0] || '';
+  const src = first
+    ? `https://www.youtube.com/embed/${first}?enablejsapi=1&playsinline=1&modestbranding=1&rel=0&playlist=${ytIds.slice(1).join(',')}`
+    : 'about:blank';
+  $('#yt-embed').src = src;
+}
+
+async function simulate(){
+  const date = $('#date').value.trim();
+  const payload = {
+    date: fmtDate(date),
+    genre: $('#genre').value,
+    hours: parseInt($('#hours').value,10),
+    repeat_gap_min: parseInt($('#gap').value,10),
+    seed: $('#seed').value || undefined
+  };
+  const r = await fetch(`${API}/v1/simulate`, {
+    method:'POST', headers:{'content-type':'application/json'},
+    body: JSON.stringify(payload)
   });
-
-  // Minimal YouTube embed builder from a list of IDs
-  function renderYouTube(ids, title="TapeDeck Mini Player") {
-    if (!ids || !ids.length){ $('#yt-wrap').innerHTML = '<div class="hint">No playable videos.</div>'; return; }
-    const first = ids[0], rest = ids.slice(1).join(',');
-    const openUrl = 'https://www.youtube.com/watch_videos?video_ids='+ids.join(',');
-    $('#yt-wrap').innerHTML =
-      `<iframe allow="autoplay; encrypted-media" allowfullscreen
-         src="https://www.youtube.com/embed/${first}?playlist=${rest}&autoplay=0&playsinline=1&rel=0&modestbranding=1&origin=${location.origin}">
-       </iframe>`;
-    $('#yt-actions').innerHTML =
-      `<a class="btn" target="_blank" rel="noopener" href="${openUrl}">Open in YouTube</a>`;
+  if (!r.ok){
+    $('#list').innerHTML = `<div class="status">Simulation failed: ${r.status}</div>`;
+    return [];
   }
+  const data = await r.json();
+  // expect data.rows like [{timestamp,artist,title,year}]
+  const rows = data.rows || data || [];
+  renderList(rows);
+  lastTracks = rows.map(x => ({artist: x.artist, title: x.title, year: x.year || null}));
+  return rows;
+}
 
-  // Render tracklist
-  function renderList(items){
-    if (!items?.length){ $('#tracklist').innerHTML = '<div class="hint">No items.</div>'; return; }
-    const rows = items.map(it=>{
-      const t = (it.timestamp || '').replace('T',' ').slice(0,16);
-      const y = it.year ? ` • ${it.year}` : '';
-      return `<div class="row"><div>${t}</div><div style="opacity:.9">${it.artist} — <strong>${it.title}</strong>${y}</div></div>`;
+async function resolveYouTube(tracks){
+  $('#yt-status').textContent = 'Building…';
+  // 1) cache-only fast pass
+  let fast;
+  try {
+    fast = await fetch(`${API}/v1/resolve_batch_fast?region=US`, {
+      method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify(tracks)
+    }).then(r=>r.json());
+  } catch(e){
+    $('#yt-status').textContent = 'Error contacting backend.';
+    return;
+  }
+  const cached = (fast.items||[]).map(x => x.videoId).filter(Boolean);
+  setYT(cached);
+  $('#yt-status').textContent = `Ready (${cached.length} cached)… resolving more`;
+  // 2) background full resolve
+  const misses = tracks.filter((t,i)=> !(fast.items[i] && fast.items[i].videoId));
+  if (misses.length){
+    fetch(`${API}/v1/resolve_batch?region=US`, {
+      method:'POST', headers:{'content-type':'application/json'},
+      body: JSON.stringify({tracks: misses})
+    }).then(r=>r.json()).then(full => {
+      const news = (full.items||[]).map(x => x.videoId).filter(Boolean);
+      const merged = Array.from(new Set([...cached, ...news]));
+      setYT(merged);
+      $('#yt-status').textContent = `Playable: ${merged.length}`;
+    }).catch(()=>{
+      $('#yt-status').textContent = `Playable: ${cached.length}`;
     });
-    $('#tracklist').innerHTML = rows.join('');
+  } else {
+    $('#yt-status').textContent = `Playable: ${cached.length}`;
   }
+}
 
-  // Fallback local simulate (if no API provided) — very simple demo
-  async function localSimulate(){
-    const date = $('#date').value, genre = $('#genre').value;
-    const hours = +$('#hours').value; const count = Math.min(50, Math.ceil(hours*14));
-    const demo = [
-      ["The White Stripes","Fell In Love With A Girl","2002","fTH71AAxXmM"],
-      ["Jimmy Eat World","The Middle","2001","oKsxPW6i3pM"],
-      ["Hoobastank","Running Away","2002","kxwsu8JfvVU"],
-      ["Red Hot Chili Peppers","By The Way","2002","JnfyjwChuNU"],
-      ["System of a Down","Toxicity","2001","iywaBOMvYLI"],
-    ];
-    const items = Array.from({length:count}, (_,i)=>{
-      const [a,t,y,vid] = demo[i % demo.length];
-      const ts = new Date(date+'T06:00:00Z'); ts.setMinutes(ts.getMinutes()+i*15);
-      return {timestamp:ts.toISOString(), artist:a, title:t, year:y, videoId:vid};
-    });
-    return {title:`TimeDeck — ${date} — ${genre}`, items};
+$('#go').onclick = async () => {
+  const rows = await simulate();
+  if (rows.length) resolveYouTube(lastTracks);
+};
+
+/* ---------- Apple Music (MusicKit) ---------- */
+let music = null, amSigned = false;
+async function getDevToken(){
+  const r = await fetch(`${API}/dev-token`).then(r=>r.json());
+  return r.token;
+}
+async function ensureMusicKit(){
+  if (window.MusicKit) return window.MusicKit;
+  await new Promise(res => {
+    const s = document.createElement('script');
+    s.src = "https://js-cdn.music.apple.com/musickit/v3/musickit.js";
+    s.onload = res;
+    document.head.appendChild(s);
+  });
+  return window.MusicKit;
+}
+async function amInit(){
+  const MK = await ensureMusicKit();
+  const devToken = await getDevToken();
+  MK.configure({ developerToken: devToken, app: { name: 'TimeDeck', build: '1.0' }});
+  music = MK.getInstance();
+}
+async function amSignIn(){
+  try{
+    if (!music) await amInit();
+    const userToken = await music.authorize();
+    amSigned = !!userToken;
+    $('#am-user').textContent = amSigned ? 'Signed in ✅' : 'Not signed in';
+    $('#am-create').disabled = !amSigned;
+  }catch(e){
+    $('#am-user').textContent = 'Sign-in failed';
   }
+}
+$('#am-sign').onclick = amSignIn;
 
-  async function simulateAndResolve(){
-    const payload = {
-      date: $('#date').value,
-      genre: $('#genre').value,
-      hours: +$('#hours').value,
-      min_gap: +$('#gap').value,
-      seed: $('#seed').value || null
-    };
+async function amCreate(){
+  if (!amSigned){ await amSignIn(); if(!amSigned) return; }
+  $('#am-status').textContent = 'Searching & creating…';
 
-    let sim;
-    if (API){
-      // 1) simulate
-      const r1 = await fetch(API+'/v1/simulate', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      if (!r1.ok){ throw new Error('simulate failed'); }
-      const s1 = await r1.json();
-      const playlistId = s1.playlist_id;
-      renderList(s1.items);
+  // 1) create empty library playlist
+  const name = `TimeDeck — ${$('#date').value} — ${$('#genre').value}`;
+  const desc = 'Generated with TimeDeck.';
+  const payload = {
+    data: [{
+      type: 'library-playlists',
+      attributes: { name, description: desc }
+    }]
+  };
+  const pl = await music.api.v1.post('/me/library/playlists', payload);
+  const plId = pl?.data?.[0]?.id;
+  if (!plId){ $('#am-status').textContent = 'Create playlist failed'; return; }
 
-      // 2) resolve for YouTube
-      const r2 = await fetch(API+'/v1/resolve/youtube', {method:'POST',headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({playlist_id: playlistId, region:'US', keep_duplicates:false, prefer_search:false, use_discogs:true, use_musicbrainz:false})
-      });
-      if (!r2.ok){ throw new Error('resolve failed'); }
-      const s2 = await r2.json();
-      renderYouTube(s2.video_ids, s1.title);
-    } else {
-      // Local demo path
-      sim = await localSimulate();
-      renderList(sim.items);
-      renderYouTube(sim.items.map(x=>x.videoId), sim.title);
+  // 2) search & collect catalog song IDs in small batches
+  const toAdd = [];
+  for (const t of lastTracks.slice(0, 100)) { // cap for demo
+    const term = `${t.artist} ${t.title}`;
+    try{
+      const q = await music.api.v1.get('/catalog/us/search', { term, limit: 1, types: 'songs' });
+      const song = q?.results?.songs?.data?.[0];
+      if (song) toAdd.push({ id: song.id, type: 'songs' });
+    }catch(_){}
+    if (toAdd.length && toAdd.length % 20 === 0) {
+      await music.api.v1.post(`/me/library/playlists/${plId}/tracks`, { data: toAdd.splice(0) });
+      $('#am-status').textContent = `Added ${toAdd.length}…`;
     }
   }
+  if (toAdd.length){
+    await music.api.v1.post(`/me/library/playlists/${plId}/tracks`, { data: toAdd });
+  }
+  $('#am-status').textContent = `Done! Open Apple Music and look for “${name}”.`;
+}
+$('#am-create').onclick = amCreate;
 
-  $('#go').onclick = ()=>{
-    $('#yt-wrap').innerHTML = '<div class="hint">Building…</div>';
-    $('#yt-actions').innerHTML = '';
-    simulateAndResolve().catch(e=>{
-      console.error(e);
-      $('#yt-wrap').innerHTML = '<div class="hint">Something went wrong. Check console.</div>';
-    });
-  };
-
-  // --- Placeholders for Apple Music / Spotify (wire these later) ---
-  $('#am-connect').onclick = ()=>{
-    $('#am-player').innerHTML =
-      `<div class="hint">TODO: Initialize MusicKit JS with your developer token, request user token, then either:
-        <ul>
-          <li>Play catalog tracks in session (subscriber = full; non-subscriber = previews)</li>
-          <li>Export playlist via your backend</li>
-        </ul>
-        <code>window.MusicKit.configure({ developerToken: 'YOUR_DEV_TOKEN', app: { name:'TapeDeck', build:'1.0' }})</code>
-      </div>`;
-  };
-
-  $('#sp-connect').onclick = ()=>{
-    $('#sp-player').innerHTML =
-      `<div class="hint">TODO: Start Spotify PKCE OAuth, then instantiate Web Playback SDK for Premium users.
-        Use your backend to create/export playlists via the Web API.
-        <ul><li>Auth scopes: user-modify-playback-state, playlist-modify-public, playlist-modify-private</li></ul>
-      </div>`;
-  };
+/* ---------- Init defaults ---------- */
+(function init(){
+  // set a nice default date
+  $('#date').value = '07/07/2002';
+  setTab('yt');
+})();
 </script>
-</body>
-</html>
