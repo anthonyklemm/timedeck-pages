@@ -98,7 +98,7 @@
       <div class="panel box" id="pane-yt">
         <div id="ytWrap">
           <div class="muted" id="ytStatus">Waiting for a simulation…</div>
-          <iframe id="ytp" allow="autoplay; encrypted-media" allowfullscreen style="display:none"></iframe>
+          <div id="ytp"></div> <!-- Changed to a div for the API to replace -->
           <a class="btn" id="ytOpen" href="#" target="_blank" rel="noopener" style="display:none">Open in YouTube</a>
           <div id="ytErr" class="err"></div>
         </div>
@@ -153,7 +153,15 @@
     };
     qs('#ytStatus').textContent = 'Building…';
     qs('#ytErr').textContent = '';
+    
+    // Reset player UI
+    if (player) {
+        player.destroy();
+        player = null;
+    }
+    qs('#ytp').innerHTML = ''; // Clear the div
     qs('#ytp').style.display = 'none';
+
     qs('#ytOpen').style.display = 'none';
     qs('#list').innerHTML = '';
 
@@ -199,8 +207,6 @@
 
   let YTapiReady = false, player = null;
   
-  // This function is called by the YouTube script when it's loaded.
-  // We just set a flag and do nothing else.
   window.onYouTubeIframeAPIReady = () => {
     YTapiReady = true;
   };
@@ -221,32 +227,29 @@
         return;
       }
 
-      // Show the 'Open in YouTube' button as soon as we have IDs.
       const openUrl = `https://www.youtube.com/watch_videos?video_ids=${ids.join(',')}`;
       qs('#ytOpen').href = openUrl;
       qs('#ytOpen').style.display = 'inline-block';
       qs('#ytStatus').textContent = `${ids.length} videos found. Loading player...`;
       
-      // If the player object already exists (from a previous run), just load the new playlist.
       if (player) {
         player.cuePlaylist(ids, 0, 0);
         qs('#ytStatus').textContent = `${ids.length} videos queued.`;
       } 
-      // If the player doesn't exist, we need to create it for the first time.
       else if (YTapiReady) {
-        qs('#ytp').style.display = 'block'; // Make the iFrame visible BEFORE creating the player.
+        qs('#ytp').style.display = 'block';
         player = new YT.Player('ytp', {
+          height: '360',
+          width: '100%',
           playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
           events: {
             'onReady': (event) => {
-              // Now that this new player is truly ready, cue the playlist.
               event.target.cuePlaylist(ids, 0, 0);
               qs('#ytStatus').textContent = `${ids.length} videos queued.`;
             }
           }
         });
       } else {
-        // This is a fallback in case the API script is somehow slower than the backend call.
         qs('#ytStatus').textContent = 'YouTube API is slow to load. Use "Open in YouTube" button.';
       }
     }catch(err){
@@ -328,5 +331,4 @@
   setTab('yt');
 </script>
 </html>
-
 
