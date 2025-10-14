@@ -49,6 +49,7 @@
     <div class="muted" style="margin-left:auto;font-size:12px">Tip: append <code>?api=YOUR_API_URL</code> to use your backend</div>
   </div>
 
+  <!-- Controls -->
   <div class="panel">
     <div class="grid">
       <div>
@@ -93,6 +94,7 @@
     </div>
 
     <div class="cols">
+      <!-- Left: player area -->
       <div class="panel box" id="pane-yt">
         <div id="ytWrap">
           <div class="muted" id="ytStatus">Waiting for a simulation…</div>
@@ -113,6 +115,7 @@
     </div>
   </div>
 
+  <!-- Tracklist -->
   <div class="panel" style="margin-top:16px">
     <div class="muted" style="margin-bottom:6px">Tracklist will appear here.</div>
     <div id="list" class="list"></div>
@@ -148,8 +151,6 @@
       seed: (qs('#seed').value.trim() || undefined) ? String(qs('#seed').value.trim()) : undefined,
       limit: 500
     };
-
-    // UI state
     qs('#ytStatus').textContent = 'Building…';
     qs('#ytErr').textContent = '';
     qs('#ytp').style.display = 'none';
@@ -162,15 +163,11 @@
         method:'POST', headers:{'content-type':'application/json'},
         body: JSON.stringify(body)
       });
-      if(!r.ok){
-        const txt = await r.text();
-        throw new Error(`simulate ${r.status}: ${txt}`);
-      }
+      if(!r.ok){ throw new Error(`simulate ${r.status}: ${await r.text()}`); }
       data = await r.json();
     }catch(err){
       qs('#ytStatus').textContent = '';
       qs('#ytErr').textContent = err.message;
-      console.error(err);
       return;
     }
 
@@ -215,9 +212,7 @@
   window.onYouTubeIframeAPIReady = () => {
     player = new YT.Player('ytp', {
       playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
-      events: {
-        'onReady': onPlayerReady
-      }
+      events: { 'onReady': onPlayerReady }
     });
   };
 
@@ -226,12 +221,9 @@
     try{
       const r = await fetch(`${API}/v1/yt/resolve`, {
         method:'POST', headers:{'content-type':'application/json'},
-        body: JSON.stringify({ tracks: tracks.map(t=>({artist:t.artist,title:t.title})), region:'US', limit:50 })
+        body: JSON.stringify({ tracks: tracks.map(t=>({artist:t.artist,title:t.title})), limit:50 })
       });
-      if(!r.ok){
-        const txt = await r.text();
-        throw new Error(`yt/resolve ${r.status}: ${txt}`);
-      }
+      if(!r.ok){ throw new Error(`yt/resolve ${r.status}: ${await r.text()}`); }
       const data = await r.json();
       const ids = (data.ids || []).filter(Boolean);
       if(!ids.length){
@@ -253,7 +245,6 @@
     }catch(err){
       qs('#ytErr').textContent = err.message;
       qs('#ytStatus').textContent = '';
-      console.error(err);
     }
   }
 
@@ -290,7 +281,6 @@
     }catch(e){
       music = null;
       qs('#amMsg').textContent = 'Sign-in failed: ' + e.message;
-      console.error(e);
     }
   }
 
@@ -302,7 +292,6 @@
     try{
         const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
         
-        // This is the key part: send the user token and tracks to your backend.
         const r = await fetch(`${API}/v1/apple/create-playlist`, {
             method:'POST',
             headers:{'Content-Type':'application/json'},
@@ -314,15 +303,12 @@
         });
 
         const j = await r.json();
-        if(!r.ok){
-            throw new Error(j.detail || 'Create failed on backend.');
-        }
+        if(!r.ok){ throw new Error(j.detail || 'Create failed on backend.'); }
 
         qs('#amMsg').textContent = `Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks. Check your Apple Music app.`;
 
     }catch(e){
       qs('#amMsg').textContent = 'Create failed: ' + e.message;
-      console.error(e);
     }
   }
 
