@@ -156,7 +156,6 @@
     qs('#ytOpen').style.display = 'none';
     qs('#list').innerHTML = '';
 
-    // call simulate
     let data;
     try{
       const r = await fetch(`${API}/v1/simulate`, {
@@ -258,88 +257,69 @@
     }
   }
 
-  // ======= Apple Music =======
-  let mkInstance=null, amSignedIn=false;
+  // ======= Apple Music (Backend Logic) =======
+  let music=null;
 
   async function amSignIn(){
     try{
-      const tok = await fetch(`${API}/v1/apple/dev-token`).then(r=>r.json());
-      if(!tok || !tok.token) throw new Error('No dev token');
+        const tok = await fetch(`${API}/v1/apple/dev-token`).then(r=>r.json());
+        if(!tok || !tok.token) throw new Error('No dev token');
       
-      if(!window.MusicKit){
-        await new Promise((res,rej)=>{
-          const s=document.createElement('script');
-          s.src="https://js-cdn.music.apple.com/musickit/v3/musickit.js";
-          s.onload=res; s.onerror=()=>rej(new Error('MusicKit load failed')); document.head.appendChild(s);
+        if(!window.MusicKit){
+            await new Promise((res,rej)=>{
+              const s=document.createElement('script');
+              s.src="https://js-cdn.music.apple.com/musickit/v3/musickit.js";
+              s.onload=res; s.onerror=()=>rej(new Error('MusicKit load failed')); document.head.appendChild(s);
+            });
+        }
+      
+        await window.MusicKit.configure({
+            developerToken: tok.token,
+            app: { name: "TapeDeck Time Machine", build: "web" }
         });
-      }
       
-      await window.MusicKit.configure({
-        developerToken: tok.token,
-        app: { name: "TapeDeck Time Machine", build: "web" }
-      });
-      
-      // Get the instance before authorization. It won't have API methods yet.
-      let preAuthInstance = window.MusicKit.getInstance();
-      
-      // Call authorize - this will prompt the user
-      await preAuthInstance.authorize();
-
-      // After authorization, get the new, fully-hydrated instance.
-      // This is crucial to get an instance with the .api methods.
-      mkInstance = window.MusicKit.getInstance();
-
-      // --- Diagnostic Log ---
-      console.log('MusicKit instance after authorization:', mkInstance);
-
-      // --- setTimeout Experiment (Uncomment to test if timing issue) ---
-      // await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
-
-      if (mkInstance && mkInstance.api && mkInstance.api.v3) {
-        amSignedIn = true;
-        qs('#amMsg').textContent = 'Signed in and ready to create.';
-        qs('#amCreate').style.display = 'inline-block';
-      } else {
-        console.error('MusicKit instance structure at failure:', mkInstance);
-        throw new Error('Authorization succeeded, but MusicKit failed to initialize (API methods missing).');
-      }
+        music = window.MusicKit.getInstance();
+        await music.authorize();
+        
+        if (music.isAuthorized) {
+            qs('#amMsg').textContent = 'Signed in. You can now create a playlist.';
+            qs('#amCreate').style.display = 'inline-block';
+        } else {
+            throw new Error('Authorization failed.');
+        }
     }catch(e){
-      amSignedIn=false;
+      music = null;
       qs('#amMsg').textContent = 'Sign-in failed: ' + e.message;
       console.error(e);
     }
   }
 
   async function amCreatePlaylist(){
-    if(!amSignedIn || !mkInstance?.api?.v3){ qs('#amMsg').textContent='MusicKit API not ready. Please try signing in again.'; return; }
+    if(!music || !music.isAuthorized || !music.musicUserToken){ qs('#amMsg').textContent='Please sign in first.'; return; }
     if(!lastTracks?.length){ qs('#amMsg').textContent='Generate a tracklist first.'; return; }
     
-    qs('#amMsg').textContent='Creating playlist… (searching tracks)';
+    qs('#amMsg').textContent='Sending to backend to create playlist...';
     try{
-      const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
-      
-      const pl = await mkInstance.api.v3.post('/me/library/playlists', {
-        attributes: { name, description: 'Generated with TapeDeck Time Machine' }
-      });
-      const playlistId = pl?.data?.data?.[0]?.id;
-      if(!playlistId) throw new Error('Failed to create playlist');
+        const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
+        
+        // This is the key part: send the user token and tracks to your backend.
+        const r = await fetch(`${API}/v1/apple/create-playlist`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+                userToken: music.musicUserToken,
+                name: name,
+                tracks: lastTracks.map(t => ({artist: t.artist, title: t.title}))
+            })
+        });
 
-      const want = lastTracks.slice(0,75);
-      const ids = [];
-      for(const t of want){
-        const q = `${t.artist} ${t.title}`;
-        const res = await mkInstance.api.v3.get('/catalog/us/search', { term:q, types:'songs', limit:5 });
-        const hit = res?.data?.results?.songs?.data?.find(s =>
-          s?.attributes?.artistName?.toLowerCase().includes(t.artist.toLowerCase()) &&
-          s?.attributes?.name?.toLowerCase().includes(t.title.toLowerCase())
-        ) || res?.data?.results?.songs?.data?.[0];
-        if(hit) ids.push({ id: hit.id, type: 'songs' });
-        await new Promise(r=>setTimeout(r,120));
-      }
+        const j = await r.json();
+        if(!r.ok){
+            throw new Error(j.detail || 'Create failed on backend.');
+        }
 
-      if(!ids.length) throw new Error('No Apple Music matches found');
-      await mkInstance.api.v3.post(`/me/library/playlists/${playlistId}/tracks`, { data: ids });
-      qs('#amMsg').innerHTML = `Playlist created: <strong>${name}</strong> (${ids.length} tracks). Open Music app to view.`;
+        qs('#amMsg').textContent = `Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks. Check your Apple Music app.`;
+
     }catch(e){
       qs('#amMsg').textContent = 'Create failed: ' + e.message;
       console.error(e);
