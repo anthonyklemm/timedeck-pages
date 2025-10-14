@@ -46,7 +46,6 @@
   <div class="bar" style="margin-bottom:14px">
     <div class="logo">TD</div>
     <h1>TapeDeck Time Machine</h1>
-    <div class="muted" style="margin-left:auto;font-size:12px">Tip: append <code>?api=YOUR_API_URL</code> to use your backend</div>
   </div>
 
   <!-- Controls -->
@@ -70,7 +69,7 @@
       <div>
         <label>Hours</label>
         <select id="hours">
-          <option>0.5</option><option>1</option><option>2</option><option>3</option><option selected>4</option><option>6</option><option>12</option>
+          <option>3</option><option selected>4</option><option>6</option><option>12</option>
         </select>
       </div>
       <div>
@@ -191,29 +190,18 @@
     qs('#list').appendChild(frag);
   }
 
-  // ======= YouTube mini-player =======
+  // ======= YouTube mini-player (Just-in-Time Initialization) =======
   (function(){
     const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api";
     document.head.appendChild(tag);
   })();
 
-  let YTready = false, player = null, pendingPlaylist = null;
+  let YTapiReady = false, player = null;
   
-  function onPlayerReady(event) {
-    YTready = true;
-    if (pendingPlaylist) {
-      player.cuePlaylist(pendingPlaylist, 0, 0);
-      qs('#ytp').style.display = 'block';
-      qs('#ytStatus').textContent = `${pendingPlaylist.length} videos queued`;
-      pendingPlaylist = null;
-    }
-  }
-
+  // This function is called by the YouTube script when it's loaded.
+  // We just set a flag and do nothing else.
   window.onYouTubeIframeAPIReady = () => {
-    player = new YT.Player('ytp', {
-      playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
-      events: { 'onReady': onPlayerReady }
-    });
+    YTapiReady = true;
   };
 
   async function buildYouTube(tracks){
@@ -226,21 +214,39 @@
       if(!r.ok){ throw new Error(`yt/resolve ${r.status}: ${await r.text()}`); }
       const data = await r.json();
       const ids = (data.ids || []).filter(Boolean);
+      
       if(!ids.length){
         qs('#ytStatus').textContent = 'No playable videos found (try another date/genre).';
         return;
       }
+
+      // Show the 'Open in YouTube' button as soon as we have IDs.
       const openUrl = `https://www.youtube.com/watch_videos?video_ids=${ids.join(',')}`;
       qs('#ytOpen').href = openUrl;
       qs('#ytOpen').style.display = 'inline-block';
-
-      if (YTready && player) {
-        qs('#ytp').style.display = 'block';
+      qs('#ytStatus').textContent = `${ids.length} videos found. Loading player...`;
+      
+      // If the player object already exists (from a previous run), just load the new playlist.
+      if (player) {
         player.cuePlaylist(ids, 0, 0);
-        qs('#ytStatus').textContent = `${ids.length} videos queued`;
+        qs('#ytStatus').textContent = `${ids.length} videos queued.`;
+      } 
+      // If the player doesn't exist, we need to create it for the first time.
+      else if (YTapiReady) {
+        qs('#ytp').style.display = 'block'; // Make the iFrame visible BEFORE creating the player.
+        player = new YT.Player('ytp', {
+          playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
+          events: {
+            'onReady': (event) => {
+              // Now that this new player is truly ready, cue the playlist.
+              event.target.cuePlaylist(ids, 0, 0);
+              qs('#ytStatus').textContent = `${ids.length} videos queued.`;
+            }
+          }
+        });
       } else {
-        pendingPlaylist = ids;
-        qs('#ytStatus').textContent = 'Player loading, queuing videos...';
+        // This is a fallback in case the API script is somehow slower than the backend call.
+        qs('#ytStatus').textContent = 'YouTube API is slow to load. Use "Open in YouTube" button.';
       }
     }catch(err){
       qs('#ytErr').textContent = err.message;
@@ -321,3 +327,5 @@
   setTab('yt');
 </script>
 </html>
+
+

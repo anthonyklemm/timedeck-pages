@@ -2,109 +2,105 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>TapeDeck Time Machine — Rewind the radio you grew up with</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content="Pick a date, pick a scene, and hear what your radio might've sounded like. Simulated from historic charts + station patterns." />
+    <title>Welcome to TapeDeck Time Machine</title>
     <style>
-    :root{
-      --bg:#0B0F1A; --card:#0f1424; --ink:#ECECF1; --muted:#9aa3b2;
-      --a:#8A5CF6; --b:#1EE3CF; --c:#F72585; --bd:#1d2340;
-    }
-    *{box-sizing:border-box}
-    body{margin:0;background:radial-gradient(1200px 600px at 20% -10%, rgba(138,92,246,.25), transparent 60%),
-                     radial-gradient(1000px 500px at 110% 10%, rgba(31,227,207,.18), transparent 55%),
-                     var(--bg);
-         color:var(--ink);font:15px/1.6 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif}
-    .wrap{max-width:1100px;margin:0 auto;padding:28px}
-    header{display:flex;align-items:center;gap:14px}
-    .logo{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,var(--a),var(--c));
-          display:grid;place-items:center;box-shadow:0 10px 30px rgba(138,92,246,.25)}
-    .logo svg{width:26px;height:26px;fill:white}
-    nav a{color:var(--ink);text-decoration:none;opacity:.8;margin-left:18px}
-    nav a:hover{opacity:1}
-    .hero{display:grid;grid-template-columns:1.2fr .8fr;gap:28px;align-items:center;margin:34px 0 18px}
-    .card{background:var(--card);border:1px solid var(--bd);border-radius:18px;padding:22px;
-          box-shadow:0 20px 60px rgba(2,5,12,.45)}
-    h1{font-size:40px;line-height:1.15;margin:8px 0 10px}
-    .tag{display:inline-block;padding:6px 10px;border:1px solid var(--bd);border-radius:999px;font-weight:600;
-         background:#0b1120;color:#CDE3FF;letter-spacing:.2px}
-    p{color:#d6d9e1}
-    .cta{display:inline-flex;gap:12px;align-items:center;margin-top:12px}
-    .btn{appearance:none;border:1px solid var(--bd);background:#0b1120;color:var(--ink);
-         padding:12px 16px;border-radius:12px;font-weight:700;cursor:pointer;text-decoration:none}
-    .btn.primary{background:linear-gradient(135deg,var(--a),var(--c));border:none}
-    .pill{font-size:12px;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:8px}
-    h3{margin:8px 0}
-    footer{opacity:.8;color:var(--muted);margin:36px 0 8px}
-    @media (max-width:900px){.hero{grid-template-columns:1fr}.grid{grid-template-columns:1fr}}
-  </style>
+        :root {
+            --bg: #0a0f17;
+            --panel: #111827;
+            --muted: #94a3b8;
+            --text: #e5e7eb;
+            --accent: #8b5cf6;
+            --accent2: #22d3ee;
+            --shadow: 0 12px 48px rgba(2, 10, 20, .45);
+        }
+        body {
+            margin: 0;
+            background: radial-gradient(1200px 600px at 10% -10%, #0e1630 0%, transparent 60%),
+                        radial-gradient(700px 400px at 120% 10%, #06101f 0%, transparent 60%), var(--bg);
+            color: var(--text);
+            font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+            display: grid;
+            place-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            padding: 2rem;
+        }
+        .logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #22d3ee 55%, #16a34a 120%);
+            display: grid;
+            place-items: center;
+            color: white;
+            font-weight: 800;
+            font-size: 24px;
+            box-shadow: var(--shadow);
+            margin: 0 auto 1.5rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin: 0 0 0.5rem;
+        }
+        p {
+            font-size: 1.1rem;
+            color: var(--muted);
+            line-height: 1.6;
+            margin-bottom: 2rem;
+        }
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.1rem;
+            border: 0;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+        }
+    </style>
 </head>
 <body>
-<div class="wrap">
-    <header>
-        <div class="logo" aria-label="TapeDeck">
-            <!-- cassette + clocks glyph -->
-            <svg viewBox="0 0 24 24" role="img" aria-hidden="true"><path d="M3 7a3 3 0 0 1 3-3h12a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-1.2l-1.4 2H8.6l-1.4-2H6a3 3 0 0 1-3-3V7zm3 7h12a1 1 0 0 0 1-1V8H5v5a1 1 0 0 0 1 1zm2.25-3.5a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5zm9.5 0a1.75 1.75 0 1 0 0-3.5 1.75 1.75 0 0 0 0 3.5zM9 15h6l-1 1.5H10L9 15z"/></svg>
-        </div>
-        <strong style="font-size:18px">TapeDeck Time Machine</strong>
-        <nav style="margin-left:auto">
-            <a href="#why">Why</a>
-            <a href="#how">How it works</a>
-            <a href="app.html">Open App</a>
-        </nav>
-    </header>
 
-    <section class="hero">
-        <div class="card">
-            <span class="tag">Rewind the radio you grew up with</span>
-            <h1>Pick a date. Pick a scene.<br/>Hear your old station come alive.</h1>
-            <p>
-                TapeDeck uses historical charts, rotation models, and our audio ID cache to
-                simulate what your local alt/rock/top-40 station would’ve played on a given day.
-                It’s nostalgia, but actually listenable.
-            </p>
-            <div class="cta">
-                <a class="btn primary" href="app.html">Open the App</a>
-                <a class="btn" href="#how">How it works</a>
-            </div>
-            <div class="pill">No downloads. Streams via YouTube / Apple Music / Spotify.</div>
-        </div>
-        <div class="card">
-            <h3 style="margin-top:0">Why does this exist?</h3>
-            <p>
-                Curated playlists miss the messy magic of real radio. We recreate the flow:
-                currents, recurrents, gold, and the occasional weird deep cut—grounded by the
-                songs that actually charted. The result feels familiar, not generic.
-            </p>
-            <p>
-                Your privacy matters. We don’t proxy audio or scrape your accounts. Playback
-                happens through official embeds and your own subscriptions.
-            </p>
-        </div>
-    </section>
+    <div class="container">
+        <div class="logo">TD</div>
+        <h1>TapeDeck Time Machine</h1>
+        <p>Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.</p>
+        
+        <!-- This is the button that will be dynamically updated -->
+        <a href="app.html" class="btn" id="open-app-btn">Open App</a>
+    </div>
 
-    <section id="how" class="card">
-        <h2 style="margin:0 0 6px">How it works</h2>
-        <div class="grid">
-            <div>
-                <h3>1) Simulate</h3>
-                <p>Choose date + genre. We build a day’s worth of spins from the chart week using radio-style rotations.</p>
-            </div>
-            <div>
-                <h3>2) Resolve</h3>
-                <p>We map tracks to playable sources. Our cache finds official videos fast; search fills gaps.</p>
-            </div>
-            <div>
-                <h3>3) Play & Export</h3>
-                <p>Listen in the browser via YouTube. Apple/Spotify tabs let subscribers stream and export the playlist.</p>
-            </div>
-        </div>
-    </section>
+    <script>
+        // This script runs when the page has finished loading.
+        document.addEventListener('DOMContentLoaded', () => {
+            // Get the query string from the current URL (e.g., "?api=https://...").
+            const queryString = window.location.search;
 
-    <footer>
-        Content via YouTube / Apple Music / Spotify. We don’t host audio. © TapeDeck Time Machine.
-    </footer>
-</div>
+            // Find the "Open App" button by its ID.
+            const openAppButton = document.getElementById('open-app-btn');
+
+            // If a query string exists and the button was found, update the button's link.
+            if (queryString && openAppButton) {
+                // This changes the href from "app.html" to "app.html?api=..."
+                openAppButton.href = 'app.html' + queryString;
+                console.log('Appended query string to app link:', openAppButton.href);
+            }
+        });
+    </script>
+
 </body>
+    <footer>
+        Content via YouTube / Apple Music / Spotify. We don’t host audio. © TapeDeck Time Machine.
+    </footer>
 </html>
