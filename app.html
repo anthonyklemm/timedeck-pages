@@ -202,26 +202,23 @@
     document.head.appendChild(tag);
   })();
 
-  let YTready = false, player = null, pendingPlaylist = null; // Added pendingPlaylist
+  let YTready = false, player = null, pendingPlaylist = null;
   
-  // New onPlayerReady function
   function onPlayerReady(event) {
     YTready = true;
-    // Now that we're ready, check if a playlist was generated while we were loading.
     if (pendingPlaylist) {
       player.cuePlaylist(pendingPlaylist, 0, 0);
       qs('#ytp').style.display = 'block';
       qs('#ytStatus').textContent = `${pendingPlaylist.length} videos queued`;
-      pendingPlaylist = null; // Clear it after loading
+      pendingPlaylist = null;
     }
   }
 
-  // Modified onYouTubeIframeAPIReady to use onPlayerReady event
   window.onYouTubeIframeAPIReady = () => {
     player = new YT.Player('ytp', {
       playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
       events: {
-        'onReady': onPlayerReady // Tell the player to call our function when it's ready
+        'onReady': onPlayerReady
       }
     });
   };
@@ -243,20 +240,15 @@
         qs('#ytStatus').textContent = 'No playable videos found (try another date/genre).';
         return;
       }
-      // cue playlist (no autoplay) and show "Open in YouTube"
       const openUrl = `https://www.youtube.com/watch_videos?video_ids=${ids.join(',')}`;
       qs('#ytOpen').href = openUrl;
       qs('#ytOpen').style.display = 'inline-block';
 
-      // Modified logic to handle player readiness
       if (YTready && player) {
-        // Player is already ready, load the playlist now.
         qs('#ytp').style.display = 'block';
         player.cuePlaylist(ids, 0, 0);
         qs('#ytStatus').textContent = `${ids.length} videos queued`;
       } else {
-        // Player is not ready yet, store these IDs.
-        // The onPlayerReady function will load them when it fires.
         pendingPlaylist = ids;
         qs('#ytStatus').textContent = 'Player loading, queuing videos...';
       }
@@ -274,7 +266,7 @@
     try{
       const tok = await fetch(`${API}/v1/apple/dev-token`).then(r=>r.json());
       if(!tok || !tok.token) throw new Error('No dev token');
-      // load MusicKit JS once
+      
       if(!window.MusicKit){
         await new Promise((res,rej)=>{
           const s=document.createElement('script');
@@ -282,15 +274,23 @@
           s.onload=res; s.onerror=()=>rej(new Error('MusicKit load failed')); document.head.appendChild(s);
         });
       }
+      
       window.MusicKit.configure({
         developerToken: tok.token,
         app: { name: "TapeDeck Time Machine", build: "web" }
       });
+      
       mkInstance = window.MusicKit.getInstance();
-      await mkInstance.authorize(); // user signs in
-      amSignedIn = true;
-      qs('#amMsg').textContent = 'Signed in.';
-      qs('#amCreate').style.display = 'inline-block';
+      await mkInstance.authorize();
+
+      // **FIX**: After authorizing, verify that the API methods are available before proceeding.
+      if (mkInstance.api && mkInstance.api.v3) {
+        amSignedIn = true;
+        qs('#amMsg').textContent = 'Signed in and ready to create.';
+        qs('#amCreate').style.display = 'inline-block';
+      } else {
+        throw new Error('Authorization succeeded, but MusicKit failed to initialize.');
+      }
     }catch(e){
       amSignedIn=false;
       qs('#amMsg').textContent = 'Sign-in failed: ' + e.message;
@@ -299,19 +299,20 @@
   }
 
   async function amCreatePlaylist(){
-    if(!amSignedIn || !mkInstance){ qs('#amMsg').textContent='Please sign in first.'; return; }
+    // **FIX**: New robust check for Apple Music API readiness.
+    if(!amSignedIn || !mkInstance?.api?.v3){ qs('#amMsg').textContent='MusicKit API not ready. Please try signing in again.'; return; }
     if(!lastTracks?.length){ qs('#amMsg').textContent='Generate a tracklist first.'; return; }
+    
     qs('#amMsg').textContent='Creating playlist… (searching tracks)';
     try{
       const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
-      // create empty playlist
+      
       const pl = await mkInstance.api.v3.post('/me/library/playlists', {
         attributes: { name, description: 'Generated with TapeDeck Time Machine' }
       });
       const playlistId = pl?.data?.data?.[0]?.id;
       if(!playlistId) throw new Error('Failed to create playlist');
 
-      // best-effort search & collect song ids (cap to 75 to be safe)
       const want = lastTracks.slice(0,75);
       const ids = [];
       for(const t of want){
@@ -322,7 +323,7 @@
           s?.attributes?.name?.toLowerCase().includes(t.title.toLowerCase())
         ) || res?.data?.results?.songs?.data?.[0];
         if(hit) ids.push({ id: hit.id, type: 'songs' });
-        await new Promise(r=>setTimeout(r,120)); // gentle pacing
+        await new Promise(r=>setTimeout(r,120));
       }
 
       if(!ids.length) throw new Error('No Apple Music matches found');
