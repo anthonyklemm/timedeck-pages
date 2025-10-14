@@ -219,7 +219,7 @@
         throw new Error(`yt/resolve ${r.status}: ${txt}`);
       }
       const data = await r.json();
-      const ids = (data.video_ids || []).filter(Boolean);
+      const ids = (data.ids || []).filter(Boolean);
       if(!ids.length){
         qs('#ytStatus').textContent = 'No playable videos found (try another date/genre).';
         return;
