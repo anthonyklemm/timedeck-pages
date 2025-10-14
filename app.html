@@ -279,18 +279,29 @@
         app: { name: "TapeDeck Time Machine", build: "web" }
       });
       
+      // Get the instance before authorization. It won't have API methods yet.
       let preAuthInstance = window.MusicKit.getInstance();
+      
+      // Call authorize - this will prompt the user
       await preAuthInstance.authorize();
 
-      // **FIX**: After authorization, get the new, fully-hydrated instance.
+      // After authorization, get the new, fully-hydrated instance.
+      // This is crucial to get an instance with the .api methods.
       mkInstance = window.MusicKit.getInstance();
+
+      // --- Diagnostic Log ---
+      console.log('MusicKit instance after authorization:', mkInstance);
+
+      // --- setTimeout Experiment (Uncomment to test if timing issue) ---
+      // await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
 
       if (mkInstance && mkInstance.api && mkInstance.api.v3) {
         amSignedIn = true;
         qs('#amMsg').textContent = 'Signed in and ready to create.';
         qs('#amCreate').style.display = 'inline-block';
       } else {
-        throw new Error('Authorization succeeded, but MusicKit failed to initialize.');
+        console.error('MusicKit instance structure at failure:', mkInstance);
+        throw new Error('Authorization succeeded, but MusicKit failed to initialize (API methods missing).');
       }
     }catch(e){
       amSignedIn=false;
