@@ -10,8 +10,8 @@
   }
   *{box-sizing:border-box}
   body{margin:0;background:radial-gradient(1200px 600px at 10% -10%, #0e1630 0%, transparent 60%),
-                  radial-gradient(700px 400px at 120% 10%, #06101f 0%, transparent 60%), var(--bg);
-       color:var(--text); font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;}
+                    radial-gradient(700px 400px at 120% 10%, #06101f 0%, transparent 60%), var(--bg);
+    color:var(--text); font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;}
   .wrap{max-width:1100px;margin:40px auto;padding:0 18px}
   .bar{display:flex;align-items:center;gap:14px}
   .logo{width:36px;height:36px;border-radius:12px;background:
@@ -19,7 +19,7 @@
         color:white;font-weight:800;box-shadow:var(--shadow)}
   h1{font-size:22px;margin:0}
   .panel{background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.12);
-         border-radius:18px;padding:16px 16px;box-shadow:var(--shadow)}
+          border-radius:18px;padding:16px 16px;box-shadow:var(--shadow)}
   .grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr auto; gap:12px; align-items:end}
   label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
   input,select,button{width:100%;padding:12px 12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
@@ -27,13 +27,13 @@
   button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700}
   .tabs{display:flex;gap:10px;margin:14px 0 8px}
   .tab{padding:9px 14px;border-radius:999px;border:1px solid rgba(148,163,184,.2);
-       background:#0c1422;color:var(--text);cursor:pointer}
+        background:#0c1422;color:var(--text);cursor:pointer}
   .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
   .cols{display:grid;grid-template-columns:1.05fr .95fr; gap:16px}
   .box{min-height:380px}
   iframe{width:100%;height:360px;border:0;border-radius:12px;box-shadow:var(--shadow)}
   .btn{display:inline-block;margin-top:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);
-       background:#0c1422;color:var(--text);text-decoration:none;font-weight:700}
+        background:#0c1422;color:var(--text);text-decoration:none;font-weight:700}
   .list{padding:12px 8px;max-height:420px;overflow:auto}
   .row{display:grid;grid-template-columns:110px 1fr;gap:14px; padding:10px 6px;border-bottom:1px dashed rgba(148,163,184,.12)}
   .ts{font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
@@ -49,7 +49,6 @@
     <div class="muted" style="margin-left:auto;font-size:12px">Tip: append <code>?api=YOUR_API_URL</code> to use your backend</div>
   </div>
 
-  <!-- Controls -->
   <div class="panel">
     <div class="grid">
       <div>
@@ -94,7 +93,6 @@
     </div>
 
     <div class="cols">
-      <!-- Left: player area -->
       <div class="panel box" id="pane-yt">
         <div id="ytWrap">
           <div class="muted" id="ytStatus">Waiting for a simulation…</div>
@@ -115,7 +113,6 @@
     </div>
   </div>
 
-  <!-- Tracklist -->
   <div class="panel" style="margin-top:16px">
     <div class="muted" style="margin-bottom:6px">Tracklist will appear here.</div>
     <div id="list" class="list"></div>
@@ -190,8 +187,8 @@
       const d = document.createElement('div');
       d.className='row';
       d.innerHTML = `<div class="ts">${t.timestamp.replace('T',' ')}</div>
-                     <div><strong>${t.artist}</strong> — <em>${t.title}</em> 
-                     <span class="muted">• ${t.source_rank ?? ''}</span></div>`;
+                      <div><strong>${t.artist}</strong> — <em>${t.title}</em> 
+                      <span class="muted">• ${t.source_rank ?? ''}</span></div>`;
       frag.appendChild(d);
     });
     qs('#list').innerHTML = '';
@@ -204,8 +201,30 @@
     const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api";
     document.head.appendChild(tag);
   })();
-  let YTready=false, player=null;
-  window.onYouTubeIframeAPIReady=()=>{ YTready=true; if(player==null){ player=new YT.Player('ytp',{playerVars:{playsinline:1,rel:0,modestbranding:1}});} };
+
+  let YTready = false, player = null, pendingPlaylist = null; // Added pendingPlaylist
+  
+  // New onPlayerReady function
+  function onPlayerReady(event) {
+    YTready = true;
+    // Now that we're ready, check if a playlist was generated while we were loading.
+    if (pendingPlaylist) {
+      player.cuePlaylist(pendingPlaylist, 0, 0);
+      qs('#ytp').style.display = 'block';
+      qs('#ytStatus').textContent = `${pendingPlaylist.length} videos queued`;
+      pendingPlaylist = null; // Clear it after loading
+    }
+  }
+
+  // Modified onYouTubeIframeAPIReady to use onPlayerReady event
+  window.onYouTubeIframeAPIReady = () => {
+    player = new YT.Player('ytp', {
+      playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
+      events: {
+        'onReady': onPlayerReady // Tell the player to call our function when it's ready
+      }
+    });
+  };
 
   async function buildYouTube(tracks){
     qs('#ytStatus').textContent = 'Resolving YouTube IDs…';
@@ -219,7 +238,7 @@
         throw new Error(`yt/resolve ${r.status}: ${txt}`);
       }
       const data = await r.json();
-      const ids = (data.ids || []).filter(Boolean);
+      const ids = (data.ids || []).filter(Boolean); // Corrected from data.video_ids to data.ids
       if(!ids.length){
         qs('#ytStatus').textContent = 'No playable videos found (try another date/genre).';
         return;
@@ -229,12 +248,17 @@
       qs('#ytOpen').href = openUrl;
       qs('#ytOpen').style.display = 'inline-block';
 
-      if(YTready && player){
+      // Modified logic to handle player readiness
+      if (YTready && player) {
+        // Player is already ready, load the playlist now.
         qs('#ytp').style.display = 'block';
         player.cuePlaylist(ids, 0, 0);
         qs('#ytStatus').textContent = `${ids.length} videos queued`;
-      }else{
-        qs('#ytStatus').textContent = 'Player not ready; use Open in YouTube.';
+      } else {
+        // Player is not ready yet, store these IDs.
+        // The onPlayerReady function will load them when it fires.
+        pendingPlaylist = ids;
+        qs('#ytStatus').textContent = 'Player loading, queuing videos...';
       }
     }catch(err){
       qs('#ytErr').textContent = err.message;
