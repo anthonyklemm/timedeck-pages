@@ -274,16 +274,18 @@
         });
       }
       
-      // **FIX**: The configure method is asynchronous and must be awaited.
       await window.MusicKit.configure({
         developerToken: tok.token,
         app: { name: "TapeDeck Time Machine", build: "web" }
       });
       
-      mkInstance = window.MusicKit.getInstance();
-      await mkInstance.authorize();
+      let preAuthInstance = window.MusicKit.getInstance();
+      await preAuthInstance.authorize();
 
-      if (mkInstance.api && mkInstance.api.v3) {
+      // **FIX**: After authorization, get the new, fully-hydrated instance.
+      mkInstance = window.MusicKit.getInstance();
+
+      if (mkInstance && mkInstance.api && mkInstance.api.v3) {
         amSignedIn = true;
         qs('#amMsg').textContent = 'Signed in and ready to create.';
         qs('#amCreate').style.display = 'inline-block';
