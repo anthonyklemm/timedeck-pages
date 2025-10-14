@@ -196,7 +196,6 @@
   }
 
   // ======= YouTube mini-player =======
-  // loads the iFrame API
   (function(){
     const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api";
     document.head.appendChild(tag);
@@ -275,7 +274,8 @@
         });
       }
       
-      window.MusicKit.configure({
+      // **FIX**: The configure method is asynchronous and must be awaited.
+      await window.MusicKit.configure({
         developerToken: tok.token,
         app: { name: "TapeDeck Time Machine", build: "web" }
       });
@@ -283,7 +283,6 @@
       mkInstance = window.MusicKit.getInstance();
       await mkInstance.authorize();
 
-      // **FIX**: After authorizing, verify that the API methods are available before proceeding.
       if (mkInstance.api && mkInstance.api.v3) {
         amSignedIn = true;
         qs('#amMsg').textContent = 'Signed in and ready to create.';
@@ -299,7 +298,6 @@
   }
 
   async function amCreatePlaylist(){
-    // **FIX**: New robust check for Apple Music API readiness.
     if(!amSignedIn || !mkInstance?.api?.v3){ qs('#amMsg').textContent='MusicKit API not ready. Please try signing in again.'; return; }
     if(!lastTracks?.length){ qs('#amMsg').textContent='Generate a tracklist first.'; return; }
     
