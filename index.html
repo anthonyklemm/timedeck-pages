@@ -3,7 +3,28 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Welcome to TapeDeck Time Machine</title>
+    <title>TapeDeck Time Machine</title>
+
+    <!-- Favicon and Social Media Preview Tags -->
+    <meta name="description" content="Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.">
+    <link rel="icon" href="/logo.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/logo.svg">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://tapedecktimemachine.com/">
+    <meta property="og:title" content="TapeDeck Time Machine">
+    <meta property="og:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
+    <meta property="og:image" content="https://tapedecktimemachine.com/logo.svg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://tapedecktimemachine.com/">
+    <meta property="twitter:title" content="TapeDeck Time Machine">
+    <meta property="twitter:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
+    <meta property="twitter:image" content="https://tapedecktimemachine.com/logo.svg">
+
     <style>
         :root {
             --bg: #0a0f17;
@@ -50,11 +71,11 @@
             font-size: 1.1rem;
             color: var(--muted);
             line-height: 1.6;
-            margin-bottom: 2rem;
+            margin-bottom: 2.5rem;
         }
         .btn {
             display: inline-block;
-            padding: 1rem 2rem;
+            padding: 1rem 2.5rem;
             border-radius: 12px;
             background: linear-gradient(135deg, var(--accent), var(--accent2));
             color: white;
@@ -66,7 +87,7 @@
             transition: transform 0.2s ease;
         }
         .btn:hover {
-            transform: scale(1.05);
+            transform: translateY(-2px) scale(1.05);
         }
     </style>
 </head>
@@ -77,30 +98,19 @@
         <h1>TapeDeck Time Machine</h1>
         <p>Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.</p>
         
-        <!-- This is the button that will be dynamically updated -->
         <a href="app.html" class="btn" id="open-app-btn">Open App</a>
     </div>
 
     <script>
-        // This script runs when the page has finished loading.
         document.addEventListener('DOMContentLoaded', () => {
-            // Get the query string from the current URL (e.g., "?api=https://...").
             const queryString = window.location.search;
-
-            // Find the "Open App" button by its ID.
             const openAppButton = document.getElementById('open-app-btn');
-
-            // If a query string exists and the button was found, update the button's link.
             if (queryString && openAppButton) {
-                // This changes the href from "app.html" to "app.html?api=..."
                 openAppButton.href = 'app.html' + queryString;
-                console.log('Appended query string to app link:', openAppButton.href);
             }
         });
     </script>
 
 </body>
-    <footer>
-        Content via YouTube / Apple Music / Spotify. We don’t host audio. © TapeDeck Time Machine.
-    </footer>
 </html>
+
