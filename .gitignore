@@ -1,0 +1,9 @@
+# Node
+node_modules/
+
+# Capacitor
+ios/
+android/
+
+# macOS
+.DS_Store
