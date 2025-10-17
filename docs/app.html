@@ -1,107 +1,80 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>TapeDeck Time Machine</title>
-    <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TapeDeck Time Machine</title>
 
+  <!-- Preload MusicKit to avoid first-click races -->
+  <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
 
-    <!-- Favicon and Social Media Preview Tags -->
-    <meta name="description" content="Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.">
-    <link rel="icon" href="/logo.svg" type="image/svg+xml">
-    <link rel="alternate icon" href="/favicon.ico">
-    <link rel="apple-touch-icon" href="/logo.svg">
+  <!-- Meta / Icons -->
+  <meta name="description" content="Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.">
+  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+  <link rel="alternate icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/logo.svg">
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://tapedecktimemachine.com/">
-    <meta property="og:title" content="TapeDeck Time Machine">
-    <meta property="og:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
-    <meta property="og:image" content="https://tapedecktimemachine.com/logo.svg">
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tapedecktimemachine.com/">
+  <meta property="og:title" content="TapeDeck Time Machine">
+  <meta property="og:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
+  <meta property="og:image" content="https://tapedecktimemachine.com/logo.svg">
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://tapedecktimemachine.com/">
-    <meta property="twitter:title" content="TapeDeck Time Machine">
-    <meta property="twitter:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
-    <meta property="twitter:image" content="https://tapedecktimemachine.com/logo.svg">
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://tapedecktimemachine.com/">
+  <meta property="twitter:title" content="TapeDeck Time Machine">
+  <meta property="twitter:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
+  <meta property="twitter:image" content="https://tapedecktimemachine.com/logo.svg">
 
-    <!-- **NEW**: Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-HPZT6BMJVD"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+  <!-- Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HPZT6BMJVD"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-HPZT6BMJVD');
+  </script>
 
-      gtag('config', 'G-HPZT6BMJVD');
-    </script>
-
-    <style>
-      :root{
-        --bg:#0a0f17; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb; --accent:#8b5cf6; --accent2:#22d3ee;
-        --br:14px; --shadow:0 12px 48px rgba(2,10,20,.45);
-      }
-      *{box-sizing:border-box}
-      body{margin:0;background:radial-gradient(1200px 600px at 10% -10%, #0e1630 0%, transparent 60%),
-                        radial-gradient(700px 400px at 120% 10%, #06101f 0%, transparent 60%), var(--bg);
-        color:var(--text); font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;}
-      .wrap{max-width:1100px;margin:40px auto;padding:0 18px}
-      .bar{display:flex;align-items:center;gap:14px}
-      .logo{width:36px;height:36px;border-radius:12px;background:
-            linear-gradient(135deg,#8b5cf6 0%,#22d3ee 55%,#16a34a 120%); display:grid;place-items:center;
-            color:white;font-weight:800;box-shadow:var(--shadow)}
-      h1{font-size:22px;margin:0}
-      .panel{background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.12);
-              border-radius:18px;padding:16px 16px;box-shadow:var(--shadow)}
-      .grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr auto; gap:12px; align-items:end}
-      label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
-      input,select,button{width:100%;padding:12px 12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
-        background:#0c1422;color:var(--text);outline:none; font-size: 1rem;}
-      button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700}
-      .tabs{display:flex;gap:10px;margin:14px 0 8px}
-      .tab{padding:9px 14px;border-radius:999px;border:1px solid rgba(148,163,184,.2);
-            background:#0c1422;color:var(--text);cursor:pointer}
-      .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
-      .cols{display:grid;grid-template-columns:1.05fr .95fr; gap:16px}
-      .box{min-height:380px}
-      iframe{width:100%;height:360px;border:0;border-radius:12px;box-shadow:var(--shadow)}
-      .btn{display:inline-block;margin-top:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);
-            background:#0c1422;color:var(--text);text-decoration:none;font-weight:700}
-      .list{padding:12px 8px;max-height:420px;overflow:auto}
-      .row{display:grid;grid-template-columns:110px 1fr;gap:14px; padding:10px 6px;border-bottom:1px dashed rgba(148,163,184,.12)}
-      .ts{font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
-      .err{color:#fda4af;margin-top:6px}
-      .ok{color:#86efac;margin-top:6px}
-      .muted{color:var(--muted)}
-    </style>
-    <!-- Responsive Styles -->
-    <style>
-        @media (max-width: 800px) {
-            .grid {
-                grid-template-columns: 1fr 1fr;
-            }
-            .grid > div:last-child {
-                grid-column: 1 / -1; /* Make the button span full width */
-            }
-        }
-        @media (max-width: 700px) {
-            .wrap {
-                margin: 20px auto;
-            }
-            .cols {
-                grid-template-columns: 1fr;
-            }
-            h1 {
-                font-size: 18px;
-            }
-        }
-        @media (max-width: 500px) {
-            .grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+  <!-- Styles -->
+  <style>
+    :root{--bg:#0a0f17;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#8b5cf6;--accent2:#22d3ee;--br:14px;--shadow:0 12px 48px rgba(2,10,20,.45)}
+    *{box-sizing:border-box}
+    body{margin:0;background:
+      radial-gradient(1200px 600px at 10% -10%, #0e1630 0%, transparent 60%),
+      radial-gradient(700px 400px at 120% 10%, #06101f 0%, transparent 60%), var(--bg);
+      color:var(--text); font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;}
+    .wrap{max-width:1100px;margin:40px auto;padding:0 18px}
+    .bar{display:flex;align-items:center;gap:14px}
+    .logo{width:36px;height:36px;border-radius:12px;background:
+      linear-gradient(135deg,#8b5cf6 0%,#22d3ee 55%,#16a34a 120%); display:grid;place-items:center;
+      color:white;font-weight:800;box-shadow:var(--shadow)}
+    h1{font-size:22px;margin:0}
+    .panel{background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.12);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+    .grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr auto; gap:12px; align-items:end}
+    label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
+    input,select,button{width:100%;padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
+      background:#0c1422;color:var(--text);outline:none;font-size:1rem}
+    button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700}
+    .tabs{display:flex;gap:10px;margin:14px 0 8px}
+    .tab{padding:9px 14px;border-radius:999px;border:1px solid rgba(148,163,184,.2);
+      background:#0c1422;color:var(--text);cursor:pointer}
+    .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
+    .cols{display:grid;grid-template-columns:1.05fr .95fr; gap:16px}
+    .box{min-height:380px}
+    iframe{width:100%;height:360px;border:0;border-radius:12px;box-shadow:var(--shadow)}
+    .btn{display:inline-block;margin-top:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);
+      background:#0c1422;color:var(--text);text-decoration:none;font-weight:700}
+    .list{padding:12px 8px;max-height:420px;overflow:auto}
+    .row{display:grid;grid-template-columns:110px 1fr;gap:14px; padding:10px 6px;border-bottom:1px dashed rgba(148,163,184,.12)}
+    .ts{font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+    .err{color:#fda4af;margin-top:6px}
+    .ok{color:#86efac;margin-top:6px}
+    .muted{color:var(--muted)}
+    @media (max-width:800px){.grid{grid-template-columns:1fr 1fr}.grid>div:last-child{grid-column:1/-1}}
+    @media (max-width:700px){.wrap{margin:20px auto}.cols{grid-template-columns:1fr}h1{font-size:18px}}
+    @media (max-width:500px){.grid{grid-template-columns:1fr}}
+  </style>
 </head>
 <body>
 
@@ -114,40 +87,17 @@
   <!-- Controls -->
   <div class="panel">
     <div class="grid">
-      <div>
-        <label>Date</label>
-        <input id="date" placeholder="mm/dd/yyyy" value="07/01/2002">
-      </div>
-      <div>
-        <label>Genre</label>
+      <div><label>Date</label><input id="date" placeholder="mm/dd/yyyy" value="07/01/2002"></div>
+      <div><label>Genre</label>
         <select id="genre">
-          <option>Alternative</option>
-          <option>Hot-100</option>
-          <option>Pop</option>
-          <option>Rock</option>
-          <option>Country</option>
-          <option>R&B/Hip-Hop</option>
-          <option>Dance/Electronic</option>
+          <option>Alternative</option><option>Hot-100</option><option>Pop</option>
+          <option>Rock</option><option>Country</option><option>R&B/Hip-Hop</option><option>Dance/Electronic</option>
         </select>
       </div>
-      <div>
-        <label>Hours</label>
-        <select id="hours">
-          <option>0.5</option><option selected>1</option><option>2</option><option>3</option>
-        </select>
-      </div>
-      <div>
-        <label>Repeat gap (min)</label>
-        <input id="gap" type="number" value="90">
-      </div>
-      <div>
-        <label>Seed (opt)</label>
-        <input id="seed" placeholder="e.g. 20020701">
-      </div>
-      <div>
-        <label>&nbsp;</label>
-        <button id="go" class="primary">Generate</button>
-      </div>
+      <div><label>Hours</label><select id="hours"><option>0.5</option><option selected>1</option><option>2</option><option>3</option></select></div>
+      <div><label>Repeat gap (min)</label><input id="gap" type="number" value="90"></div>
+      <div><label>Seed (opt)</label><input id="seed" placeholder="e.g. 20020701"></div>
+      <div><label>&nbsp;</label><button id="go" class="primary">Generate</button></div>
     </div>
 
     <div class="tabs">
@@ -157,16 +107,17 @@
     </div>
 
     <div class="cols">
-      <!-- Left: player area -->
+      <!-- YouTube -->
       <div class="panel box" id="pane-yt">
         <div id="ytWrap">
           <div class="muted" id="ytStatus">Waiting for a simulation…</div>
-          <div id="ytp"></div> <!-- Changed to a div for the API to replace -->
+          <div id="ytp"></div>
           <a class="btn" id="ytOpen" href="#" target="_blank" rel="noopener" style="display:none">Open in YouTube</a>
           <div id="ytErr" class="err"></div>
         </div>
       </div>
 
+      <!-- Apple Music -->
       <div class="panel box" id="pane-am" style="display:none">
         <div id="amWrap">
           <div class="muted" style="margin-bottom:8px">Sign in with Apple Music to create a playlist from the simulation.</div>
@@ -186,15 +137,10 @@
 </div>
 
 <script>
-  // ======= helpers =======
+  // ---------- helpers ----------
   const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
-  const qs = sel => document.querySelector(sel);
-
-  function toISO(mmddyyyy){
-    const [mm,dd,yyyy] = mmddyyyy.split('/');
-    return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
-  }
-
+  const qs = s => document.querySelector(s);
+  function toISO(mmddyyyy){ const [mm,dd,yyyy] = mmddyyyy.split('/'); return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
   function setTab(id){
     document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
     qs('#pane-yt').style.display = id==='yt' ? '' : 'none';
@@ -202,9 +148,8 @@
   }
   document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 
-  // ======= simulate -> render list -> build YouTube =======
+  // ---------- simulate + list ----------
   let lastTracks = [];
-
   async function simulate(){
     const body = {
       date: toISO(qs('#date').value.trim()),
@@ -216,53 +161,96 @@
     };
     qs('#ytStatus').textContent = 'Building…';
     qs('#ytErr').textContent = '';
-    
-    // Reset player UI
-    if (player) {
-        player.destroy();
-        player = null;
-    }
-    qs('#ytp').innerHTML = ''; // Clear the div
-    qs('#ytp').style.display = 'none';
 
+    // Reset player UI
+    if (player) { try{ player.destroy(); }catch{} player = null; }
+    qs('#ytp').innerHTML = '';
+    qs('#ytp').style.display = 'none';
     qs('#ytOpen').style.display = 'none';
     qs('#list').innerHTML = '';
 
-    let data;
-    try{
-      const r = await fetch(`${API}/v1/simulate`, {
-        method:'POST', headers:{'content-type':'application/json'},
-        body: JSON.stringify(body)
-      });
-      if(!r.ok){ throw new Error(`simulate ${r.status}: ${await r.text()}`); }
-      data = await r.json();
-    }catch(err){
-      qs('#ytStatus').textContent = '';
-      qs('#ytErr').textContent = err.message;
-      return;
-    }
+    // fetch with timeout so it never hangs forever
+    const withTimeout = (p, ms=20000) => {
+      let t; const tm = new Promise((_,rej)=> t=setTimeout(()=>rej(new Error(`Network timeout after ${ms/1000}s`)), ms));
+      return Promise.race([p.finally(()=>clearTimeout(t)), tm]);
+    };
 
-    lastTracks = data.tracks || [];
-    renderList(lastTracks);
-    buildYouTube(lastTracks);
+    try{
+      console.log('[simulate] POST', `${API}/v1/simulate`, body);
+      const r = await withTimeout(fetch(`${API}/v1/simulate`, {
+        method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)
+      }), 20000);
+      if(!r.ok){ const txt = await r.text().catch(()=> ''); throw new Error(`simulate ${r.status}: ${txt}`); }
+      const data = await r.json();
+      lastTracks = data.tracks || [];
+      if(!lastTracks.length){ qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned. Try a different date/genre.'; return; }
+      renderList(lastTracks);
+      buildYouTube(lastTracks);
+    }catch(err){
+      console.error('[simulate] failed:', err);
+      qs('#ytStatus').textContent = '';
+      qs('#ytErr').textContent = err.message || String(err);
+    }
   }
 
   function renderList(rows){
     if(!rows?.length){ qs('#list').innerHTML = '<div class="muted">No tracks.</div>'; return; }
     const frag = document.createDocumentFragment();
     rows.slice(0,500).forEach(t=>{
-      const d = document.createElement('div');
-      d.className='row';
+      const d = document.createElement('div'); d.className='row';
       d.innerHTML = `<div class="ts">${t.timestamp.replace('T',' ')}</div>
-                      <div><strong>${t.artist}</strong> — <em>${t.title}</em> 
-                      <span class="muted">• ${t.source_rank ?? ''}</span></div>`;
+                     <div><strong>${t.artist}</strong> — <em>${t.title}</em>
+                     <span class="muted">• ${t.source_rank ?? ''}</span></div>`;
       frag.appendChild(d);
     });
-    qs('#list').innerHTML = '';
-    qs('#list').appendChild(frag);
+    qs('#list').replaceChildren(frag);
   }
 
-  // --- Apple Music (race-proof loader) ---
+  // ---------- YouTube mini-player ----------
+  (function(){ const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api"; document.head.appendChild(tag); })();
+  let YTapiReady=false, player=null;
+  window.onYouTubeIframeAPIReady = () => { YTapiReady = true; };
+  async function buildYouTube(tracks){
+    qs('#ytStatus').textContent = 'Resolving YouTube IDs…';
+    try{
+      const r = await fetch(`${API}/v1/yt/resolve`, {
+        method:'POST', headers:{'content-type':'application/json'},
+        body: JSON.stringify({ tracks: tracks.map(t=>({artist:t.artist,title:t.title})), limit:50 })
+      });
+      if(!r.ok){ throw new Error(`yt/resolve ${r.status}: ${await r.text()}`); }
+      const data = await r.json();
+      const ids = (data.ids || []).filter(Boolean);
+
+      if(!ids.length){ qs('#ytStatus').textContent = 'No playable videos found (try another date/genre).'; return; }
+
+      const openUrl = `https://www.youtube.com/watch_videos?video_ids=${ids.join(',')}`;
+      qs('#ytOpen').href = openUrl;
+      qs('#ytOpen').style.display = 'inline-block';
+      qs('#ytStatus').textContent = `${ids.length} videos found. Loading player...`;
+
+      if (player) {
+        try{ player.cuePlaylist(ids, 0, 0); qs('#ytStatus').textContent = `${ids.length} videos queued.`; }
+        catch { player = null; }
+      }
+      if (!player) {
+        if (YTapiReady) {
+          qs('#ytp').style.display = 'block';
+          player = new YT.Player('ytp', {
+            height: '360', width: '100%',
+            playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
+            events: { onReady: (e) => { e.target.cuePlaylist(ids, 0, 0); qs('#ytStatus').textContent = `${ids.length} videos queued.`; } }
+          });
+        } else {
+          qs('#ytStatus').textContent = 'YouTube API is still loading. Use "Open in YouTube".';
+        }
+      }
+    }catch(err){
+      qs('#ytErr').textContent = err.message;
+      qs('#ytStatus').textContent = '';
+    }
+  }
+
+  // ---------- Apple Music (race-proof MusicKit init) ----------
   let music = null;
   let musicReadyPromise = null;
 
@@ -279,8 +267,6 @@
     if (!musicReadyPromise) {
       musicReadyPromise = (async () => {
         await waitForMusicKitLoaded();
-
-        // get dev token from your backend
         const res = await fetch(`${API}/v1/apple/dev-token`);
         if (!res.ok) throw new Error(`dev-token ${res.status}`);
         const { token: developerToken } = await res.json();
@@ -291,16 +277,9 @@
           app: { name: 'TapeDeck Time Machine', build: 'web' },
         });
         const inst = window.MusicKit.getInstance();
-        if (!inst || typeof inst.authorize !== 'function') {
-          throw new Error('MusicKit not initialized (no authorize)');
-        }
-        music = inst;
-        return music;
-      })().catch(err => {
-        // allow retry on next click
-        musicReadyPromise = null;
-        throw err;
-      });
+        if (!inst || typeof inst.authorize !== 'function') { throw new Error('MusicKit not initialized (no authorize)'); }
+        music = inst; return music;
+      })().catch(err => { musicReadyPromise = null; throw err; });
     }
     return musicReadyPromise;
   }
@@ -340,17 +319,12 @@
     }
   }
 
-
-
-  // events
+  // ---------- wire up ----------
   qs('#go').onclick = simulate;
-  // wire buttons (keep your IDs)
   qs('#amSign').onclick = amSignIn;
   qs('#amCreate').onclick = amCreatePlaylist;
-  // init
   setTab('yt');
 </script>
 
 </body>
 </html>
-
