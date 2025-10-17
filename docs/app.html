@@ -319,67 +319,73 @@
     }
   }
 
-  // ======= Apple Music (Backend Logic) =======
-  let music=null;
+  // --- Apple Music (matches your backend endpoints) ---
+  let music = null;
 
   async function amSignIn(){
+    qs('#amMsg').textContent = 'Contacting Apple…';
     try{
-        const tok = await fetch(`${API}/v1/apple/dev-token`).then(r=>r.json());
-        if(!tok || !tok.token) throw new Error('No dev token');
-      
-        if(!window.MusicKit){
-            await new Promise((res,rej)=>{
-              const s=document.createElement('script');
-              s.src="https://js-cdn.music.apple.com/musickit/v3/musickit.js";
-              s.onload=res; s.onerror=()=>rej(new Error('MusicKit load failed')); document.head.appendChild(s);
-            });
-        }
-      
-        await window.MusicKit.configure({
-            developerToken: tok.token,
-            app: { name: "TapeDeck Time Machine", build: "web" }
+      // 1) Get developer token from your backend
+      const tok = await fetch(`${API}/v1/apple/dev-token`).then(r=>r.json());
+      if(!tok || !tok.token) throw new Error('No developer token');
+
+      // 2) Ensure MusicKit is loaded
+      if(!window.MusicKit){
+        await new Promise((res,rej)=>{
+          const s=document.createElement('script');
+          s.src="https://js-cdn.music.apple.com/musickit/v3/musickit.js";
+          s.onload=res; s.onerror=()=>rej(new Error('MusicKit load failed'));
+          document.head.appendChild(s);
         });
-      
-        music = window.MusicKit.getInstance();
-        await music.authorize();
-        
-        if (music.isAuthorized) {
-            qs('#amMsg').textContent = 'Signed in. You can now create a playlist.';
-            qs('#amCreate').style.display = 'inline-block';
-        } else {
-            throw new Error('Authorization failed.');
-        }
+      }
+
+      // 3) Configure and authorize inside the app (no Safari redirect)
+      window.MusicKit.configure({
+        developerToken: tok.token,
+        app: { name: "TapeDeck Time Machine", build: "web" }
+      });
+
+      music = window.MusicKit.getInstance();
+      const userToken = await music.authorize();   // <-- gets the Music User Token
+      if(!userToken) throw new Error('Authorization failed');
+
+      // 4) Ready to create playlists
+      qs('#amMsg').textContent = 'Signed in. You can now create a playlist.';
+      qs('#amCreate').style.display = 'inline-block';
     }catch(e){
       music = null;
-      qs('#amMsg').textContent = 'Sign-in failed: ' + e.message;
+      console.error(e);
+      qs('#amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
     }
   }
 
   async function amCreatePlaylist(){
-    if(!music || !music.isAuthorized || !music.musicUserToken){ qs('#amMsg').textContent='Please sign in first.'; return; }
-    if(!lastTracks?.length){ qs('#amMsg').textContent='Generate a tracklist first.'; return; }
-    
-    qs('#amMsg').textContent='Sending to backend to create playlist...';
+    if(!music || !music.isAuthorized || !music.musicUserToken){
+      qs('#amMsg').textContent='Please sign in first.'; return;
+    }
+    if(!lastTracks?.length){
+      qs('#amMsg').textContent='Generate a tracklist first.'; return;
+    }
+
+    qs('#amMsg').textContent='Creating playlist…';
     try{
-        const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
-        
-        const r = await fetch(`${API}/v1/apple/create-playlist`, {
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({
-                userToken: music.musicUserToken,
-                name: name,
-                tracks: lastTracks.map(t => ({artist: t.artist, title: t.title}))
-            })
-        });
+      const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
+      const r = await fetch(`${API}/v1/apple/create-playlist`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          userToken: music.musicUserToken,   // <-- what your backend expects
+          name,
+          tracks: lastTracks.map(t => ({ artist:t.artist, title:t.title }))
+        })
+      });
+      const j = await r.json();
+      if(!r.ok) throw new Error(j.detail || 'Create failed');
 
-        const j = await r.json();
-        if(!r.ok){ throw new Error(j.detail || 'Create failed on backend.'); }
-
-        qs('#amMsg').textContent = `Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks. Check your Apple Music app.`;
-
+      qs('#amMsg').textContent = `Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks. Check Apple Music.`;
     }catch(e){
-      qs('#amMsg').textContent = 'Create failed: ' + e.message;
+      console.error(e);
+      qs('#amMsg').textContent = 'Create failed: ' + (e.message || e);
     }
   }
 
