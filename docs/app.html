@@ -176,7 +176,7 @@
     qs('#list').innerHTML = '';
 
     // fetch with timeout so it never hangs forever
-    const withTimeout = (p, ms=20000) => {
+    const withTimeout = (p, ms=180000) => {
       let t; const tm = new Promise((_,rej)=> t=setTimeout(()=>rej(new Error(`Network timeout after ${ms/1000}s`)), ms));
       return Promise.race([p.finally(()=>clearTimeout(t)), tm]);
     };
@@ -184,7 +184,7 @@
     try{
       const r = await withTimeout(fetch(`${API}/v1/simulate`, {
         method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)
-      }), 20000);
+      }), 180000);
       if(!r.ok){ const txt = await r.text().catch(()=> ''); throw new Error(`simulate ${r.status}: ${txt}`); }
       const data = await r.json();
       lastTracks = data.tracks || [];
