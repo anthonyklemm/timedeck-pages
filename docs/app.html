@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>TapeDeck Time Machine</title>
 
-  <!-- Preload MusicKit to avoid first-click races -->
+  <!-- Preload MusicKit (web also uses this) -->
   <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
 
   <!-- Meta / Icons -->
@@ -212,9 +212,7 @@
   }
 
   // ---------- YouTube mini-player ----------
-  (function(){
-    const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api"; document.head.appendChild(tag);
-  })();
+  (function(){ const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api"; document.head.appendChild(tag); })();
   window.onYouTubeIframeAPIReady = () => { YTapiReady = true; };
 
   async function buildYouTube(tracks){
@@ -244,7 +242,7 @@
           qs('#ytp').style.display = 'block';
           player = new YT.Player('ytp', {
             height: '360', width: '100%',
-            playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
+            playerVars: { playsinline: 1, rel: 0, modestbranding: 1, origin: 'https://tapedecktimemachine.com' },
             events: { onReady: (e) => { e.target.cuePlaylist(ids, 0, 0); qs('#ytStatus').textContent = `${ids.length} videos queued.`; } }
           });
         } else {
@@ -257,72 +255,104 @@
     }
   }
 
-  // ---------- Apple Music (race-proof MusicKit init) ----------
-  let music = null;
-  let musicReadyPromise = null;
+  // ---------- Apple Music: dual-mode auth (web vs native) ----------
 
+  // Listener to catch Universal Link back in the native app
+  (function(){
+    const Cap = window.Capacitor || {};
+    const App = Cap.Plugins && Cap.Plugins.App;
+    const Browser = Cap.Plugins && Cap.Plugins.Browser;
+
+    function parseQuery(u){ const o={}; const i=u.indexOf('?'); if(i<0) return o;
+      for (const p of u.slice(i+1).split('&')) { const [k,v]=p.split('='); o[decodeURIComponent(k)] = decodeURIComponent(v||''); }
+      return o;
+    }
+
+    if (App && App.addListener) {
+      App.addListener('appUrlOpen', async ({ url }) => {
+        try { if (Browser && Browser.close) await Browser.close(); } catch {}
+        const q = parseQuery(url);
+        if (q.token) {
+          localStorage.setItem('appleMusicUserToken', q.token);
+          const btn = document.getElementById('amCreate');
+          const msg = document.getElementById('amMsg');
+          if (btn) btn.style.display = 'inline-block';
+          if (msg) msg.textContent = 'Signed in. You can now create a playlist.';
+        }
+      });
+    }
+  })();
+
+  // Robust web MusicKit loader (used only on website)
+  let music = null;
+  let musicInitPromise = null;
   function waitForMusicKitLoaded(timeoutMs = 10000){
     if (window.MusicKit && typeof window.MusicKit.getInstance === 'function') return Promise.resolve();
     return new Promise((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error('MusicKit load timed out')), timeoutMs);
-      window.addEventListener('musickitloaded', () => { clearTimeout(t); resolve(); }, { once: true });
+      const t = setTimeout(()=>reject(new Error('MusicKit load timed out')), timeoutMs);
+      window.addEventListener('musickitloaded', () => { clearTimeout(t); resolve(); }, { once:true });
     });
   }
-
-  async function getMusicInstance() {
+  async function getWebMusicInstance(){
     if (music) return music;
-    if (!musicReadyPromise) {
-      musicReadyPromise = (async () => {
+    if (!musicInitPromise) {
+      musicInitPromise = (async () => {
         await waitForMusicKitLoaded();
-
-        const res = await fetch(`${API}/v1/apple/dev-token`);
-        if (!res.ok) throw new Error(`dev-token ${res.status}`);
-        const { token: developerToken } = await res.json();
-        if (!developerToken) throw new Error('No developer token');
-
-        window.MusicKit.configure({
-          developerToken,
-          app: { name: 'TapeDeck Time Machine', build: 'web' },
-        });
-
-        // Grab instance; retry briefly until hydrated
+        const r = await fetch(`${API}/v1/apple/dev-token`);
+        if(!r.ok) throw new Error(`dev-token ${r.status}`);
+        const { token: developerToken } = await r.json();
+        if(!developerToken) throw new Error('No developer token');
+        window.MusicKit.configure({ developerToken, app:{ name:'TapeDeck Time Machine', build:'web' } });
         let inst = window.MusicKit.getInstance();
-        for (let i = 0; i < 10 && (!inst || typeof inst.authorize !== 'function'); i++) {
-          await new Promise(r => setTimeout(r, 100));
+        for (let i=0; i<10 && (!inst || typeof inst.authorize !== 'function'); i++){
+          await new Promise(res=>setTimeout(res,100));
           inst = window.MusicKit.getInstance();
         }
-        if (!inst || typeof inst.authorize !== 'function') throw new Error('MusicKit not initialized (no authorize)');
+        if(!inst || typeof inst.authorize !== 'function') throw new Error('MusicKit not initialized');
         music = inst; return music;
-      })().catch(err => { musicReadyPromise = null; throw err; });
+      })().catch(e=>{ musicInitPromise = null; throw e; });
     }
-    return musicReadyPromise;
+    return musicInitPromise;
   }
 
   async function amSignIn(){
-    qs('#amMsg').textContent = 'Contacting Apple…';
-    try {
-      const m = await getMusicInstance();
-      const userToken = await m.authorize(); // returns Music User Token
-      if (!userToken) throw new Error('Authorization failed');
+    const Cap = window.Capacitor || {};
+    const Browser = Cap.Plugins && Cap.Plugins.Browser;
+    const platform = (Cap.getPlatform && Cap.getPlatform()) || 'web';
+
+    if (platform !== 'web' && Browser && Browser.open) {
+      qs('#amMsg').textContent = 'Opening Apple sign-in…';
+      await Browser.open({ url: 'https://tapedecktimemachine.com/auth/native' });
+      return;
+    }
+
+    // Website: use MusicKit JS directly
+    try{
+      qs('#amMsg').textContent = 'Contacting Apple…';
+      const m = await getWebMusicInstance();
+      const userToken = await m.authorize();
+      if(!userToken) throw new Error('Authorization failed');
       qs('#amMsg').textContent = 'Signed in. You can now create a playlist.';
       qs('#amCreate').style.display = 'inline-block';
-    } catch (e) {
+      localStorage.setItem('appleMusicUserToken', userToken);
+    }catch(e){
       console.error(e);
       qs('#amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
     }
   }
 
   async function amCreatePlaylist(){
-    const m = music;
-    if (!m || !m.isAuthorized || !m.musicUserToken) { qs('#amMsg').textContent='Please sign in first.'; return; }
-    if (!lastTracks?.length) { qs('#amMsg').textContent='Generate a tracklist first.'; return; }
+    // Prefer MusicKit instance if present; else read stored token (native flow)
+    let userToken = (music && music.musicUserToken) || localStorage.getItem('appleMusicUserToken');
+    if(!userToken){ qs('#amMsg').textContent='Please sign in first.'; return; }
+    if(!lastTracks?.length){ qs('#amMsg').textContent='Generate a tracklist first.'; return; }
 
     qs('#amMsg').textContent='Creating playlist…';
     try{
       const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
       const r = await fetch(`${API}/v1/apple/create-playlist`, {
         method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ userToken: m.musicUserToken, name, tracks: lastTracks.map(t=>({artist:t.artist,title:t.title})) })
+        body: JSON.stringify({ userToken, name, tracks: lastTracks.map(t=>({artist:t.artist,title:t.title})) })
       });
       const j = await r.json();
       if(!r.ok) throw new Error(j.detail || 'Create failed');
