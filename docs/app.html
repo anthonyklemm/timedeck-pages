@@ -4,6 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>TapeDeck Time Machine</title>
+    <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
+
 
     <!-- Favicon and Social Media Preview Tags -->
     <meta name="description" content="Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.">
@@ -260,103 +262,91 @@
     qs('#list').appendChild(frag);
   }
 
-  // --- Apple Music (robust load) ---
+  // --- Apple Music (race-proof loader) ---
   let music = null;
+  let musicReadyPromise = null;
 
-  async function loadMusicKit() {
-    // Already loaded?
-    if (window.MusicKit && window.MusicKit.getInstance) return;
-
-    // Inject the script if it's not there yet
-    if (!document.querySelector('script[data-mkit]')) {
-      const s = document.createElement('script');
-      s.src = 'https://js-cdn.music.apple.com/musickit/v3/musickit.js';
-      s.setAttribute('data-mkit', '1');
-      document.head.appendChild(s);
-    }
-
-    // Wait for MusicKit to finish loading
-    if (!window.MusicKit) {
-      await new Promise((resolve, reject) => {
-        const onLoad = () => resolve();
-        const onTimeout = () => reject(new Error('MusicKit load timed out'));
-        const t = setTimeout(onTimeout, 10000);
-        window.addEventListener('musickitloaded', () => { clearTimeout(t); onLoad(); }, { once: true });
-      });
-    }
+  function waitForMusicKitLoaded(timeoutMs = 10000){
+    if (window.MusicKit && window.MusicKit.getInstance) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('MusicKit load timed out')), timeoutMs);
+      window.addEventListener('musickitloaded', () => { clearTimeout(t); resolve(); }, { once: true });
+    });
   }
 
-  async function amSignIn() {
+  function getMusicInstance() {
+    if (music) return Promise.resolve(music);
+    if (!musicReadyPromise) {
+      musicReadyPromise = (async () => {
+        await waitForMusicKitLoaded();
+
+        // get dev token from your backend
+        const res = await fetch(`${API}/v1/apple/dev-token`);
+        if (!res.ok) throw new Error(`dev-token ${res.status}`);
+        const { token: developerToken } = await res.json();
+        if (!developerToken) throw new Error('No developer token');
+
+        window.MusicKit.configure({
+          developerToken,
+          app: { name: 'TapeDeck Time Machine', build: 'web' },
+        });
+        const inst = window.MusicKit.getInstance();
+        if (!inst || typeof inst.authorize !== 'function') {
+          throw new Error('MusicKit not initialized (no authorize)');
+        }
+        music = inst;
+        return music;
+      })().catch(err => {
+        // allow retry on next click
+        musicReadyPromise = null;
+        throw err;
+      });
+    }
+    return musicReadyPromise;
+  }
+
+  async function amSignIn(){
     qs('#amMsg').textContent = 'Contacting Apple…';
     try {
-      // 1) Load MusicKit JS fully
-      await loadMusicKit();
-
-      // 2) Get your developer token from the backend
-      const tokRes = await fetch(`${API}/v1/apple/dev-token`);
-      if (!tokRes.ok) throw new Error(`dev-token ${tokRes.status}`);
-      const { token: developerToken } = await tokRes.json();
-      if (!developerToken) throw new Error('No developer token');
-
-      // 3) Configure and get the instance
-      window.MusicKit.configure({
-        developerToken,
-        app: { name: 'TapeDeck Time Machine', build: 'web' },
-      });
-
-      music = window.MusicKit.getInstance();
-      if (!music || typeof music.authorize !== 'function') {
-        throw new Error('MusicKit not initialized (no authorize method)');
-      }
-
-      // 4) Authorize – returns the Music User Token
-      const userToken = await music.authorize();
+      const m = await getMusicInstance();
+      const userToken = await m.authorize();
       if (!userToken) throw new Error('Authorization failed');
-
       qs('#amMsg').textContent = 'Signed in. You can now create a playlist.';
       qs('#amCreate').style.display = 'inline-block';
     } catch (e) {
       console.error(e);
-      music = null;
       qs('#amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
     }
   }
 
-  async function amCreatePlaylist() {
-    if (!music || !music.isAuthorized || !music.musicUserToken) {
-      qs('#amMsg').textContent = 'Please sign in first.'; return;
-    }
-    if (!lastTracks?.length) {
-      qs('#amMsg').textContent = 'Generate a tracklist first.'; return;
-    }
+  async function amCreatePlaylist(){
+    const m = music;
+    if (!m || !m.isAuthorized || !m.musicUserToken) { qs('#amMsg').textContent='Please sign in first.'; return; }
+    if (!lastTracks?.length) { qs('#amMsg').textContent='Generate a tracklist first.'; return; }
 
-    qs('#amMsg').textContent = 'Creating playlist…';
-    try {
+    qs('#amMsg').textContent='Creating playlist…';
+    try{
       const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
       const r = await fetch(`${API}/v1/apple/create-playlist`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userToken: music.musicUserToken,
-          name,
-          tracks: lastTracks.map(t => ({ artist: t.artist, title: t.title })),
-        }),
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ userToken: m.musicUserToken, name, tracks: lastTracks.map(t=>({artist:t.artist,title:t.title})) })
       });
       const j = await r.json();
-      if (!r.ok) throw new Error(j.detail || 'Create failed');
+      if(!r.ok) throw new Error(j.detail || 'Create failed');
       qs('#amMsg').textContent = `Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks.`;
-    } catch (e) {
+    } catch(e){
       console.error(e);
       qs('#amMsg').textContent = 'Create failed: ' + (e.message || e);
     }
   }
 
-  // Wire buttons (keep your existing IDs)
-  qs('#amSign').onclick = amSignIn;
-  qs('#amCreate').onclick = amCreatePlaylist;
+
+
   // events
   qs('#go').onclick = simulate;
-
+  // wire buttons (keep your IDs)
+  qs('#amSign').onclick = amSignIn;
+  qs('#amCreate').onclick = amCreatePlaylist;
   // init
   setTab('yt');
 </script>
