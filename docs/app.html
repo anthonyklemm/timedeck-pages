@@ -318,33 +318,46 @@
     return musicInitPromise;
   }
 
-  async function amSignIn(){
-    const Cap = window.Capacitor || {};
-    const App = Cap.Plugins && Cap.Plugins.App;
+	async function amSignIn(){
+	  const Cap = window.Capacitor || {};
+	  const Plugins = (Cap && Cap.Plugins) || {};
+	  const App = Plugins.App;
 
-    // If the native App plugin exists, always use real Safari (best for Universal Links)
-    if (App && typeof App.openUrl === 'function') {
-      console.log('[AM] native path → openUrl to /auth/native');
-      qs('#amMsg').textContent = 'Opening Apple sign-in…';
-      await App.openUrl({ url: 'https://tapedecktimemachine.com/auth/native' });
-      return;
-    }
+	  // 🔎 Log what we see at runtime
+	  console.log('[AM] Cap present:', !!Cap, 'Plugins keys:', Object.keys(Plugins||{}));
+	  console.log('[AM] typeof App:', typeof App, 'typeof App.openUrl:', App && typeof App.openUrl);
 
-    // Website: in-page MusicKit
-    try{
-      console.log('[AM] web path → MusicKit.authorize()');
-      qs('#amMsg').textContent = 'Contacting Apple…';
-      const m = await getWebMusicInstance();
-      const userToken = await m.authorize();
-      if(!userToken) throw new Error('Authorization failed');
-      qs('#amMsg').textContent = 'Signed in. You can now create a playlist.';
-      qs('#amCreate').style.display = 'inline-block';
-      localStorage.setItem('appleMusicUserToken', userToken);
-    }catch(e){
-      console.error(e);
-      qs('#amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
-    }
-  }
+	  // 🚀 Native-first: try to open real Safari via App.openUrl
+	  if (App && typeof App.openUrl === 'function') {
+		try {
+		  document.getElementById('amMsg').textContent = 'Opening Apple sign-in…';
+		  console.log('[AM] calling App.openUrl → https://tapedecktimemachine.com/auth/native');
+		  await App.openUrl({ url: 'https://tapedecktimemachine.com/auth/native' });
+		  console.log('[AM] App.openUrl returned (Safari should now be in front)');
+		  return; // if it worked, we’re done—Safari will bounce back via /auth/callback
+		} catch (e) {
+		  console.warn('[AM] App.openUrl threw, falling back to web flow:', e);
+		  // fallthrough to web MusicKit
+		}
+	  } else {
+		console.warn('[AM] App.openUrl not available, falling back to web MusicKit');
+	  }
+
+	  // 🌐 Website fallback: in-page MusicKit
+	  try{
+		console.log('[AM] web path → MusicKit.authorize()');
+		document.getElementById('amMsg').textContent = 'Contacting Apple…';
+		const m = await getWebMusicInstance();
+		const userToken = await m.authorize();
+		if(!userToken) throw new Error('Authorization failed');
+		document.getElementById('amMsg').textContent = 'Signed in. You can now create a playlist.';
+		document.getElementById('amCreate').style.display = 'inline-block';
+		localStorage.setItem('appleMusicUserToken', userToken);
+	  }catch(e){
+		console.error(e);
+		document.getElementById('amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
+	  }
+	}
 
   async function amCreatePlaylist(){
     const userToken = (music && music.musicUserToken) || localStorage.getItem('appleMusicUserToken');
