@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>TapeDeck Time Machine</title>
 
-  <!-- Preload MusicKit (web also uses this) -->
+  <!-- MusicKit for web mode -->
   <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
 
   <!-- Meta / Icons -->
@@ -14,14 +14,12 @@
   <link rel="alternate icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="/logo.svg">
 
-  <!-- Open Graph -->
+  <!-- Social -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://tapedecktimemachine.com/">
   <meta property="og:title" content="TapeDeck Time Machine">
   <meta property="og:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
   <meta property="og:image" content="https://tapedecktimemachine.com/logo.svg">
-
-  <!-- Twitter -->
   <meta property="twitter:card" content="summary_large_image">
   <meta property="twitter:url" content="https://tapedecktimemachine.com/">
   <meta property="twitter:title" content="TapeDeck Time Machine">
@@ -37,17 +35,17 @@
 
   <!-- Styles -->
   <style>
-    :root{--bg:#0a0f17;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#8b5cf6;--accent2:#22d3ee;--br:14px;--shadow:0 12px 48px rgba(2,10,20,.45)}
+    :root{--bg:#0a0f17;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#8b5cf6;--accent2:#22d3ee;--shadow:0 12px 48px rgba(2,10,20,.45)}
     *{box-sizing:border-box}
     body{margin:0;background:
       radial-gradient(1200px 600px at 10% -10%, #0e1630 0%, transparent 60%),
-      radial-gradient(700px 400px at 120% 10%, #06101f 0%, transparent 60%), var(--bg);
+      radial-gradient(700px 400px at 120% 10%, #06101f 0%, transparent 60%), #0a0f17;
       color:var(--text); font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;}
     .wrap{max-width:1100px;margin:40px auto;padding:0 18px}
     .bar{display:flex;align-items:center;gap:14px}
     .logo{width:36px;height:36px;border-radius:12px;background:
       linear-gradient(135deg,#8b5cf6 0%,#22d3ee 55%,#16a34a 120%); display:grid;place-items:center;
-      color:white;font-weight:800;box-shadow:var(--shadow)}
+      color:#fff;font-weight:800;box-shadow:var(--shadow)}
     h1{font-size:22px;margin:0}
     .panel{background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.12);
       border-radius:18px;padding:16px;box-shadow:var(--shadow)}
@@ -139,6 +137,7 @@
 <script>
   // ---------- config & helpers ----------
   const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
+  const NET_TIMEOUT_MS = 180000; // 3 minutes
   const qs = s => document.querySelector(s);
   function toISO(mmddyyyy){ const [mm,dd,yyyy] = mmddyyyy.split('/'); return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
   function setTab(id){
@@ -147,6 +146,14 @@
     qs('#pane-am').style.display = id==='am' ? '' : 'none';
   }
   document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+
+  function withTimeout(promise, ms = NET_TIMEOUT_MS) {
+    let t;
+    const timer = new Promise((_, reject) => {
+      t = setTimeout(() => reject(new Error(`Network timeout after ${Math.round(ms/1000)}s`)), ms);
+    });
+    return Promise.race([promise.finally(() => clearTimeout(t)), timer]);
+  }
 
   // ---------- state ----------
   let lastTracks = [];
@@ -175,16 +182,10 @@
     qs('#ytOpen').style.display = 'none';
     qs('#list').innerHTML = '';
 
-    // fetch with timeout so it never hangs forever
-    const withTimeout = (p, ms=180000) => {
-      let t; const tm = new Promise((_,rej)=> t=setTimeout(()=>rej(new Error(`Network timeout after ${ms/1000}s`)), ms));
-      return Promise.race([p.finally(()=>clearTimeout(t)), tm]);
-    };
-
     try{
       const r = await withTimeout(fetch(`${API}/v1/simulate`, {
         method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)
-      }), 180000);
+      }));
       if(!r.ok){ const txt = await r.text().catch(()=> ''); throw new Error(`simulate ${r.status}: ${txt}`); }
       const data = await r.json();
       lastTracks = data.tracks || [];
@@ -218,10 +219,10 @@
   async function buildYouTube(tracks){
     qs('#ytStatus').textContent = 'Resolving YouTube IDs…';
     try{
-      const r = await fetch(`${API}/v1/yt/resolve`, {
+      const r = await withTimeout(fetch(`${API}/v1/yt/resolve`, {
         method:'POST', headers:{'content-type':'application/json'},
         body: JSON.stringify({ tracks: tracks.map(t=>({artist:t.artist,title:t.title})), limit:50 })
-      });
+      }));
       if(!r.ok){ throw new Error(`yt/resolve ${r.status}: ${await r.text()}`); }
       const data = await r.json();
       const ids = (data.ids || []).filter(Boolean);
@@ -255,35 +256,39 @@
     }
   }
 
-  // ---------- Apple Music: dual-mode auth (web vs native) ----------
+  // ---------- Apple Music: web vs native auth ----------
 
-  // Listener to catch Universal Link back in the native app
+  // Catch Universal Link when the native app is opened via /auth/callback?token=...
   (function(){
     const Cap = window.Capacitor || {};
     const App = Cap.Plugins && Cap.Plugins.App;
-    const Browser = Cap.Plugins && Cap.Plugins.Browser;
 
-    function parseQuery(u){ const o={}; const i=u.indexOf('?'); if(i<0) return o;
+    function parseQuery(u){
+      const o={}; const i=u.indexOf('?'); if(i<0) return o;
       for (const p of u.slice(i+1).split('&')) { const [k,v]=p.split('='); o[decodeURIComponent(k)] = decodeURIComponent(v||''); }
       return o;
     }
 
     if (App && App.addListener) {
-      App.addListener('appUrlOpen', async ({ url }) => {
-        try { if (Browser && Browser.close) await Browser.close(); } catch {}
-        const q = parseQuery(url);
-        if (q.token) {
-          localStorage.setItem('appleMusicUserToken', q.token);
-          const btn = document.getElementById('amCreate');
-          const msg = document.getElementById('amMsg');
-          if (btn) btn.style.display = 'inline-block';
-          if (msg) msg.textContent = 'Signed in. You can now create a playlist.';
+      App.addListener('appUrlOpen', ({ url }) => {
+        try {
+          if (!url || url.indexOf('/auth/callback') === -1) return;
+          const q = parseQuery(url);
+          if (q.token) {
+            localStorage.setItem('appleMusicUserToken', q.token);
+            const btn = document.getElementById('amCreate');
+            const msg = document.getElementById('amMsg');
+            if (btn) btn.style.display = 'inline-block';
+            if (msg) msg.textContent = 'Signed in. You can now create a playlist.';
+          }
+        } catch(e) {
+          console.error('[appUrlOpen] failed', e);
         }
       });
     }
   })();
 
-  // Robust web MusicKit loader (used only on website)
+  // Web MusicKit loader (used only on the website)
   let music = null;
   let musicInitPromise = null;
   function waitForMusicKitLoaded(timeoutMs = 10000){
@@ -298,7 +303,7 @@
     if (!musicInitPromise) {
       musicInitPromise = (async () => {
         await waitForMusicKitLoaded();
-        const r = await fetch(`${API}/v1/apple/dev-token`);
+        const r = await withTimeout(fetch(`${API}/v1/apple/dev-token`));
         if(!r.ok) throw new Error(`dev-token ${r.status}`);
         const { token: developerToken } = await r.json();
         if(!developerToken) throw new Error('No developer token');
@@ -317,12 +322,12 @@
 
   async function amSignIn(){
     const Cap = window.Capacitor || {};
-    const Browser = Cap.Plugins && Cap.Plugins.Browser;
+    const App = Cap.Plugins && Cap.Plugins.App;
     const platform = (Cap.getPlatform && Cap.getPlatform()) || 'web';
 
-    if (platform !== 'web' && Browser && Browser.open) {
+    if (platform !== 'web' && App && App.openUrl) {
       qs('#amMsg').textContent = 'Opening Apple sign-in…';
-      await Browser.open({ url: 'https://tapedecktimemachine.com/auth/native' });
+      await App.openUrl({ url: 'https://tapedecktimemachine.com/auth/native' }); // real Safari, supports Universal Links
       return;
     }
 
@@ -342,18 +347,17 @@
   }
 
   async function amCreatePlaylist(){
-    // Prefer MusicKit instance if present; else read stored token (native flow)
-    let userToken = (music && music.musicUserToken) || localStorage.getItem('appleMusicUserToken');
+    const userToken = (music && music.musicUserToken) || localStorage.getItem('appleMusicUserToken');
     if(!userToken){ qs('#amMsg').textContent='Please sign in first.'; return; }
     if(!lastTracks?.length){ qs('#amMsg').textContent='Generate a tracklist first.'; return; }
 
     qs('#amMsg').textContent='Creating playlist…';
     try{
       const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
-      const r = await fetch(`${API}/v1/apple/create-playlist`, {
+      const r = await withTimeout(fetch(`${API}/v1/apple/create-playlist`, {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ userToken, name, tracks: lastTracks.map(t=>({artist:t.artist,title:t.title})) })
-      });
+      }));
       const j = await r.json();
       if(!r.ok) throw new Error(j.detail || 'Create failed');
       qs('#amMsg').textContent = `Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks.`;
