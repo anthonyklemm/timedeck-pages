@@ -156,15 +156,6 @@
     return Promise.race([promise.finally(() => clearTimeout(t)), timer]);
   }
 
-  function isNative(){
-    const Cap = window.Capacitor || {};
-    try {
-      if (typeof Cap.isNativePlatform === 'function') return Cap.isNativePlatform();
-      if (typeof Cap.getPlatform === 'function') return Cap.getPlatform() !== 'web';
-    } catch {}
-    return !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.bridge);
-  }
-
   // ---------- state ----------
   let lastTracks = [];
 
@@ -329,8 +320,8 @@
     const Cap = window.Capacitor || {};
     const App = Cap.Plugins && Cap.Plugins.App;
 
-    // Always use real Safari when running as a native app
-    if (isNative() && App && typeof App.openUrl === 'function') {
+    // If the native App plugin exists, always use real Safari (best for Universal Links)
+    if (App && typeof App.openUrl === 'function') {
       console.log('[AM] native path → openUrl to /auth/native');
       qs('#amMsg').textContent = 'Opening Apple sign-in…';
       await App.openUrl({ url: 'https://tapedecktimemachine.com/auth/native' });
