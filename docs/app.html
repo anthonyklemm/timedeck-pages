@@ -260,139 +260,102 @@
     qs('#list').appendChild(frag);
   }
 
-  // ======= YouTube mini-player (Just-in-Time Initialization) =======
-  (function(){
-    const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api";
-    document.head.appendChild(tag);
-  })();
+  // --- Apple Music (robust load) ---
+  let music = null;
 
-  let YTapiReady = false, player = null;
-  
-  window.onYouTubeIframeAPIReady = () => {
-    YTapiReady = true;
-  };
+  async function loadMusicKit() {
+    // Already loaded?
+    if (window.MusicKit && window.MusicKit.getInstance) return;
 
-  async function buildYouTube(tracks){
-    qs('#ytStatus').textContent = 'Resolving YouTube IDs…';
-    try{
-      const r = await fetch(`${API}/v1/yt/resolve`, {
-        method:'POST', headers:{'content-type':'application/json'},
-        body: JSON.stringify({ tracks: tracks.map(t=>({artist:t.artist,title:t.title})), limit:50 })
+    // Inject the script if it's not there yet
+    if (!document.querySelector('script[data-mkit]')) {
+      const s = document.createElement('script');
+      s.src = 'https://js-cdn.music.apple.com/musickit/v3/musickit.js';
+      s.setAttribute('data-mkit', '1');
+      document.head.appendChild(s);
+    }
+
+    // Wait for MusicKit to finish loading
+    if (!window.MusicKit) {
+      await new Promise((resolve, reject) => {
+        const onLoad = () => resolve();
+        const onTimeout = () => reject(new Error('MusicKit load timed out'));
+        const t = setTimeout(onTimeout, 10000);
+        window.addEventListener('musickitloaded', () => { clearTimeout(t); onLoad(); }, { once: true });
       });
-      if(!r.ok){ throw new Error(`yt/resolve ${r.status}: ${await r.text()}`); }
-      const data = await r.json();
-      const ids = (data.ids || []).filter(Boolean);
-      
-      if(!ids.length){
-        qs('#ytStatus').textContent = 'No playable videos found (try another date/genre).';
-        return;
-      }
-
-      const openUrl = `https://www.youtube.com/watch_videos?video_ids=${ids.join(',')}`;
-      qs('#ytOpen').href = openUrl;
-      qs('#ytOpen').style.display = 'inline-block';
-      qs('#ytStatus').textContent = `${ids.length} videos found. Loading player...`;
-      
-      if (player) {
-        player.cuePlaylist(ids, 0, 0);
-        qs('#ytStatus').textContent = `${ids.length} videos queued.`;
-      } 
-      else if (YTapiReady) {
-        qs('#ytp').style.display = 'block';
-        player = new YT.Player('ytp', {
-          height: '360',
-          width: '100%',
-          playerVars: { playsinline: 1, rel: 0, modestbranding: 1 },
-          events: {
-            'onReady': (event) => {
-              event.target.cuePlaylist(ids, 0, 0);
-              qs('#ytStatus').textContent = `${ids.length} videos queued.`;
-            }
-          }
-        });
-      } else {
-        qs('#ytStatus').textContent = 'YouTube API is slow to load. Use "Open in YouTube" button.';
-      }
-    }catch(err){
-      qs('#ytErr').textContent = err.message;
-      qs('#ytStatus').textContent = '';
     }
   }
 
-  // --- Apple Music (matches your backend endpoints) ---
-  let music = null;
-
-  async function amSignIn(){
+  async function amSignIn() {
     qs('#amMsg').textContent = 'Contacting Apple…';
-    try{
-      // 1) Get developer token from your backend
-      const tok = await fetch(`${API}/v1/apple/dev-token`).then(r=>r.json());
-      if(!tok || !tok.token) throw new Error('No developer token');
+    try {
+      // 1) Load MusicKit JS fully
+      await loadMusicKit();
 
-      // 2) Ensure MusicKit is loaded
-      if(!window.MusicKit){
-        await new Promise((res,rej)=>{
-          const s=document.createElement('script');
-          s.src="https://js-cdn.music.apple.com/musickit/v3/musickit.js";
-          s.onload=res; s.onerror=()=>rej(new Error('MusicKit load failed'));
-          document.head.appendChild(s);
-        });
-      }
+      // 2) Get your developer token from the backend
+      const tokRes = await fetch(`${API}/v1/apple/dev-token`);
+      if (!tokRes.ok) throw new Error(`dev-token ${tokRes.status}`);
+      const { token: developerToken } = await tokRes.json();
+      if (!developerToken) throw new Error('No developer token');
 
-      // 3) Configure and authorize inside the app (no Safari redirect)
+      // 3) Configure and get the instance
       window.MusicKit.configure({
-        developerToken: tok.token,
-        app: { name: "TapeDeck Time Machine", build: "web" }
+        developerToken,
+        app: { name: 'TapeDeck Time Machine', build: 'web' },
       });
 
       music = window.MusicKit.getInstance();
-      const userToken = await music.authorize();   // <-- gets the Music User Token
-      if(!userToken) throw new Error('Authorization failed');
+      if (!music || typeof music.authorize !== 'function') {
+        throw new Error('MusicKit not initialized (no authorize method)');
+      }
 
-      // 4) Ready to create playlists
+      // 4) Authorize – returns the Music User Token
+      const userToken = await music.authorize();
+      if (!userToken) throw new Error('Authorization failed');
+
       qs('#amMsg').textContent = 'Signed in. You can now create a playlist.';
       qs('#amCreate').style.display = 'inline-block';
-    }catch(e){
-      music = null;
+    } catch (e) {
       console.error(e);
+      music = null;
       qs('#amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
     }
   }
 
-  async function amCreatePlaylist(){
-    if(!music || !music.isAuthorized || !music.musicUserToken){
-      qs('#amMsg').textContent='Please sign in first.'; return;
+  async function amCreatePlaylist() {
+    if (!music || !music.isAuthorized || !music.musicUserToken) {
+      qs('#amMsg').textContent = 'Please sign in first.'; return;
     }
-    if(!lastTracks?.length){
-      qs('#amMsg').textContent='Generate a tracklist first.'; return;
+    if (!lastTracks?.length) {
+      qs('#amMsg').textContent = 'Generate a tracklist first.'; return;
     }
 
-    qs('#amMsg').textContent='Creating playlist…';
-    try{
+    qs('#amMsg').textContent = 'Creating playlist…';
+    try {
       const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
       const r = await fetch(`${API}/v1/apple/create-playlist`, {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userToken: music.musicUserToken,   // <-- what your backend expects
+          userToken: music.musicUserToken,
           name,
-          tracks: lastTracks.map(t => ({ artist:t.artist, title:t.title }))
-        })
+          tracks: lastTracks.map(t => ({ artist: t.artist, title: t.title })),
+        }),
       });
       const j = await r.json();
-      if(!r.ok) throw new Error(j.detail || 'Create failed');
-
-      qs('#amMsg').textContent = `Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks. Check Apple Music.`;
-    }catch(e){
+      if (!r.ok) throw new Error(j.detail || 'Create failed');
+      qs('#amMsg').textContent = `Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks.`;
+    } catch (e) {
       console.error(e);
       qs('#amMsg').textContent = 'Create failed: ' + (e.message || e);
     }
   }
 
-  // events
-  qs('#go').onclick = simulate;
+  // Wire buttons (keep your existing IDs)
   qs('#amSign').onclick = amSignIn;
   qs('#amCreate').onclick = amCreatePlaylist;
+  // events
+  qs('#go').onclick = simulate;
 
   // init
   setTab('yt');
