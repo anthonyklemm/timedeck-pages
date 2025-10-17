@@ -139,6 +139,7 @@
   const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
   const NET_TIMEOUT_MS = 180000; // 3 minutes
   const qs = s => document.querySelector(s);
+
   function toISO(mmddyyyy){ const [mm,dd,yyyy] = mmddyyyy.split('/'); return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
   function setTab(id){
     document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
@@ -155,10 +156,19 @@
     return Promise.race([promise.finally(() => clearTimeout(t)), timer]);
   }
 
+  function isNative(){
+    const Cap = window.Capacitor || {};
+    try {
+      if (typeof Cap.isNativePlatform === 'function') return Cap.isNativePlatform();
+      if (typeof Cap.getPlatform === 'function') return Cap.getPlatform() !== 'web';
+    } catch {}
+    return !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.bridge);
+  }
+
   // ---------- state ----------
   let lastTracks = [];
 
-  // ---------- YouTube globals (declare BEFORE simulate) ----------
+  // ---------- YouTube globals ----------
   let player = null;
   let YTapiReady = false;
 
@@ -258,7 +268,7 @@
 
   // ---------- Apple Music: web vs native auth ----------
 
-  // Catch Universal Link when the native app is opened via /auth/callback?token=...
+  // Catch Universal Link back in the native app
   (function(){
     const Cap = window.Capacitor || {};
     const App = Cap.Plugins && Cap.Plugins.App;
@@ -271,24 +281,19 @@
 
     if (App && App.addListener) {
       App.addListener('appUrlOpen', ({ url }) => {
-        try {
-          if (!url || url.indexOf('/auth/callback') === -1) return;
-          const q = parseQuery(url);
-          if (q.token) {
-            localStorage.setItem('appleMusicUserToken', q.token);
-            const btn = document.getElementById('amCreate');
-            const msg = document.getElementById('amMsg');
-            if (btn) btn.style.display = 'inline-block';
-            if (msg) msg.textContent = 'Signed in. You can now create a playlist.';
-          }
-        } catch(e) {
-          console.error('[appUrlOpen] failed', e);
+        console.log('[appUrlOpen]', url);
+        if (!url || url.indexOf('/auth/callback') === -1) return;
+        const q = parseQuery(url);
+        if (q.token) {
+          localStorage.setItem('appleMusicUserToken', q.token);
+          qs('#amCreate').style.display = 'inline-block';
+          qs('#amMsg').textContent = 'Signed in. You can now create a playlist.';
         }
       });
     }
   })();
 
-  // Web MusicKit loader (used only on the website)
+  // Web MusicKit loader (website only)
   let music = null;
   let musicInitPromise = null;
   function waitForMusicKitLoaded(timeoutMs = 10000){
@@ -323,16 +328,18 @@
   async function amSignIn(){
     const Cap = window.Capacitor || {};
     const App = Cap.Plugins && Cap.Plugins.App;
-    const platform = (Cap.getPlatform && Cap.getPlatform()) || 'web';
 
-    if (platform !== 'web' && App && App.openUrl) {
+    // Always use real Safari when running as a native app
+    if (isNative() && App && typeof App.openUrl === 'function') {
+      console.log('[AM] native path → openUrl to /auth/native');
       qs('#amMsg').textContent = 'Opening Apple sign-in…';
-      await App.openUrl({ url: 'https://tapedecktimemachine.com/auth/native' }); // real Safari, supports Universal Links
+      await App.openUrl({ url: 'https://tapedecktimemachine.com/auth/native' });
       return;
     }
 
-    // Website: use MusicKit JS directly
+    // Website: in-page MusicKit
     try{
+      console.log('[AM] web path → MusicKit.authorize()');
       qs('#amMsg').textContent = 'Contacting Apple…';
       const m = await getWebMusicInstance();
       const userToken = await m.authorize();
