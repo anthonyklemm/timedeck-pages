@@ -137,7 +137,7 @@
 </div>
 
 <script>
-  // ---------- helpers ----------
+  // ---------- config & helpers ----------
   const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
   const qs = s => document.querySelector(s);
   function toISO(mmddyyyy){ const [mm,dd,yyyy] = mmddyyyy.split('/'); return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
@@ -148,8 +148,14 @@
   }
   document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 
-  // ---------- simulate + list ----------
+  // ---------- state ----------
   let lastTracks = [];
+
+  // ---------- YouTube globals (declare BEFORE simulate) ----------
+  let player = null;
+  let YTapiReady = false;
+
+  // ---------- simulate + list ----------
   async function simulate(){
     const body = {
       date: toISO(qs('#date').value.trim()),
@@ -176,7 +182,6 @@
     };
 
     try{
-      console.log('[simulate] POST', `${API}/v1/simulate`, body);
       const r = await withTimeout(fetch(`${API}/v1/simulate`, {
         method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)
       }), 20000);
@@ -207,9 +212,11 @@
   }
 
   // ---------- YouTube mini-player ----------
-  (function(){ const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api"; document.head.appendChild(tag); })();
-  let YTapiReady=false, player=null;
+  (function(){
+    const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api"; document.head.appendChild(tag);
+  })();
   window.onYouTubeIframeAPIReady = () => { YTapiReady = true; };
+
   async function buildYouTube(tracks){
     qs('#ytStatus').textContent = 'Resolving YouTube IDs…';
     try{
@@ -255,18 +262,19 @@
   let musicReadyPromise = null;
 
   function waitForMusicKitLoaded(timeoutMs = 10000){
-    if (window.MusicKit && window.MusicKit.getInstance) return Promise.resolve();
+    if (window.MusicKit && typeof window.MusicKit.getInstance === 'function') return Promise.resolve();
     return new Promise((resolve, reject) => {
       const t = setTimeout(() => reject(new Error('MusicKit load timed out')), timeoutMs);
       window.addEventListener('musickitloaded', () => { clearTimeout(t); resolve(); }, { once: true });
     });
   }
 
-  function getMusicInstance() {
-    if (music) return Promise.resolve(music);
+  async function getMusicInstance() {
+    if (music) return music;
     if (!musicReadyPromise) {
       musicReadyPromise = (async () => {
         await waitForMusicKitLoaded();
+
         const res = await fetch(`${API}/v1/apple/dev-token`);
         if (!res.ok) throw new Error(`dev-token ${res.status}`);
         const { token: developerToken } = await res.json();
@@ -276,8 +284,14 @@
           developerToken,
           app: { name: 'TapeDeck Time Machine', build: 'web' },
         });
-        const inst = window.MusicKit.getInstance();
-        if (!inst || typeof inst.authorize !== 'function') { throw new Error('MusicKit not initialized (no authorize)'); }
+
+        // Grab instance; retry briefly until hydrated
+        let inst = window.MusicKit.getInstance();
+        for (let i = 0; i < 10 && (!inst || typeof inst.authorize !== 'function'); i++) {
+          await new Promise(r => setTimeout(r, 100));
+          inst = window.MusicKit.getInstance();
+        }
+        if (!inst || typeof inst.authorize !== 'function') throw new Error('MusicKit not initialized (no authorize)');
         music = inst; return music;
       })().catch(err => { musicReadyPromise = null; throw err; });
     }
@@ -288,7 +302,7 @@
     qs('#amMsg').textContent = 'Contacting Apple…';
     try {
       const m = await getMusicInstance();
-      const userToken = await m.authorize();
+      const userToken = await m.authorize(); // returns Music User Token
       if (!userToken) throw new Error('Authorization failed');
       qs('#amMsg').textContent = 'Signed in. You can now create a playlist.';
       qs('#amCreate').style.display = 'inline-block';
