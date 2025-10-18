@@ -2,9 +2,6 @@ version: 1.0
 workflows:
   default:
     name: Default
-    environment:
-      xcode: latest
-      os: latest
     actions:
       - postClone:
           name: Prepare deps
@@ -12,7 +9,7 @@ workflows:
             set -euxo pipefail
             echo ">>> POST-CLONE: $(git rev-parse --short HEAD)"
             npm ci
-            # Ensure Capacitor headers exist (workaround for missing files in npm tarballs)
+            # Ensure Capacitor headers exist (some npm tarballs omit them)
             if [ ! -d "node_modules/@capacitor/ios/Capacitor" ] || [ ! -d "node_modules/@capacitor/ios/CapacitorCordova" ]; then
               git clone --depth 1 --branch 7.4.3 https://github.com/ionic-team/capacitor tmp_cap_ios
               rsync -a tmp_cap_ios/ios/Capacitor node_modules/@capacitor/ios/
