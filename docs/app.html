@@ -319,16 +319,17 @@
   // ---------- Native-first sign-in (Browser.open) ----------
   async function amSignIn(){
     const Cap = window.Capacitor || {};
-    const Plugins = (Cap && Cap.Plugins) || {};
-    const Browser = Plugins.Browser;
+  	const Plugins = (Cap && Cap.Plugins) || {};
+  	const Browser = Plugins.Browser;
 
-    if (Browser && typeof Browser.open === 'function') {
-      const url = 'https://tapedecktimemachine.com/auth/native?native=1';
+  	if (Browser && typeof Browser.open === 'function') {
+    // use WWW to avoid the app’s Universal Link capture
+      const url = 'https://www.tapedecktimemachine.com/auth/native?native=1';
       console.log('[AM] native (SFSafariViewController) →', url);
-      qs('#amMsg').textContent = 'Opening Apple sign-in…';
+      document.getElementById('amMsg').textContent = 'Opening Apple sign-in…';
       await Browser.open({ url, presentationStyle: 'fullscreen' });
       return;
-    }
+    }  
 
     // Website fallback
     try{
