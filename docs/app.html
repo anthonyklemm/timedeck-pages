@@ -324,7 +324,7 @@
 
   	if (Browser && typeof Browser.open === 'function') {
     // use WWW to avoid the app’s Universal Link capture
-      const url = 'https://anthonyklemm.github.io/timedeck-pages/auth/native?native=1&v=3';
+      const url = 'https://anthonyklemm.github.io/timedeck-pages/auth/native?native=1&v=4';
       console.log('[AM] native (SFSafariViewController) →', url);
       document.getElementById('amMsg').textContent = 'Opening Apple sign-in…';
       await Browser.open({ url, presentationStyle: 'fullscreen' });
