@@ -11,7 +11,10 @@ DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorApp (from `../../node_modules/@capacitor/app`)"
   - "CapacitorBrowser (from `../../node_modules/@capacitor/browser`)"
-  - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
+
+SPEC REPOS:
+  trunk:
+    - CapacitorCordova
 
 EXTERNAL SOURCES:
   Capacitor:
@@ -20,15 +23,13 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@capacitor/app"
   CapacitorBrowser:
     :path: "../../node_modules/@capacitor/browser"
-  CapacitorCordova:
-    :path: "../../node_modules/@capacitor/ios"
 
 SPEC CHECKSUMS:
   Capacitor: 9d9e481b79ffaeacaf7a85d6a11adec32bd33b59
   CapacitorApp: 26587c2ce485d88ddb39adb21cac64f8e481afe3
   CapacitorBrowser: 22541e48442de44dc629c214388290d6eecc6ae9
-  CapacitorCordova: 5e58d04631bc5094894ac106e2bf1da18a9e6151
+  CapacitorCordova: 98d23e72010ecc9ecb31f51c01f8c099428ba0b5
 
-PODFILE CHECKSUM: 4aff2922841799f9ef78cd5d462744c7648af68b
+PODFILE CHECKSUM: 70b052e75e17f7ae1f3abba0341cb235423d4800
 
 COCOAPODS: 1.16.2
