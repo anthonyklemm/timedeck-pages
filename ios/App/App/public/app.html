@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>TapeDeck Time Machine</title>
 
-  <!-- MusicKit for web mode -->
+  <!-- MusicKit for web fallback -->
   <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
 
   <!-- Meta / Icons -->
@@ -257,17 +257,17 @@
     }
   }
 
-  // ---------- Apple Music: web vs native auth ----------
-
-  // Catch Universal Link back in the native app
+  // ---------- Universal Link / custom-scheme listener (native) ----------
   (function(){
     const Cap = window.Capacitor || {};
     const App = Cap.Plugins && Cap.Plugins.App;
 
     function parseQuery(u){
-      const o={}; const i=u.indexOf('?'); if(i<0) return o;
-      for (const p of u.slice(i+1).split('&')) { const [k,v]=p.split('='); o[decodeURIComponent(k)] = decodeURIComponent(v||''); }
-      return o;
+      // works for both https://.../auth/callback?... and com.tapedecktimemachine.app://auth/callback?...
+      const i = u.indexOf('?'); if (i < 0) return {};
+      const q = u.slice(i+1).split('&'); const out = {};
+      for (const p of q) { const [k,v] = p.split('='); out[decodeURIComponent(k)] = decodeURIComponent(v||''); }
+      return out;
     }
 
     if (App && App.addListener) {
@@ -284,7 +284,7 @@
     }
   })();
 
-  // Web MusicKit loader (website only)
+  // ---------- Web MusicKit loader (website only) ----------
   let music = null;
   let musicInitPromise = null;
   function waitForMusicKitLoaded(timeoutMs = 10000){
@@ -316,19 +316,22 @@
     return musicInitPromise;
   }
 
+  // ---------- Native-first sign-in (Browser.open) ----------
   async function amSignIn(){
     const Cap = window.Capacitor || {};
-    const App = Cap.Plugins && Cap.Plugins.App;
+  	const Plugins = (Cap && Cap.Plugins) || {};
+  	const Browser = Plugins.Browser;
 
-    // If the native App plugin exists, always use real Safari (best for Universal Links)
-    if (App && typeof App.openUrl === 'function') {
-      console.log('[AM] native path → openUrl to /auth/native');
-      qs('#amMsg').textContent = 'Opening Apple sign-in…';
-      await App.openUrl({ url: 'https://tapedecktimemachine.com/auth/native' });
+  	if (Browser && typeof Browser.open === 'function') {
+    // use WWW to avoid the app’s Universal Link capture
+      const url = 'https://anthonyklemm.github.io/timedeck-pages/auth/native?native=1&v=4';
+      console.log('[AM] native (SFSafariViewController) →', url);
+      document.getElementById('amMsg').textContent = 'Opening Apple sign-in…';
+      await Browser.open({ url, presentationStyle: 'fullscreen' });
       return;
-    }
+    }  
 
-    // Website: in-page MusicKit
+    // Website fallback
     try{
       console.log('[AM] web path → MusicKit.authorize()');
       qs('#amMsg').textContent = 'Contacting Apple…';
@@ -344,6 +347,7 @@
     }
   }
 
+  // ---------- Create playlist (shared) ----------
   async function amCreatePlaylist(){
     const userToken = (music && music.musicUserToken) || localStorage.getItem('appleMusicUserToken');
     if(!userToken){ qs('#amMsg').textContent='Please sign in first.'; return; }
@@ -367,8 +371,18 @@
 
   // ---------- wire up ----------
   qs('#go').onclick = simulate;
-  qs('#amSign').onclick = amSignIn;
-  qs('#amCreate').onclick = amCreatePlaylist;
+
+  // bind sign-in with non-passive listener (we call preventDefault)
+  (function(){
+    const btn = document.getElementById('amSign');
+    if (btn) {
+      btn.onclick = null;
+      btn.addEventListener('click', (e) => { e.preventDefault(); amSignIn(); }, { passive: false });
+      console.log('[AM] Button bound to native Browser.open flow');
+    }
+  })();
+
+  qs('#amCreate').onclick = () => amCreatePlaylist();
   setTab('yt');
 </script>
 

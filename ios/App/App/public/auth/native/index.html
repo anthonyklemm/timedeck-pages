@@ -1,0 +1,58 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>TapeDeck – Apple Music sign-in…</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
+<style>
+  body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:24px;color:#e5e7eb;background:#0a0f17}
+  .box{max-width:640px;margin:0 auto;background:#111827;border:1px solid #263040;border-radius:14px;padding:16px}
+  .muted{color:#94a3b8}.err{color:#fda4af;margin-top:8px;white-space:pre-wrap}
+</style>
+
+<div class="box">
+  <h2>Connecting to Apple Music…</h2>
+  <div id="msg" class="muted">Preparing sign-in…</div>
+  <div id="err" class="err"></div>
+</div>
+
+<script>
+(async () => {
+  const qs = new URLSearchParams(location.search);
+  const API = qs.get('api') || 'https://timedeck-api.onrender.com';
+  const say = m => (document.getElementById('msg').textContent = m);
+  const fail = e => (document.getElementById('err').textContent = e?.message || String(e||'Unknown error'));
+
+  try {
+    say('Loading MusicKit…');
+    await new Promise((res, rej) => {
+      if (window.MusicKit && MusicKit.getInstance) return res();
+      const t = setTimeout(()=>rej(new Error('MusicKit load timed out')),15000);
+      addEventListener('musickitloaded', ()=>{clearTimeout(t);res();},{once:true});
+    });
+
+    say('Requesting developer token…');
+    const r = await fetch(`${API}/v1/apple/dev-token`);
+    if(!r.ok) throw new Error(`dev-token ${r.status}`);
+    const { token: developerToken } = await r.json();
+    if(!developerToken) throw new Error('No developer token');
+
+    MusicKit.configure({ developerToken, app: { name:'TapeDeck Time Machine', build:'native' } });
+    let music = MusicKit.getInstance();
+    for (let i=0;i<10 && (!music || typeof music.authorize!=='function');i++) {
+      await new Promise(res=>setTimeout(res,100)); music = MusicKit.getInstance();
+    }
+    if(!music || typeof music.authorize!=='function') throw new Error('MusicKit not initialized (no authorize)');
+
+    say('Opening Apple sign-in…');
+    const token = await music.authorize();
+    if(!token) throw new Error('Authorization failed');
+
+    say('Returning to app…');
+    const cb = new URL('https://tapedecktimemachine.com/auth/callback/');
+    cb.searchParams.set('token', token);
+    cb.searchParams.set('native', '1');
+    if (qs.get('api')) cb.searchParams.set('api', qs.get('api'));
+    location.replace(cb.toString());
+  } catch (e) { fail(e); }
+})();
+</script>

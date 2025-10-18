@@ -1,10 +1,24 @@
 <!doctype html>
-<html><head>
-  <meta charset="utf-8" />
-  <title>Returning to TapeDeck…</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>body{font:16px -apple-system,system-ui;display:grid;place-items:center;height:100dvh;margin:0;background:#0a0f17;color:#e5e7eb}</style>
-</head>
-<body>
-  <div>Finishing sign-in…</div>
-</body></html>
+<meta charset="utf-8">
+<title>TapeDeck – Finishing sign-in…</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:24px;color:#e5e7eb;background:#0a0f17}
+  .box{max-width:640px;margin:0 auto;background:#111827;border:1px solid #263040;border-radius:14px;padding:16px}
+  .muted{color:#94a3b8}
+</style>
+
+<div class="box">
+  <h2>Finishing sign-in…</h2>
+  <div class="muted">Handing off to the TapeDeck app.</div>
+</div>
+
+<script>
+(() => {
+  const qs = location.search || "";
+  const p = new URLSearchParams(qs);
+  if (p.get('native') === '1') {
+    location.replace('com.tapedecktimemachine.app://auth/callback' + qs);
+  }
+})();
+</script>
