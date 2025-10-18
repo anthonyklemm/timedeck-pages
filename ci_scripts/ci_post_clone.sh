@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 set -x
+echo ">>> CI POST-CLONE RAN (commit: $(git rev-parse --short HEAD))"
 
 # 1) Install Node deps
 npm ci
