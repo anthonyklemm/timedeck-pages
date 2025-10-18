@@ -1,20 +1,28 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>TapeDeck – Finishing Sign-in…</title>
-<style>body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:24px;}</style>
-<p>Finishing sign-in…</p>
+<title>TapeDeck – Finishing sign-in…</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:24px;color:#e5e7eb;background:#0a0f17}
+  .box{max-width:640px;margin:0 auto;background:#111827;border:1px solid #263040;border-radius:14px;padding:16px}
+  .muted{color:#94a3b8}
+</style>
+
+<div class="box">
+  <h2>Finishing sign-in…</h2>
+  <div class="muted">Handing off to the TapeDeck app.</div>
+</div>
+
 <script>
-  // Copy the full query (?token=... etc)
-  var qs = location.search || "";
-  // If the native flag is present, bounce back into the app via custom scheme:
-  if (qs.includes('native=1')) {
-    // Try to open the native app with the same querystring (so token comes along)
-    var deep = 'com.tapedecktimemachine.app://auth/callback' + qs;
-    // Use replace() so Safari view is closed after handoff
+(function(){
+  const qs = location.search || "";
+  const params = new URLSearchParams(qs);
+  const isNative = params.get('native') === '1';
+  // If native, bounce via custom URL scheme so the app gets appUrlOpen with the token
+  if (isNative) {
+    const deep = 'com.tapedecktimemachine.app://auth/callback' + qs;
     location.replace(deep);
-  } else {
-    // Web case: show a small link back to the app page, or just close the window if it was a popup
-    document.body.insertAdjacentHTML('beforeend',
-      '<p>You can close this tab and return to TapeDeck.</p>');
   }
+  // Otherwise (pure web) you could store the token or close the window.
+})();
 </script>
