@@ -1,0 +1,28 @@
+version: 1.0
+workflows:
+  default:
+    name: Default
+    environment:
+      xcode: latest
+      os: latest
+    actions:
+      - postClone:
+          name: Prepare deps
+          script: |
+            set -euxo pipefail
+            echo ">>> POST-CLONE: $(git rev-parse --short HEAD)"
+            npm ci
+            # Ensure Capacitor headers exist (workaround for missing files in npm tarballs)
+            if [ ! -d "node_modules/@capacitor/ios/Capacitor" ] || [ ! -d "node_modules/@capacitor/ios/CapacitorCordova" ]; then
+              git clone --depth 1 --branch 7.4.3 https://github.com/ionic-team/capacitor tmp_cap_ios
+              rsync -a tmp_cap_ios/ios/Capacitor node_modules/@capacitor/ios/
+              rsync -a tmp_cap_ios/ios/CapacitorCordova node_modules/@capacitor/ios/
+              rm -rf tmp_cap_ios
+            fi
+            npx cap sync ios
+            (cd ios/App && pod install)
+      - build:
+          name: Archive - iOS
+          project: ios/App/App.xcworkspace
+          scheme: App
+          destination: "generic/platform=iOS"
