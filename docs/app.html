@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>TapeDeck Time Machine</title>
 
-  <!-- MusicKit for web mode -->
+  <!-- MusicKit for web fallback -->
   <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
 
   <!-- Meta / Icons -->
@@ -257,15 +257,17 @@
     }
   }
 
-  // ---------- Universal Link listener (native) ----------
+  // ---------- Universal Link / custom-scheme listener (native) ----------
   (function(){
     const Cap = window.Capacitor || {};
     const App = Cap.Plugins && Cap.Plugins.App;
 
     function parseQuery(u){
-      const o={}; const i=u.indexOf('?'); if(i<0) return o;
-      for (const p of u.slice(i+1).split('&')) { const [k,v]=p.split('='); o[decodeURIComponent(k)] = decodeURIComponent(v||''); }
-      return o;
+      // works for both https://.../auth/callback?... and com.tapedecktimemachine.app://auth/callback?...
+      const i = u.indexOf('?'); if (i < 0) return {};
+      const q = u.slice(i+1).split('&'); const out = {};
+      for (const p of q) { const [k,v] = p.split('='); out[decodeURIComponent(k)] = decodeURIComponent(v||''); }
+      return out;
     }
 
     if (App && App.addListener) {
@@ -314,67 +316,35 @@
     return musicInitPromise;
   }
 
-  // ---------- Native-first sign-in + button rebind ----------
-  function amSignInNativeFirst(){
+  // ---------- Native-first sign-in (Browser.open) ----------
+  async function amSignIn(){
     const Cap = window.Capacitor || {};
     const Plugins = (Cap && Cap.Plugins) || {};
-    const App = Plugins.App;
+    const Browser = Plugins.Browser;
 
-    console.log('[AM] CLICKED: native-first handler');
-    console.log('[AM] Plugins seen:', Object.keys(Plugins||{}));
-    console.log('[AM] App.openUrl type:', App && typeof App.openUrl);
-
-    if (App && typeof App.openUrl === 'function') {
-      try {
-        const msg = document.getElementById('amMsg');
-        if (msg) msg.textContent = 'Opening Apple sign-in…';
-        console.log('[AM] calling App.openUrl → https://tapedecktimemachine.com/auth/native');
-        App.openUrl({ url: 'https://tapedecktimemachine.com/auth/native' });
-        return false;
-      } catch (e) {
-        console.warn('[AM] App.openUrl threw; fallback to web MusicKit', e);
-      }
-    } else {
-      console.warn('[AM] App.openUrl not available; fallback to web MusicKit');
+    if (Browser && typeof Browser.open === 'function') {
+      const url = 'https://tapedecktimemachine.com/auth/native?native=1';
+      console.log('[AM] native (SFSafariViewController) →', url);
+      qs('#amMsg').textContent = 'Opening Apple sign-in…';
+      await Browser.open({ url, presentationStyle: 'fullscreen' });
+      return;
     }
 
-    // Web fallback
-    (async () => {
-      try {
-        console.log('[AM] web fallback → MusicKit.authorize()');
-        document.getElementById('amMsg').textContent = 'Contacting Apple…';
-        const m = await getWebMusicInstance();
-        const userToken = await m.authorize();
-        if(!userToken) throw new Error('Authorization failed');
-        document.getElementById('amMsg').textContent = 'Signed in. You can now create a playlist.';
-        document.getElementById('amCreate').style.display = 'inline-block';
-        localStorage.setItem('appleMusicUserToken', userToken);
-      } catch(e) {
-        console.error(e);
-        document.getElementById('amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
-      }
-    })();
-
-    return false;
+    // Website fallback
+    try{
+      console.log('[AM] web path → MusicKit.authorize()');
+      qs('#amMsg').textContent = 'Contacting Apple…';
+      const m = await getWebMusicInstance();
+      const userToken = await m.authorize();
+      if(!userToken) throw new Error('Authorization failed');
+      qs('#amMsg').textContent = 'Signed in. You can now create a playlist.';
+      qs('#amCreate').style.display = 'inline-block';
+      localStorage.setItem('appleMusicUserToken', userToken);
+    }catch(e){
+      console.error(e);
+      qs('#amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
+    }
   }
-
-  // ---------- wire up ----------
-  qs('#go').onclick = simulate;
-
-  // rebind sign-in button to native-first handler
-  (function(){
-    const btn = document.getElementById('amSign');
-    if (btn) {
-      btn.onclick = null;
-      btn.addEventListener('click', (e) => { e.preventDefault(); amSignInNativeFirst(); }, { passive: true });
-      console.log('[AM] Button bound to amSignInNativeFirst');
-    } else {
-      console.warn('[AM] amSign button not found at bind time');
-    }
-  })();
-
-  qs('#amCreate').onclick = () => amCreatePlaylist();
-  setTab('yt');
 
   // ---------- Create playlist (shared) ----------
   async function amCreatePlaylist(){
@@ -397,6 +367,22 @@
       qs('#amMsg').textContent = 'Create failed: ' + (e.message || e);
     }
   }
+
+  // ---------- wire up ----------
+  qs('#go').onclick = simulate;
+
+  // bind sign-in with non-passive listener (we call preventDefault)
+  (function(){
+    const btn = document.getElementById('amSign');
+    if (btn) {
+      btn.onclick = null;
+      btn.addEventListener('click', (e) => { e.preventDefault(); amSignIn(); }, { passive: false });
+      console.log('[AM] Button bound to native Browser.open flow');
+    }
+  })();
+
+  qs('#amCreate').onclick = () => amCreatePlaylist();
+  setTab('yt');
 </script>
 
 </body>
