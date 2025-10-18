@@ -1,28 +1,30 @@
-import { CapacitorConfig } from '@capacitor/cli';
+// capacitor.config.ts
+import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.tapedecktimemachine.app',
   appName: 'TapeDeck Time Machine',
-  webDir: 'docs', // This should point to your web assets folder
+  webDir: 'docs',
   bundledWebRuntime: false,
-  // **NEW**: This server configuration is crucial for handling authentication redirects.
+
   server: {
-    // This makes the app's internal server respond to your domain name, which is required for secure callbacks.
+    // Force the app to load your site over HTTPS (not the bundled files)
+    url: 'https://tapedecktimemachine.com',
+    cleartext: false,
+
+    // Keep these for Android parity / future
     hostname: 'tapedecktimemachine.com',
     iosScheme: 'https',
     androidScheme: 'https',
-    // This is a security feature that whitelists the external domains your app is allowed to navigate to.
     allowNavigation: [
-      // Allow your API backend
       'timedeck-api.onrender.com',
-      // Allow Apple for authentication
-      'apple.com',
-      '*.apple.com',
-      // Allow YouTube for the embedded player
-      '*.youtube.com',
-      '*.googlevideo.com' // YouTube media content is often served from here
-    ]
-  }
+      'apple.com','*.apple.com','idmsa.apple.com','authorize.music.apple.com','*.music.apple.com',
+      '*.youtube.com','*.youtube-nocookie.com','*.googlevideo.com','*.google.com','*.gstatic.com','*.ytimg.com','*.doubleclick.net'
+    ],
+  },
+
+  ios: { contentInset: 'always' },
+  plugins: { SplashScreen: { launchShowDuration: 0 } },
 };
 
 export default config;
