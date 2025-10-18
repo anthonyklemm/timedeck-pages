@@ -14,15 +14,11 @@
 </div>
 
 <script>
-(function(){
+(() => {
   const qs = location.search || "";
-  const params = new URLSearchParams(qs);
-  const isNative = params.get('native') === '1';
-  // If native, bounce via custom URL scheme so the app gets appUrlOpen with the token
-  if (isNative) {
-    const deep = 'com.tapedecktimemachine.app://auth/callback' + qs;
-    location.replace(deep);
+  const p = new URLSearchParams(qs);
+  if (p.get('native') === '1') {
+    location.replace('com.tapedecktimemachine.app://auth/callback' + qs);
   }
-  // Otherwise (pure web) you could store the token or close the window.
 })();
 </script>
