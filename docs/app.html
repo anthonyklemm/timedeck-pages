@@ -158,8 +158,6 @@
 
   // ---------- state ----------
   let lastTracks = [];
-  console.log('[Cap Plugins]', Object.keys((window.Capacitor && window.Capacitor.Plugins) || {}));
-
 
   // ---------- YouTube globals ----------
   let player = null;
@@ -259,9 +257,7 @@
     }
   }
 
-  // ---------- Apple Music: web vs native auth ----------
-
-  // Catch Universal Link back in the native app
+  // ---------- Universal Link listener (native) ----------
   (function(){
     const Cap = window.Capacitor || {};
     const App = Cap.Plugins && Cap.Plugins.App;
@@ -286,7 +282,7 @@
     }
   })();
 
-  // Web MusicKit loader (website only)
+  // ---------- Web MusicKit loader (website only) ----------
   let music = null;
   let musicInitPromise = null;
   function waitForMusicKitLoaded(timeoutMs = 10000){
@@ -318,47 +314,69 @@
     return musicInitPromise;
   }
 
-	async function amSignIn(){
-	  const Cap = window.Capacitor || {};
-	  const Plugins = (Cap && Cap.Plugins) || {};
-	  const App = Plugins.App;
+  // ---------- Native-first sign-in + button rebind ----------
+  function amSignInNativeFirst(){
+    const Cap = window.Capacitor || {};
+    const Plugins = (Cap && Cap.Plugins) || {};
+    const App = Plugins.App;
 
-	  // 🔎 Log what we see at runtime
-	  console.log('[AM] Cap present:', !!Cap, 'Plugins keys:', Object.keys(Plugins||{}));
-	  console.log('[AM] typeof App:', typeof App, 'typeof App.openUrl:', App && typeof App.openUrl);
+    console.log('[AM] CLICKED: native-first handler');
+    console.log('[AM] Plugins seen:', Object.keys(Plugins||{}));
+    console.log('[AM] App.openUrl type:', App && typeof App.openUrl);
 
-	  // 🚀 Native-first: try to open real Safari via App.openUrl
-	  if (App && typeof App.openUrl === 'function') {
-		try {
-		  document.getElementById('amMsg').textContent = 'Opening Apple sign-in…';
-		  console.log('[AM] calling App.openUrl → https://tapedecktimemachine.com/auth/native');
-		  await App.openUrl({ url: 'https://tapedecktimemachine.com/auth/native' });
-		  console.log('[AM] App.openUrl returned (Safari should now be in front)');
-		  return; // if it worked, we’re done—Safari will bounce back via /auth/callback
-		} catch (e) {
-		  console.warn('[AM] App.openUrl threw, falling back to web flow:', e);
-		  // fallthrough to web MusicKit
-		}
-	  } else {
-		console.warn('[AM] App.openUrl not available, falling back to web MusicKit');
-	  }
+    if (App && typeof App.openUrl === 'function') {
+      try {
+        const msg = document.getElementById('amMsg');
+        if (msg) msg.textContent = 'Opening Apple sign-in…';
+        console.log('[AM] calling App.openUrl → https://tapedecktimemachine.com/auth/native');
+        App.openUrl({ url: 'https://tapedecktimemachine.com/auth/native' });
+        return false;
+      } catch (e) {
+        console.warn('[AM] App.openUrl threw; fallback to web MusicKit', e);
+      }
+    } else {
+      console.warn('[AM] App.openUrl not available; fallback to web MusicKit');
+    }
 
-	  // 🌐 Website fallback: in-page MusicKit
-	  try{
-		console.log('[AM] web path → MusicKit.authorize()');
-		document.getElementById('amMsg').textContent = 'Contacting Apple…';
-		const m = await getWebMusicInstance();
-		const userToken = await m.authorize();
-		if(!userToken) throw new Error('Authorization failed');
-		document.getElementById('amMsg').textContent = 'Signed in. You can now create a playlist.';
-		document.getElementById('amCreate').style.display = 'inline-block';
-		localStorage.setItem('appleMusicUserToken', userToken);
-	  }catch(e){
-		console.error(e);
-		document.getElementById('amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
-	  }
-	}
+    // Web fallback
+    (async () => {
+      try {
+        console.log('[AM] web fallback → MusicKit.authorize()');
+        document.getElementById('amMsg').textContent = 'Contacting Apple…';
+        const m = await getWebMusicInstance();
+        const userToken = await m.authorize();
+        if(!userToken) throw new Error('Authorization failed');
+        document.getElementById('amMsg').textContent = 'Signed in. You can now create a playlist.';
+        document.getElementById('amCreate').style.display = 'inline-block';
+        localStorage.setItem('appleMusicUserToken', userToken);
+      } catch(e) {
+        console.error(e);
+        document.getElementById('amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
+      }
+    })();
 
+    return false;
+  }
+
+  // ---------- wire up ----------
+  qs('#go').onclick = simulate;
+
+  // rebind sign-in button to native-first handler
+  (function(){
+    const btn = document.getElementById('amSign');
+    if (btn) {
+      btn.onclick = null;
+      btn.addEventListener('click', (e) => { e.preventDefault(); amSignInNativeFirst(); }, { passive: true });
+      console.log('[AM] Button bound to amSignInNativeFirst');
+    } else {
+      console.warn('[AM] amSign button not found at bind time');
+    }
+  })();
+
+  qs('#amCreate').onclick = () => amCreatePlaylist();
+  setTab('yt');
+
+  // ---------- Create playlist (shared) ----------
   async function amCreatePlaylist(){
     const userToken = (music && music.musicUserToken) || localStorage.getItem('appleMusicUserToken');
     if(!userToken){ qs('#amMsg').textContent='Please sign in first.'; return; }
@@ -379,12 +397,6 @@
       qs('#amMsg').textContent = 'Create failed: ' + (e.message || e);
     }
   }
-
-  // ---------- wire up ----------
-  qs('#go').onclick = simulate;
-  qs('#amSign').onclick = amSignIn;
-  qs('#amCreate').onclick = amCreatePlaylist;
-  setTab('yt');
 </script>
 
 </body>
