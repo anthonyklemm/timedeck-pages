@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TapeDeck Time Machine</title>
+
+    <!-- Favicon and Social Media Preview Tags -->
+    <meta name="description" content="Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.">
+    <link rel="icon" href="/logo.svg" type="image/svg+xml">
+    <link rel="alternate icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/logo.svg">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://tapedecktimemachine.com/">
+    <meta property="og:title" content="TapeDeck Time Machine">
+    <meta property="og:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
+    <meta property="og:image" content="https://tapedecktimemachine.com/logo.svg">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://tapedecktimemachine.com/">
+    <meta property="twitter:title" content="TapeDeck Time Machine">
+    <meta property="twitter:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
+    <meta property="twitter:image" content="https://tapedecktimemachine.com/logo.svg">
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-HPZT6BMJVD"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-HPZT6BMJVD');
+    </script>
+
+    <style>
+        :root {
+            --bg: #0a0f17;
+            --panel: #111827;
+            --muted: #94a3b8;
+            --text: #e5e7eb;
+            --accent: #8b5cf6;
+            --accent2: #22d3ee;
+            --shadow: 0 12px 48px rgba(2, 10, 20, .45);
+        }
+        body {
+            margin: 0;
+            background: radial-gradient(1200px 600px at 10% -10%, #0e1630 0%, transparent 60%),
+                        radial-gradient(700px 400px at 120% 10%, #06101f 0%, transparent 60%), var(--bg);
+            color: var(--text);
+            font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+            display: grid;
+            place-items: center;
+            min-height: 100vh;
+            text-align: center;
+        }
+        .container {
+            max-width: 600px;
+            padding: 2rem;
+        }
+        .logo {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #22d3ee 55%, #16a34a 120%);
+            display: grid;
+            place-items: center;
+            color: white;
+            font-weight: 800;
+            font-size: 24px;
+            box-shadow: var(--shadow);
+            margin: 0 auto 1.5rem;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin: 0 0 0.5rem;
+        }
+        p {
+            font-size: 1.1rem;
+            color: var(--muted);
+            line-height: 1.6;
+            margin-bottom: 2.5rem;
+        }
+        .btn {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.1rem;
+            border: 0;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease;
+        }
+        .btn:hover {
+            transform: translateY(-2px) scale(1.05);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="logo">TD</div>
+        <h1>TapeDeck Time Machine</h1>
+        <p>Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.</p>
+        
+        <a href="app.html" class="btn" id="open-app-btn">Open App</a>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const queryString = window.location.search;
+            const openAppButton = document.getElementById('open-app-btn');
+            if (queryString && openAppButton) {
+                openAppButton.href = 'app.html' + queryString;
+            }
+        });
+    </script>
+    <script src="/callback-listener.js"></script>
+
+</body>
+</html>
+

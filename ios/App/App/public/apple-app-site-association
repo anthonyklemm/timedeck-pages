@@ -1,0 +1,10 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["FBTA9J7UQU.com.tapedecktimemachine.app"],
+        "paths": ["*"]
+      }
+    ]
+  }
+}

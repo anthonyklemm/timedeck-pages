@@ -1,0 +1,40 @@
+{
+	"appId": "com.tapedecktimemachine.app",
+	"appName": "TapeDeck Time Machine",
+	"webDir": "docs",
+	"bundledWebRuntime": false,
+	"server": {
+		"url": "https://tapedecktimemachine.com",
+		"cleartext": false,
+		"hostname": "tapedecktimemachine.com",
+		"iosScheme": "https",
+		"androidScheme": "https",
+		"allowNavigation": [
+			"timedeck-api.onrender.com",
+			"apple.com",
+			"*.apple.com",
+			"idmsa.apple.com",
+			"authorize.music.apple.com",
+			"*.music.apple.com",
+			"*.youtube.com",
+			"*.youtube-nocookie.com",
+			"*.googlevideo.com",
+			"*.google.com",
+			"*.gstatic.com",
+			"*.ytimg.com",
+			"*.doubleclick.net"
+		]
+	},
+	"ios": {
+		"contentInset": "always"
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 0
+		}
+	},
+	"packageClassList": [
+		"AppPlugin",
+		"CAPBrowserPlugin"
+	]
+}

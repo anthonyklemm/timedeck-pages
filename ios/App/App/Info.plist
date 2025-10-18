@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+
+  <!-- App identity -->
+  <key>CFBundleDevelopmentRegion</key>
+  <string>en</string>
+  <key>CFBundleDisplayName</key>
+  <string>TapeDeck Time Machine</string>
+  <key>CFBundleExecutable</key>
+  <string>$(EXECUTABLE_NAME)</string>
+  <key>CFBundleIdentifier</key>
+  <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>CFBundleName</key>
+  <string>$(PRODUCT_NAME)</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>$(MARKETING_VERSION)</string>
+  <key>CFBundleVersion</key>
+  <string>$(CURRENT_PROJECT_VERSION)</string>
+
+  <!-- URL scheme for native handoff -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleTypeRole</key>
+      <string>Editor</string>
+      <key>CFBundleURLName</key>
+      <string>AppURL</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>com.tapedecktimemachine.app</string>
+      </array>
+    </dict>
+  </array>
+
+  <!-- Allow opening other apps -->
+  <key>LSApplicationQueriesSchemes</key>
+  <array>
+    <string>youtube</string>
+    <string>music</string>
+    <string>itms</string>
+    <string>itmss</string>
+  </array>
+
+  <key>LSRequiresIPhoneOS</key>
+  <true/>
+
+  <!-- Export compliance: no non-exempt encryption in the app -->
+  <key>ITSAppUsesNonExemptEncryption</key>
+  <false/>
+
+  <!-- App Transport Security (tight/clean) -->
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsArbitraryLoads</key>
+    <false/>
+    <key>NSExceptionDomains</key>
+    <dict>
+      <!-- Your backend -->
+      <key>timedeck-api.onrender.com</key>
+      <dict>
+        <key>NSIncludesSubdomains</key><true/>
+        <!-- Keep only if your TLS lacks PFS; otherwise remove the next line -->
+        <key>NSTemporaryExceptionRequiresForwardSecrecy</key><false/>
+      </dict>
+      <!-- Apple Music domains used by MusicKit -->
+      <key>music.apple.com</key><dict/>
+      <key>js-cdn.music.apple.com</key><dict/>
+      <!-- YouTube embed -->
+      <key>www.youtube.com</key><dict/>
+    </dict>
+  </dict>
+
+  <!-- Permissions -->
+  <key>NSAppleMusicUsageDescription</key>
+  <string>TapeDeck Time Machine needs access to your music library to create and save new playlists for you.</string>
+
+  <!-- Launch/UI -->
+  <key>UILaunchStoryboardName</key>
+  <string>LaunchScreen</string>
+  <key>UIMainStoryboardFile</key>
+  <string>Main</string>
+
+  <!-- Device caps & orientations -->
+  <key>UIRequiredDeviceCapabilities</key>
+  <array>
+    <string>armv7</string>
+  </array>
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+  <key>UISupportedInterfaceOrientations~ipad</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationPortraitUpsideDown</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+  <key>UIViewControllerBasedStatusBarAppearance</key>
+  <true/>
+
+  <!-- WKWebView tweaks -->
+  <key>WKWebViewConfiguration</key>
+  <dict>
+    <key>AllowsInlineMediaPlayback</key>
+    <true/>
+    <key>MediaTypesRequiringUserActionForPlayback</key>
+    <integer>0</integer>
+  </dict>
+
+  <!-- Capacitor host/origin -->
+  <key>CapacitorScheme</key>
+  <string>https</string>
+  <key>CapacitorHostname</key>
+  <string>tapedecktimemachine.com</string>
+
+</dict>
+</plist>
