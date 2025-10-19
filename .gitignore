@@ -28,3 +28,8 @@ ios/App/App.xcworkspace/
 .env*
 .vscode/
 .idea/
+
+# macOS & Xcode user files
+*.DS_Store
+ios/**/xcuserdata/
+*.xcuserstate

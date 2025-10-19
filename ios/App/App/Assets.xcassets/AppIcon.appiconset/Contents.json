@@ -1,9 +1,26 @@
 {
   "images" : [
     {
-      "filename" : "AppIcon-512@2x.png",
+      "filename" : "AppIcon.png",
       "idiom" : "universal",
       "platform" : "ios",
+      "size" : "1024x1024"
+    },
+    {
+      "idiom" : "universal",
+      "platform" : "watchos",
+      "size" : "1024x1024"
+    },
+    {
+      "idiom" : "universal",
+      "language-direction" : "left-to-right",
+      "platform" : "watchos",
+      "size" : "1024x1024"
+    },
+    {
+      "idiom" : "universal",
+      "language-direction" : "right-to-left",
+      "platform" : "watchos",
       "size" : "1024x1024"
     }
   ],
