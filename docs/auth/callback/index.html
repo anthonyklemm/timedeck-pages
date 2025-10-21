@@ -1,85 +1,24 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>TapeDeck – Finishing sign-in…</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root{
-    --bg:#0a0f17; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb;
-    --accent:#8b5cf6; --accent2:#22d3ee; --ok:#86efac; --err:#fda4af;
-    --br:14px; --shadow:0 12px 48px rgba(2,10,20,.45);
-  }
-  *{box-sizing:border-box}
-  body{margin:0; padding:24px; background:#0a0f17; color:var(--text);
-       font:16px/1.45 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif}
-  .wrap{max-width:760px;margin:0 auto}
-  .card{background:#111827;border:1px solid #263040;border-radius:14px;
-        box-shadow:var(--shadow); padding:18px 16px; margin:0 0 16px}
-  h1{font-size:20px;margin:0 0 8px}
-  .muted{color:var(--muted)}
-  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-  .btn{appearance:none;border:0;border-radius:12px;padding:12px 14px;
-       font-weight:700; color:#081018; background:linear-gradient(135deg,var(--accent),var(--accent2));
-       text-decoration:none; display:inline-block}
-  .btn.ghost{background:transparent;color:var(--text);border:1px solid #334155}
-  .hint{font-size:14px;color:var(--muted)}
-  ol{margin:8px 0 0 18px}
-  .ok{color:var(--ok)} .err{color:var(--err)}
+  body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:24px;color:#e5e7eb;background:#0a0f17}
+  .box{max-width:640px;margin:0 auto;background:#111827;border:1px solid #263040;border-radius:14px;padding:16px}
+  .muted{color:#94a3b8}
 </style>
 
-<div class="wrap">
-  <div id="status" class="card">
-    <h1 id="title">Finishing sign-in…</h1>
-    <div class="muted" id="subtitle">Handing off to the TapeDeck app.</div>
-    <div class="row" id="actions" style="display:none">
-      <a id="openAppBtn" class="btn" href="#">Open TapeDeck app</a>
-      <button id="closeBtn" class="btn ghost" type="button">Close this window</button>
-    </div>
-  </div>
-
-  <div id="help" class="card" style="display:none">
-    <h1>Nothing happened?</h1>
-    <div class="muted">
-      If you were signing in on the website and nothing opens, pop-ups might be blocked.
-    </div>
-    <div style="margin-top:10px">
-      <strong>Fix on iPhone / iPad:</strong>
-      <ol>
-        <li>Open <strong>Settings</strong> ▶ <strong>Safari</strong>.</li>
-        <li>Turn <strong>Block Pop-ups</strong> <em>off</em>.</li>
-        <li>Return and try again.</li>
-      </ol>
-    </div>
-    <div class="hint" style="margin-top:10px">
-      Tip: If you see a banner that says <em>“Open in TapeDeck Time Machine app”</em>, tap <strong>Open</strong>.
-    </div>
-    <div class="row" style="margin-top:12px">
-      <a class="btn ghost" href="/auth/native/?help=1" target="_blank" rel="noopener">See full instructions</a>
-    </div>
-  </div>
+<div class="box">
+  <h2>Finishing sign-in…</h2>
+  <div class="muted">Handing off to the TapeDeck app.</div>
 </div>
 
 <script>
-(function(){
-  const params = new URLSearchParams(location.search);
-  const isNative = params.get('native') === '1';
-  const deep = 'com.tapedecktimemachine.app://auth/callback' + (location.search || '');
-  const $ = (id)=>document.getElementById(id);
-
-  const $title = $('title'), $subtitle = $('subtitle'), $actions = $('actions');
-  const $openAppBtn = $('openAppBtn'), $closeBtn = $('closeBtn'), $help = $('help');
-
-  $openAppBtn.href = deep;
-  $closeBtn.onclick = () => { window.close(); setTimeout(()=>history.back(),150); };
-
-  // If we’re returning from Apple’s flow and native=1, bounce to the app.
-  if (isNative) {
-    $actions.style.display = '';
-    setTimeout(()=>location.replace(deep), 50);
-    return;
+(() => {
+  const qs = location.search || "";
+  const p = new URLSearchParams(qs);
+  if (p.get('native') === '1') {
+    location.replace('com.tapedecktimemachine.app://auth/callback' + qs);
   }
-
-  // Web fallback: expose actions + help.
-  $actions.style.display = '';
-  $help.style.display = '';
 })();
 </script>

@@ -1,148 +1,57 @@
-<!doctype html>
 <meta charset="utf-8">
-<title>TapeDeck – Finishing sign-in…</title>
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TapeDeck – Apple Music sign-in…</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
 <style>
-  :root{
-    --bg:#0a0f17; --panel:#111827; --muted:#94a3b8; --text:#e5e7eb;
-    --accent:#8b5cf6; --accent2:#22d3ee; --ok:#86efac; --err:#fda4af;
-    --br:14px; --shadow:0 12px 48px rgba(2,10,20,.45);
-  }
-  *{box-sizing:border-box}
-  body{margin:0; padding:24px; background:#0a0f17; color:var(--text);
-       font:16px/1.45 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif}
-  .wrap{max-width:760px;margin:0 auto}
-  .card{background:#111827;border:1px solid #263040;border-radius:14px;
-        box-shadow:var(--shadow); padding:18px 16px; margin:0 0 16px}
-  h1{font-size:20px;margin:0 0 8px}
-  .muted{color:var(--muted)}
-  .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-  .btn{appearance:none;border:0;border-radius:12px;padding:12px 14px;
-       font-weight:700; color:#081018; background:linear-gradient(135deg,var(--accent),var(--accent2));
-       text-decoration:none; display:inline-block}
-  .btn.ghost{background:transparent;color:var(--text);border:1px solid #334155}
-  .hint{font-size:14px;color:var(--muted)}
-  ol{margin:8px 0 0 18px}
-  .ok{color:var(--ok)} .err{color:var(--err)}
-  code{background:#0c1422;border:1px solid #273244;border-radius:8px;padding:2px 6px}
+  body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:24px;color:#e5e7eb;background:#0a0f17}
+  .box{max-width:640px;margin:0 auto;background:#111827;border:1px solid #263040;border-radius:14px;padding:16px}
+  .muted{color:#94a3b8}.err{color:#fda4af;margin-top:8px;white-space:pre-wrap}
 </style>
 
-<div class="wrap">
-  <!-- Status -->
-  <div id="status" class="card">
-    <h1 id="title">Connecting to Apple Music…</h1>
-    <div class="muted" id="subtitle">Opening Apple sign-in…</div>
-
-    <div class="row" id="actions" style="display:none">
-      <a id="openAppBtn" class="btn" href="#">Open TapeDeck app</a>
-      <button id="retryBtn" class="btn ghost" type="button">Try again</button>
-    </div>
-  </div>
-
-  <!-- Popup help (shown only if popups are blocked or user taps Help) -->
-  <div id="help" class="card" style="display:none">
-    <h1>It looks like pop-ups are blocked</h1>
-    <div class="muted">
-      Apple’s sign-in opens in a new window. If pop-ups are blocked, the flow stalls on
-      “Connecting to Apple Music…”.
-    </div>
-    <div style="margin-top:10px">
-      <strong>Fix on iPhone / iPad:</strong>
-      <ol>
-        <li>Open <strong>Settings</strong> ▶ <strong>Safari</strong>.</li>
-        <li>Turn <strong>Block Pop-ups</strong> <em>off</em>.</li>
-        <li>Return here and tap <strong>Try again</strong>.</li>
-      </ol>
-    </div>
-    <div class="hint" style="margin-top:10px">
-      Tip: If you see a banner that says <em>“Open in TapeDeck Time Machine app”</em>, tap <strong>Open</strong>.
-    </div>
-    <div class="row" style="margin-top:12px">
-      <button id="checkBtn" class="btn" type="button">Check pop-ups again</button>
-      <button id="dismissHelpBtn" class="btn ghost" type="button">Close</button>
-    </div>
-    <div id="checkResult" class="hint" style="margin-top:8px"></div>
-  </div>
-
-  <!-- Manual help toggle -->
-  <div class="card" style="display:none" id="manualHelp">
-    <h1>Need help?</h1>
-    <div class="muted">If sign-in didn’t open, pop-ups might be blocked.</div>
-    <div class="row" style="margin-top:8px">
-      <button id="showHelpBtn" class="btn ghost" type="button">Show instructions</button>
-    </div>
-  </div>
+<div class="box">
+  <h2>Connecting to Apple Music… If nothing opens, please turn off <strong>Settings ▸ Safari ▸ Block Pop-ups</strong> and try again.</h2>
+  <div id="msg" class="muted">Preparing sign-in…</div>
+  <div id="err" class="err"></div>
 </div>
 
 <script>
-(function(){
+(async () => {
   const qs = new URLSearchParams(location.search);
-  const isNative = qs.get('native') === '1';
-  const deepLink = 'com.tapedecktimemachine.app://auth/callback' + (location.search || '');
+  const API = qs.get('api') || 'https://timedeck-api.onrender.com';
+  const say = m => (document.getElementById('msg').textContent = m);
+  const fail = e => (document.getElementById('err').textContent = e?.message || String(e||'Unknown error'));
 
-  const el = (id) => document.getElementById(id);
-  const $status = el('status'), $help = el('help'), $manualHelp = el('manualHelp');
-  const $title = el('title'), $subtitle = el('subtitle'), $actions = el('actions');
-  const $openAppBtn = el('openAppBtn'), $retryBtn = el('retryBtn');
-  const $checkBtn = el('checkBtn'), $dismissHelpBtn = el('dismissHelpBtn'), $showHelpBtn = el('showHelpBtn');
-  const $checkResult = el('checkResult');
+  try {
+    say('Loading MusicKit…');
+    await new Promise((res, rej) => {
+      if (window.MusicKit && MusicKit.getInstance) return res();
+      const t = setTimeout(()=>rej(new Error('MusicKit load timed out')),15000);
+      addEventListener('musickitloaded', ()=>{clearTimeout(t);res();},{once:true});
+    });
 
-  // Basic popup-block test
-  function popupsBlocked(){
-    let w = null;
-    try { w = window.open('', '_popup_test', 'width=1,height=1'); }
-    catch(_) { /* blocked */ }
-    if (!w) return true;
-    try { w.close(); } catch(_) {}
-    return false;
-  }
+    say('Requesting developer token…');
+    const r = await fetch(`${API}/v1/apple/dev-token`);
+    if(!r.ok) throw new Error(`dev-token ${r.status}`);
+    const { token: developerToken } = await r.json();
+    if(!developerToken) throw new Error('No developer token');
 
-  function showHelp(){
-    $help.style.display = '';
-    $manualHelp.style.display = 'none';
-  }
-  function hideHelp(){
-    $help.style.display = 'none';
-  }
-
-  function setActionsVisible(v){
-    $actions.style.display = v ? '' : 'none';
-    $manualHelp.style.display = v ? '' : 'none';
-  }
-
-  // Wire buttons
-  $openAppBtn.href = deepLink;
-  $retryBtn.onclick = () => location.reload();
-  $showHelpBtn.onclick = showHelp;
-  $dismissHelpBtn.onclick = hideHelp;
-  $checkBtn.onclick = () => {
-    const blocked = popupsBlocked();
-    $checkResult.textContent = blocked
-      ? 'Pop-ups are still blocked. (Settings → Safari → Block Pop-ups → OFF)'
-      : 'Pop-ups look OK. Tap “Try again”.';
-    $checkResult.className = blocked ? 'err' : 'ok';
-  };
-
-  if (isNative) {
-    // Native hand-off: bounce to the app immediately, keep a manual button visible.
-    $title.textContent = 'Finishing sign-in…';
-    $subtitle.textContent = 'Handing off to the TapeDeck app.';
-    setActionsVisible(true);
-    // do the bounce with a short delay so UI renders
-    setTimeout(() => { location.replace(deepLink); }, 50);
-  } else {
-    // Web path: we’re usually coming from a button that will call MusicKit.authorize().
-    // If pop-ups are blocked, show instructions proactively.
-    const blocked = popupsBlocked();
-    if (blocked) {
-      $title.textContent = 'Action needed to continue';
-      $subtitle.textContent = 'Apple sign-in opens in a new window, but pop-ups are blocked.';
-      showHelp();
-      setActionsVisible(true);
-    } else {
-      // Pop-ups OK – keep the simple status message.
-      setActionsVisible(true);
+    MusicKit.configure({ developerToken, app: { name:'TapeDeck Time Machine', build:'native' } });
+    let music = MusicKit.getInstance();
+    for (let i=0;i<10 && (!music || typeof music.authorize!=='function');i++) {
+      await new Promise(res=>setTimeout(res,100)); music = MusicKit.getInstance();
     }
-  }
+    if(!music || typeof music.authorize!=='function') throw new Error('MusicKit not initialized (no authorize)');
+
+    say('Opening Apple sign-in…');
+    const token = await music.authorize();
+    if(!token) throw new Error('Authorization failed');
+
+    say('Returning to app…');
+    const cb = new URL('https://tapedecktimemachine.com/auth/callback/');
+    cb.searchParams.set('token', token);
+    cb.searchParams.set('native', '1');
+    if (qs.get('api')) cb.searchParams.set('api', qs.get('api'));
+    location.replace(cb.toString());
+  } catch (e) { fail(e); }
 })();
 </script>
