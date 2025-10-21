@@ -103,6 +103,7 @@
       <button class="tab" data-tab="am">Apple Music</button>
       <button class="tab" data-tab="sp" disabled title="Coming soon">Spotify</button>
     </div>
+    <div class="muted" style="margin:-6px 0 8px 2px">Spotify sign-in is under construction. Coming soon!</div>
 
     <div class="cols">
       <!-- YouTube -->
@@ -122,6 +123,10 @@
           <button class="btn" id="amSign">Sign in to Apple Music</button>
           <button class="btn" id="amCreate" style="display:none">Create Playlist</button>
           <div id="amMsg" class="muted" style="margin-top:8px"></div>
+          <div class="hint muted" style="margin-top:8px">
+            If nothing opens, turn off <strong>Settings ▸ Safari ▸ Block Pop-ups</strong> and try again.
+            <a href="/auth/native/?help=1" target="_blank" rel="noopener">See how</a>.
+          </div>
         </div>
       </div>
     </div>
@@ -138,6 +143,7 @@
   // ---------- config & helpers ----------
   const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
   const NET_TIMEOUT_MS = 180000; // 3 minutes
+  const NATIVE_HOST = 'https://anthonyklemm.github.io/timedeck-pages'; // avoid universal link capture
   const qs = s => document.querySelector(s);
 
   function toISO(mmddyyyy){ const [mm,dd,yyyy] = mmddyyyy.split('/'); return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
@@ -149,11 +155,8 @@
   document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 
   function withTimeout(promise, ms = NET_TIMEOUT_MS) {
-    let t;
-    const timer = new Promise((_, reject) => {
-      t = setTimeout(() => reject(new Error(`Network timeout after ${Math.round(ms/1000)}s`)), ms);
-    });
-    return Promise.race([promise.finally(() => clearTimeout(t)), timer]);
+    let t; const timer = new Promise((_, rej)=>{ t=setTimeout(()=>rej(new Error(`Network timeout after ${Math.round(ms/1000)}s`)), ms); });
+    return Promise.race([promise.finally(()=>clearTimeout(t)), timer]);
   }
 
   // ---------- state ----------
@@ -244,7 +247,7 @@
           qs('#ytp').style.display = 'block';
           player = new YT.Player('ytp', {
             height: '360', width: '100%',
-            playerVars: { playsinline: 1, rel: 0, modestbranding: 1, origin: 'https://tapedecktimemachine.com' },
+            playerVars: { playsinline: 1, rel: 0, modestbranding: 1, origin: location.origin },
             events: { onReady: (e) => { e.target.cuePlaylist(ids, 0, 0); qs('#ytStatus').textContent = `${ids.length} videos queued.`; } }
           });
         } else {
@@ -263,7 +266,6 @@
     const App = Cap.Plugins && Cap.Plugins.App;
 
     function parseQuery(u){
-      // works for both https://.../auth/callback?... and com.tapedecktimemachine.app://auth/callback?...
       const i = u.indexOf('?'); if (i < 0) return {};
       const q = u.slice(i+1).split('&'); const out = {};
       for (const p of q) { const [k,v] = p.split('='); out[decodeURIComponent(k)] = decodeURIComponent(v||''); }
@@ -319,17 +321,17 @@
   // ---------- Native-first sign-in (Browser.open) ----------
   async function amSignIn(){
     const Cap = window.Capacitor || {};
-  	const Plugins = (Cap && Cap.Plugins) || {};
-  	const Browser = Plugins.Browser;
+    const Plugins = (Cap && Cap.Plugins) || {};
+    const Browser = Plugins.Browser;
 
-  	if (Browser && typeof Browser.open === 'function') {
-    // use WWW to avoid the app’s Universal Link capture
-      const url = 'https://anthonyklemm.github.io/timedeck-pages/auth/native?native=1&v=4';
+    if (Browser && typeof Browser.open === 'function') {
+      // use GitHub Pages to avoid the app’s Universal Link capture
+      const url = `${NATIVE_HOST}/auth/native?native=1&v=4`;
       console.log('[AM] native (SFSafariViewController) →', url);
       document.getElementById('amMsg').textContent = 'Opening Apple sign-in…';
       await Browser.open({ url, presentationStyle: 'fullscreen' });
       return;
-    }  
+    }
 
     // Website fallback
     try{
