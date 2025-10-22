@@ -1,57 +1,94 @@
+<!doctype html>
+<html lang="en">
 <meta charset="utf-8">
-<title>TapeDeck – Apple Music sign-in…</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TapeDeck – Apple Music sign-in</title>
 <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
 <style>
-  body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:24px;color:#e5e7eb;background:#0a0f17}
-  .box{max-width:640px;margin:0 auto;background:#111827;border:1px solid #263040;border-radius:14px;padding:16px}
-  .muted{color:#94a3b8}.err{color:#fda4af;margin-top:8px;white-space:pre-wrap}
+  :root{--bg:#0a0f17;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  .box{max-width:720px;margin:28px auto;background:#111827;border:1px solid #263040;border-radius:14px;padding:16px}
+  .muted{color:var(--muted)}
+  .err{color:#fda4af;margin-top:.75rem;white-space:pre-wrap}
+  button{display:block;width:100%;font-size:1.05rem;font-weight:700;color:#fff;background:#007aff;border:0;border-radius:12px;padding:12px 16px;cursor:pointer}
+  button:disabled{background:#475569;color:#cbd5e1;cursor:not-allowed}
+  .tip{margin-top:.75rem}
 </style>
 
 <div class="box">
-  <h2>Connecting to Apple Music… If nothing opens, please turn off <strong>Settings ▸ Safari ▸ Block Pop-ups</strong> and try again.</h2>
-  <div id="msg" class="muted">Preparing sign-in…</div>
-  <div id="err" class="err"></div>
+  <h2 style="margin:.2rem 0">Connect to Apple Music</h2>
+  <p class="muted" id="msg">Tap the button to open Apple sign-in.</p>
+
+  <button id="signInButton">Sign in with Apple Music</button>
+
+  <p class="muted tip">
+    If nothing opens, turn off <strong>Settings ▸ Safari ▸ Block Pop-ups</strong> and try again.
+  </p>
+
+  <pre id="err" class="err"></pre>
 </div>
 
 <script>
-(async () => {
+(async function(){
+  const btn = document.getElementById('signInButton');
+  const $msg = (t)=>document.getElementById('msg').textContent=t||'';
+  const $err = (t)=>document.getElementById('err').textContent=t||'';
   const qs = new URLSearchParams(location.search);
   const API = qs.get('api') || 'https://timedeck-api.onrender.com';
-  const say = m => (document.getElementById('msg').textContent = m);
-  const fail = e => (document.getElementById('err').textContent = e?.message || String(e||'Unknown error'));
+  const CALLBACK_HOST = 'https://tapedecktimemachine.com'; // keep this aligned with your AASA & Associated Domains
 
-  try {
-    say('Loading MusicKit…');
-    await new Promise((res, rej) => {
-      if (window.MusicKit && MusicKit.getInstance) return res();
-      const t = setTimeout(()=>rej(new Error('MusicKit load timed out')),15000);
-      addEventListener('musickitloaded', ()=>{clearTimeout(t);res();},{once:true});
+  function waitForMusicKit(timeout=15000){
+    if (window.MusicKit && window.MusicKit.getInstance) return Promise.resolve();
+    return new Promise((res, rej)=>{
+      const to = setTimeout(()=>rej(new Error('MusicKit load timed out')), timeout);
+      addEventListener('musickitloaded', ()=>{ clearTimeout(to); res(); }, { once:true });
     });
+  }
 
-    say('Requesting developer token…');
-    const r = await fetch(`${API}/v1/apple/dev-token`);
-    if(!r.ok) throw new Error(`dev-token ${r.status}`);
-    const { token: developerToken } = await r.json();
-    if(!developerToken) throw new Error('No developer token');
+  async function doAuth(){
+    btn.disabled = true; $err(''); $msg('Loading MusicKit…');
 
-    MusicKit.configure({ developerToken, app: { name:'TapeDeck Time Machine', build:'native' } });
-    let music = MusicKit.getInstance();
-    for (let i=0;i<10 && (!music || typeof music.authorize!=='function');i++) {
-      await new Promise(res=>setTimeout(res,100)); music = MusicKit.getInstance();
+    try{
+      await waitForMusicKit();
+
+      $msg('Requesting developer token…');
+      const r = await fetch(`${API}/v1/apple/dev-token`, { cache: 'no-store' });
+      if(!r.ok) throw new Error(`dev-token ${r.status}`);
+      const { token: developerToken } = await r.json();
+      if(!developerToken) throw new Error('No developer token');
+
+      window.MusicKit.configure({ developerToken, app:{ name:'TapeDeck Time Machine', build:'native' } });
+
+      // give MusicKit a tick to init
+      let mk = window.MusicKit.getInstance();
+      for (let i=0;i<10 && (!mk || typeof mk.authorize!=='function');i++){
+        await new Promise(res=>setTimeout(res,100));
+        mk = window.MusicKit.getInstance();
+      }
+      if(!mk || typeof mk.authorize!=='function') throw new Error('MusicKit not initialized');
+
+      $msg('Opening Apple sign-in…');
+      const token = await mk.authorize();
+      if(!token) throw new Error('Authorization failed');
+
+      $msg('Returning to app…');
+      const cb = new URL('/auth/callback/', CALLBACK_HOST);
+      cb.searchParams.set('token', token);
+      cb.searchParams.set('native', '1');
+      if (qs.get('api')) cb.searchParams.set('api', qs.get('api'));
+      // This navigates the Safari view to your callback page, which will deep-link back to the app
+      location.replace(cb.toString());
+
+    }catch(e){
+      console.error(e);
+      $msg('Sign-in failed.');
+      $err(e.message || String(e));
+      btn.disabled = false; // allow retry
     }
-    if(!music || typeof music.authorize!=='function') throw new Error('MusicKit not initialized (no authorize)');
+  }
 
-    say('Opening Apple sign-in…');
-    const token = await music.authorize();
-    if(!token) throw new Error('Authorization failed');
-
-    say('Returning to app…');
-    const cb = new URL('https://tapedecktimemachine.com/auth/callback/');
-    cb.searchParams.set('token', token);
-    cb.searchParams.set('native', '1');
-    if (qs.get('api')) cb.searchParams.set('api', qs.get('api'));
-    location.replace(cb.toString());
-  } catch (e) { fail(e); }
+  // Run only on explicit tap (satisfies pop-up/user-gesture rules)
+  btn.addEventListener('click', doAuth, { passive: true });
 })();
 </script>
+</html>
