@@ -143,8 +143,7 @@
   // ---------- config & helpers ----------
   const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
   const NET_TIMEOUT_MS = 180000; // 3 minutes
-  const NATIVE_HOST = 'https://anthonyklemm.github.io/timedeck-pages'; // avoid universal link capture
-  const qs = s => document.querySelector(s);
+  const NATIVE_HOST = 'https://tapedecktimemachine.com'; // Universal Link capture fixed via AASA  const qs = s => document.querySelector(s);
 
   function toISO(mmddyyyy){ const [mm,dd,yyyy] = mmddyyyy.split('/'); return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
   function setTab(id){
