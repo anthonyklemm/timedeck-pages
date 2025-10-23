@@ -28,12 +28,10 @@
   const $err = (t)=>document.getElementById('err').textContent=t||'';
   const qs = new URLSearchParams(location.search);
   const API = qs.get('api') || 'https://timedeck-api.onrender.com';
-  const CALLBACK_HOST = 'https://tapedecktimemachine.com'; 
+  const CALLBACK_HOST = 'https://tapedecktimemachine.com';
   let developerToken = null;
 
-  // --- NEW: Stricter function to check the token ---
   function isInvalidToken(token) {
-    // It's invalid if it's null, not a string, or an empty/whitespace string
     return !token || typeof token !== 'string' || token.trim().length === 0;
   }
 
@@ -53,21 +51,19 @@
       const r = await fetch(`${API}/v1/apple/dev-token`, { cache: 'no-store' });
       if(!r.ok) throw new Error(`dev-token ${r.status}`);
       const j = await r.json();
-      
-      // --- THIS IS THE FIX ---
+
       if (isInvalidToken(j.token)) {
-        // We will now 100% catch an empty, null, or whitespace token.
         console.error('API returned an invalid token:', j.token);
         throw new Error('No developer token was returned from the API.');
       }
-      
-      developerToken = j.token.trim(); // Store the clean, valid token
-      // --- END FIX ---
+
+      developerToken = j.token.trim();
+      console.log(`[INIT] Developer token loaded successfully. Length: ${developerToken.length}`); // <-- Log token length
 
       $msg('Tap the button to open Apple sign-in.');
       btn.disabled = false;
     }catch(e){
-      console.error(e);
+      console.error('[INIT] Failed:', e); // <-- Add console error
       $msg('Initialization failed.');
       $err(e.message || String(e));
     }
@@ -77,37 +73,47 @@
     btn.disabled = true; $err(''); $msg('Redirecting to Apple…');
 
     try{
-      // --- Added a safety check here too ---
       if (isInvalidToken(developerToken)) {
-        console.error('developerToken is invalid before redirect:', developerToken);
+        console.error('[AUTH] Developer token is invalid BEFORE redirect:', developerToken); // <-- Log invalid token
         throw new Error('Developer token is missing. Please refresh.');
       }
 
+      console.log('[AUTH] Using valid developer token. Length:', developerToken.length); // <-- Log valid token length
+
       const redirectURL = `${CALLBACK_HOST}/auth/callback/`;
       const authURL = new URL('https://idmsa.apple.com/IDMSWebAuth/auth2');
-      
-      authURL.searchParams.set('appIdKey', 'cbf6439019b843308571a6e7a1c7d7041a99a656606ffc8446b8259b350f4d6d'); 
+
+      authURL.searchParams.set('appIdKey', 'cbf6439019b843308571a6e7a1c7d7041a99a656606ffc8446b8259b350f4d6d');
       authURL.searchParams.set('language', 'en-US');
       authURL.searchParams.set('path', '/authorize');
       authURL.searchParams.set('redirectUrl', redirectURL);
       authURL.searchParams.set('sdkVersion', 'musickit.js/v3');
-      
-      const state = {
-        api: qs.get('api'),
-        native: '1' 
-      };
+
+      const state = { api: qs.get('api'), native: '1' };
       authURL.searchParams.set('state', btoa(JSON.stringify(state)));
-      
+
       const webAuth = {
-        developerToken, // This will now be a trimmed, valid string
+        developerToken, // Using the validated, trimmed token
         appName: 'TapeDeck Time Machine'
       };
-      authURL.searchParams.set('webAuthentication', JSON.stringify(webAuth));
+      const webAuthStr = JSON.stringify(webAuth);
+      authURL.searchParams.set('webAuthentication', webAuthStr);
 
-      location.href = authURL.toString();
+      const finalUrlToLoad = authURL.toString();
+
+      // --- CRITICAL LOGGING ---
+      console.log('[AUTH] Final URL being loaded:');
+      console.log(finalUrlToLoad);
+      console.log('[AUTH] Developer token being sent:');
+      console.log(developerToken); // Log the raw token string
+      console.log('[AUTH] webAuthentication parameter being sent:');
+      console.log(webAuthStr); // Log the stringified object
+      // --- END LOGGING ---
+
+      location.href = finalUrlToLoad; // Redirect
 
     }catch(e){
-      console.error(e);
+      console.error('[AUTH] Failed:', e); // <-- Add console error
       $msg('Sign-in failed.');
       $err(e.message || String(e));
       btn.disabled = false; // allow retry
@@ -115,7 +121,7 @@
   }
 
   btn.addEventListener('click', doAuth, { passive: true });
-  init();
+  init(); // Start loading the token
 })();
 </script>
 </html>
