@@ -1,24 +1,102 @@
 <!doctype html>
+<html lang="en">
 <meta charset="utf-8">
-<title>TapeDeck – Finishing sign-in…</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TapeDeck – Finishing sign-in…</title>
 <style>
-  body{font-family:-apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;margin:24px;color:#e5e7eb;background:#0a0f17}
-  .box{max-width:640px;margin:0 auto;background:#111827;border:1px solid #263040;border-radius:14px;padding:16px}
-  .muted{color:#94a3b8}
+  :root{--bg:#0a0f17;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#8b5cf6}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  .box{max-width:720px;margin:28px auto;background:#111827;border:1px solid #263040;border-radius:14px;padding:16px}
+  h1{margin:.2rem 0;font-size:20px}
+  .muted{color:var(--muted)}
+  .err{color:#fda4af;white-space:pre-wrap}
+  .row{margin:.5rem 0}
+  .btn{display:inline-block;margin-top:.75rem;padding:10px 14px;border-radius:10px;border:1px solid #2b3a4f;
+       background:#0c1422;color:#fff;text-decoration:none;font-weight:700}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),#22d3ee);border:0}
 </style>
 
-<div class="box">
-  <h2>Finishing sign-in…</h2>
-  <div class="muted">Handing off to the TapeDeck app.</div>
+<div class="box" id="wrap">
+  <h1>Finishing sign-in…</h1>
+  <div class="row muted" id="msg">Processing your Apple Music login.</div>
+
+  <a id="openApp" class="btn primary" style="display:none" href="#">Open TapeDeck</a>
+
+  <div id="tips" class="row muted" style="display:none">
+    If nothing happens, try tapping <strong>Open TapeDeck</strong> above.
+    On iPhone, you may need to turn off <strong>Settings ▸ Safari ▸ Block Pop-ups</strong> and try again.
+  </div>
+
+  <div id="err" class="row err" style="display:none"></div>
 </div>
 
 <script>
-(() => {
-  const qs = location.search || "";
-  const p = new URLSearchParams(qs);
-  if (p.get('native') === '1') {
-    location.replace('com.tapedecktimemachine.app://auth/callback' + qs);
+(function(){
+  const qs = new URLSearchParams(location.search);
+  const token = qs.get('token') || '';
+  const isNative = qs.get('native') === '1';
+  const api = qs.get('api') || '';
+  const scheme = 'com.tapedecktimemachine.app://auth/callback';
+
+  const $ = (id)=>document.getElementById(id);
+  const setMsg = (t)=> $('msg').textContent = t || '';
+  const show = (id, on=true)=>($(id).style.display = on ? '' : 'none');
+
+  function buildDeepLink(){
+    const u = new URL(scheme);
+    if (token) u.searchParams.set('token', token);
+    if (isNative) u.searchParams.set('native','1');
+    if (api) u.searchParams.set('api', api);
+    return u.toString();
+  }
+
+  // --- guard: missing token ---
+  if (!token) {
+    setMsg('We did not receive a sign-in token from Apple.');
+    $('err').textContent = 'Tip: Make sure pop-ups are allowed for Safari and try again.';
+    show('err', true);
+    show('tips', true);
+    // Offer a way back to start auth
+    const back = document.createElement('a');
+    back.className = 'btn';
+    back.href = '/auth/native/?native=1' + (api ? '&api='+encodeURIComponent(api) : '');
+    back.textContent = 'Start Sign-in Again';
+    $('wrap').appendChild(back);
+    return;
+  }
+
+  if (isNative) {
+    // --- NATIVE HANDOFF: deep-link back into the app ---
+    setMsg('Handing off to the TapeDeck app…');
+
+    const deep = buildDeepLink();
+    const openBtn = $('openApp');
+    openBtn.href = deep; // manual fallback
+    show('openApp', true);
+    show('tips', true);
+
+    // Auto attempt
+    try {
+      // location.href gives the best chance to trigger the scheme
+      location.href = deep;
+      // As a backstop, try again shortly (some WebViews ignore the first attempt)
+      setTimeout(()=>{ location.href = deep; }, 700);
+    } catch (e) {
+      // If it throws (rare), we still have the manual button visible
+      $('err').textContent = e.message || String(e);
+      show('err', true);
+    }
+  } else {
+    // --- PURE WEB: stash token & go back to app page ---
+    try { localStorage.setItem('appleMusicUserToken', token); } catch {}
+    setMsg('Signed in. Returning to TapeDeck…');
+    const back = new URL('/app.html', 'https://tapedecktimemachine.com');
+    back.searchParams.set('authed','1');
+    if (api) back.searchParams.set('api', api);
+    // Use replace to avoid extra history entries
+    location.replace(back.toString());
   }
 })();
 </script>
+</html>
