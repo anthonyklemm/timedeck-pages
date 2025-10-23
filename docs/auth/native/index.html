@@ -39,7 +39,6 @@
     });
   }
 
-  // --- This function is the same: pre-load the token ---
   async function init(){
     try{
       $msg('Loading MusicKit…');
@@ -48,8 +47,17 @@
       const r = await fetch(`${API}/v1/apple/dev-token`, { cache: 'no-store' });
       if(!r.ok) throw new Error(`dev-token ${r.status}`);
       const j = await r.json();
-      developerToken = j.token;
-      if(!developerToken) throw new Error('No developer token');
+      
+      // --- THIS IS THE FIX ---
+      // We now trim the token and check if it's null or an empty string.
+      developerToken = (j.token && typeof j.token === 'string') ? j.token.trim() : null;
+      
+      if(!developerToken) {
+        // This will now catch null, undefined, "" and " "
+        throw new Error('No developer token was returned from the API.');
+      }
+      // --- END FIX ---
+
       $msg('Tap the button to open Apple sign-in.');
       btn.disabled = false;
     }catch(e){
@@ -58,45 +66,37 @@
     }
   }
 
-  // --- MODIFIED: This function now builds a URL and redirects ---
   async function doAuth(){
     btn.disabled = true; $err(''); $msg('Redirecting to Apple…');
 
     try{
-      if (!developerToken) {
+      // --- THIS IS A STRONGER CHECK ---
+      if (!developerToken || developerToken.length === 0) {
         throw new Error('Developer token is missing. Please refresh.');
       }
+      // --- END CHECK ---
 
-      // 1. THIS IS THE FIX: Manually build the authorization URL.
-      // We are *not* calling mk.authorize()
-      
       const redirectURL = `${CALLBACK_HOST}/auth/callback/`;
-      
       const authURL = new URL('https://idmsa.apple.com/IDMSWebAuth/auth2');
       
-      // This is the public, non-secret key for MusicKit JS
       authURL.searchParams.set('appIdKey', 'cbf6439019b843308571a6e7a1c7d7041a99a656606ffc8446b8259b350f4d6d'); 
       authURL.searchParams.set('language', 'en-US');
       authURL.searchParams.set('path', '/authorize');
       authURL.searchParams.set('redirectUrl', redirectURL);
       authURL.searchParams.set('sdkVersion', 'musickit.js/v3');
       
-      // Pass along any query params from the original request
       const state = {
         api: qs.get('api'),
-        native: '1' // We will pass 'native' here
+        native: '1' 
       };
-      // We encode our state so it survives the redirect
       authURL.searchParams.set('state', btoa(JSON.stringify(state)));
       
       const webAuth = {
-        developerToken,
+        developerToken, // This will now be a trimmed, valid string
         appName: 'TapeDeck Time Machine'
       };
       authURL.searchParams.set('webAuthentication', JSON.stringify(webAuth));
 
-      // 2. Redirect the *entire page* to Apple's sign-in.
-      // This is just like clicking a link and will not be blocked.
       location.href = authURL.toString();
 
     }catch(e){
