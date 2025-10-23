@@ -5,35 +5,28 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>TapeDeck Time Machine</title>
 
-  <!-- MusicKit for web fallback -->
   <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
 
-  <!-- Meta / Icons -->
   <meta name="description" content="Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.">
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
   <link rel="alternate icon" href="/favicon.ico">
-  <link rel="apple-touch-icon" href="/logo.svg">
-
-  <!-- Social -->
-  <meta property="og:type" content="website">
+  <link rel="apple-touch-icon" href="/logo.svg"> <meta property="og:type" content="website">
   <meta property="og:url" content="https://tapedecktimemachine.com/">
-  <meta property="og:title" content="TapeDeck Time Machine">
-  <meta property="og:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
-  <meta property="og:image" content="https://tapedecktimemachine.com/logo.svg">
+  <meta property="og:title" content="TapeDeck Time Machine - Historical Music Playlist Generator"> <meta property="og:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
+  <meta property="og:image" content="https://tapedecktimemachine.com/tapedeck-preview.png"> <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta property="twitter:card" content="summary_large_image">
   <meta property="twitter:url" content="https://tapedecktimemachine.com/">
-  <meta property="twitter:title" content="TapeDeck Time Machine">
+  <meta property="twitter:title" content="TapeDeck Time Machine - Historical Music Playlist Generator">
   <meta property="twitter:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
-  <meta property="twitter:image" content="https://tapedecktimemachine.com/logo.svg">
+  <meta property="twitter:image" content="https://tapedecktimemachine.com/tapedeck-preview.png">
 
-  <!-- Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HPZT6BMJVD"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-HPZT6BMJVD');
   </script>
 
-  <!-- Styles -->
   <style>
     :root{--bg:#0a0f17;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#8b5cf6;--accent2:#22d3ee;--shadow:0 12px 48px rgba(2,10,20,.45)}
     *{box-sizing:border-box}
@@ -82,7 +75,6 @@
     <h1>TapeDeck Time Machine</h1>
   </div>
 
-  <!-- Controls -->
   <div class="panel">
     <div class="grid">
       <div><label>Date</label><input id="date" placeholder="mm/dd/yyyy" value="07/01/2002"></div>
@@ -106,7 +98,6 @@
     <div class="muted" style="margin:-6px 0 8px 2px">Spotify sign-in is under construction. Coming soon!</div>
 
     <div class="cols">
-      <!-- YouTube -->
       <div class="panel box" id="pane-yt">
         <div id="ytWrap">
           <div class="muted" id="ytStatus">Waiting for a simulation…</div>
@@ -116,36 +107,39 @@
         </div>
       </div>
 
-      <!-- Apple Music -->
       <div class="panel box" id="pane-am" style="display:none">
         <div id="amWrap">
           <div class="muted" style="margin-bottom:8px">Sign in with Apple Music to create a playlist from the simulation.</div>
           <button class="btn" id="amSign">Sign in to Apple Music</button>
           <button class="btn" id="amCreate" style="display:none">Create Playlist</button>
           <div id="amMsg" class="muted" style="margin-top:8px"></div>
-          <div class="hint muted" style="margin-top:8px">
-            If nothing opens, turn off <strong>Settings ▸ Safari ▸ Block Pop-ups</strong> and try again.
-            <a href="/auth/native/?help=1" target="_blank" rel="noopener">See how</a>.
           </div>
-        </div>
       </div>
     </div>
   </div>
 
-  <!-- Tracklist -->
   <div class="panel" style="margin-top:16px">
-    <div class="muted" style="margin-bottom:6px">Tracklist will appear here.</div>
+    <h2>Your Music Time Machine Playlist</h2>
+    <p class="muted" style="margin-bottom:6px">
+      Ever wonder <strong>what songs were popular on your birthday?</strong>
+      Just pick a date and genre, and we'll <strong>generate a music playlist</strong>
+      of the top songs from that week, based on <strong>historical Billboard charts</strong>.
+      The tracklist will appear below.
+    </p>
     <div id="list" class="list"></div>
   </div>
 </div>
 
 <script>
   // ---------- config & helpers ----------
+  const qs = s => document.querySelector(s); // <-- MOVED TO TOP
+
   const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
   const NET_TIMEOUT_MS = 180000; // 3 minutes
-  const NATIVE_HOST = 'https://tapedecktimemachine.com'; // Universal Link capture fixed via AASA  const qs = s => document.querySelector(s);
+  const NATIVE_HOST = 'https://tapedecktimemachine.com'; // <-- UPDATED HOST
 
   function toISO(mmddyyyy){ const [mm,dd,yyyy] = mmddyyyy.split('/'); return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
+
   function setTab(id){
     document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
     qs('#pane-yt').style.display = id==='yt' ? '' : 'none';
@@ -274,14 +268,22 @@
     if (App && App.addListener) {
       App.addListener('appUrlOpen', ({ url }) => {
         console.log('[appUrlOpen]', url);
-        if (!url || url.indexOf('/auth/callback') === -1) return;
+        // Ensure we only handle our specific callback URL structure
+        if (!url || !url.startsWith('com.tapedecktimemachine.app://auth/callback')) return;
         const q = parseQuery(url);
         if (q.token) {
           localStorage.setItem('appleMusicUserToken', q.token);
-          qs('#amCreate').style.display = 'inline-block';
+          qs('#amSign').style.display = 'none'; // Hide sign-in button
+          qs('#amCreate').style.display = 'inline-block'; // Show create button
           qs('#amMsg').textContent = 'Signed in. You can now create a playlist.';
+        } else {
+           console.warn('[appUrlOpen] Received callback without token:', url);
+           qs('#amMsg').textContent = 'Sign-in callback received, but no token found.';
         }
       });
+      console.log('[AM] appUrlOpen listener attached');
+    } else {
+      console.warn('[AM] Capacitor App plugin not available for appUrlOpen listener.');
     }
   })();
 
@@ -324,33 +326,41 @@
     const Browser = Plugins.Browser;
 
     if (Browser && typeof Browser.open === 'function') {
-      // use GitHub Pages to avoid the app’s Universal Link capture
-      const url = `${NATIVE_HOST}/auth/native?native=1&v=4`;
-      console.log('[AM] native (SFSafariViewController) →', url);
-      document.getElementById('amMsg').textContent = 'Opening Apple sign-in…';
-      await Browser.open({ url, presentationStyle: 'fullscreen' });
+      // Use the main domain now, fixed by AASA 'NOT /auth/*' rule
+      const url = `${NATIVE_HOST}/auth/native/?native=1&v=5`; // Added cache buster v=5
+      console.log('[AM] Native SFSafariViewController →', url);
+      qs('#amMsg').textContent = 'Opening Apple sign-in…';
+      try {
+        await Browser.open({ url, presentationStyle: 'fullscreen' });
+        // After Browser.open, iOS handles the rest via Universal Link (callback handled by appUrlOpen listener)
+      } catch (e) {
+         console.error('[AM] Browser.open failed:', e);
+         qs('#amMsg').textContent = 'Failed to open sign-in window: ' + (e.message || e);
+      }
       return;
     }
 
-    // Website fallback
+    // Website fallback (uses standard MusicKit pop-up)
     try{
-      console.log('[AM] web path → MusicKit.authorize()');
+      console.log('[AM] Web Fallback → MusicKit.authorize()');
       qs('#amMsg').textContent = 'Contacting Apple…';
       const m = await getWebMusicInstance();
-      const userToken = await m.authorize();
+      const userToken = await m.authorize(); // Standard web pop-up
       if(!userToken) throw new Error('Authorization failed');
       qs('#amMsg').textContent = 'Signed in. You can now create a playlist.';
-      qs('#amCreate').style.display = 'inline-block';
+      qs('#amSign').style.display = 'none'; // Hide sign-in
+      qs('#amCreate').style.display = 'inline-block'; // Show create
       localStorage.setItem('appleMusicUserToken', userToken);
     }catch(e){
-      console.error(e);
+      console.error('[AM] Web fallback failed:', e);
       qs('#amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
     }
   }
 
   // ---------- Create playlist (shared) ----------
   async function amCreatePlaylist(){
-    const userToken = (music && music.musicUserToken) || localStorage.getItem('appleMusicUserToken');
+    // Use token from localStorage (set by native callback OR web fallback)
+    const userToken = localStorage.getItem('appleMusicUserToken');
     if(!userToken){ qs('#amMsg').textContent='Please sign in first.'; return; }
     if(!lastTracks?.length){ qs('#amMsg').textContent='Generate a tracklist first.'; return; }
 
@@ -369,22 +379,23 @@
       qs('#amMsg').textContent = 'Create failed: ' + (e.message || e);
     }
   }
-
-  // ---------- wire up ----------
-  qs('#go').onclick = simulate;
-
-  // bind sign-in with non-passive listener (we call preventDefault)
+  
+  // ---------- Check initial signed-in state ----------
   (function(){
-    const btn = document.getElementById('amSign');
-    if (btn) {
-      btn.onclick = null;
-      btn.addEventListener('click', (e) => { e.preventDefault(); amSignIn(); }, { passive: false });
-      console.log('[AM] Button bound to native Browser.open flow');
+    const storedToken = localStorage.getItem('appleMusicUserToken');
+    if (storedToken) {
+      qs('#amSign').style.display = 'none';
+      qs('#amCreate').style.display = 'inline-block';
+      qs('#amMsg').textContent = 'Signed in. Generate a list to create a playlist.';
     }
   })();
 
-  qs('#amCreate').onclick = () => amCreatePlaylist();
-  setTab('yt');
+  // ---------- wire up ----------
+  qs('#go').onclick = simulate;
+  qs('#amSign').onclick = amSignIn; // Directly bind amSignIn
+  qs('#amCreate').onclick = amCreatePlaylist;
+
+  setTab('yt'); // Set initial tab
 </script>
 
 </body>
