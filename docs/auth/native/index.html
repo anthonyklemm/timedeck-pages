@@ -12,15 +12,12 @@
   .err{color:#fda4af;margin-top:.75rem;white-space:pre-wrap}
   button{display:block;width:100%;font-size:1.05rem;font-weight:700;color:#fff;background:#007aff;border:0;border-radius:12px;padding:12px 16px;cursor:pointer}
   button:disabled{background:#475569;color:#cbd5e1;cursor:not-allowed}
-  .tip{margin-top:.75rem}
 </style>
 
 <div class="box">
   <h2 style="margin:.2rem 0">Connect to Apple Music</h2>
-  <p class="muted" id="msg">Initializing...</p>
-
+  <p class="muted" id="msg">Initializing…</p>
   <button id="signInButton" disabled>Sign in with Apple Music</button>
-
   <pre id="err" class="err"></pre>
 </div>
 
@@ -31,9 +28,8 @@
   const $err = (t)=>document.getElementById('err').textContent=t||'';
   const qs = new URLSearchParams(location.search);
   const API = qs.get('api') || 'https://timedeck-api.onrender.com';
-  const CALLBACK_HOST = 'https://tapedecktimemachine.com';
-
-  let developerToken; // We'll store this after pre-loading
+  const CALLBACK_HOST = 'https://tapedecktimemachine.com'; 
+  let developerToken = null;
 
   function waitForMusicKit(timeout=15000){
     if (window.MusicKit && window.MusicKit.getInstance) return Promise.resolve();
@@ -43,79 +39,65 @@
     });
   }
 
-  // --- NEW: Pre-fetch the token on page load ---
-  async function prepareToken() {
-    try {
-      $msg('Initializing MusicKit…');
+  // --- This function is the same: pre-load the token ---
+  async function init(){
+    try{
+      $msg('Loading MusicKit…');
       await waitForMusicKit();
-
       $msg('Requesting developer token…');
       const r = await fetch(`${API}/v1/apple/dev-token`, { cache: 'no-store' });
       if(!r.ok) throw new Error(`dev-token ${r.status}`);
-      const { token } = await r.json();
-      if(!token) throw new Error('No developer token');
-      
-      developerToken = token; // Store the token
-      
+      const j = await r.json();
+      developerToken = j.token;
+      if(!developerToken) throw new Error('No developer token');
       $msg('Tap the button to open Apple sign-in.');
-      btn.disabled = false; // Enable the button
-
-    } catch(e) {
-      console.error(e);
+      btn.disabled = false;
+    }catch(e){
       $msg('Initialization failed.');
       $err(e.message || String(e));
-      btn.disabled = true;
     }
   }
 
-  // --- MODIFIED: This function now intercepts the pop-up ---
+  // --- MODIFIED: This function now builds a URL and redirects ---
   async function doAuth(){
-    btn.disabled = true; $err(''); $msg('Preparing sign-in…');
+    btn.disabled = true; $err(''); $msg('Redirecting to Apple…');
 
     try{
       if (!developerToken) {
         throw new Error('Developer token is missing. Please refresh.');
       }
+
+      // 1. THIS IS THE FIX: Manually build the authorization URL.
+      // We are *not* calling mk.authorize()
       
-      // 1. THIS IS THE HACK: Temporarily replace window.open
-      const originalWindowOpen = window.open;
-      let authURL = '';
-      window.open = (url) => {
-        authURL = url; // Capture the URL
-        console.log('Intercepted auth URL:', authURL);
-        return null; // Prevent the pop-up
+      const redirectURL = `${CALLBACK_HOST}/auth/callback/`;
+      
+      const authURL = new URL('https://idmsa.apple.com/IDMSWebAuth/auth2');
+      
+      // This is the public, non-secret key for MusicKit JS
+      authURL.searchParams.set('appIdKey', 'cbf6439019b843308571a6e7a1c7d7041a99a656606ffc8446b8259b350f4d6d'); 
+      authURL.searchParams.set('language', 'en-US');
+      authURL.searchParams.set('path', '/authorize');
+      authURL.searchParams.set('redirectUrl', redirectURL);
+      authURL.searchParams.set('sdkVersion', 'musickit.js/v3');
+      
+      // Pass along any query params from the original request
+      const state = {
+        api: qs.get('api'),
+        native: '1' // We will pass 'native' here
       };
-
-      // 2. Configure MusicKit
-      window.MusicKit.configure({ developerToken, app:{ name:'TapeDeck Time Machine', build:'native' } });
-      let mk = window.MusicKit.getInstance();
-      for (let i=0;i<10 && (!mk || typeof mk.authorize!=='function');i++){
-        await new Promise(res=>setTimeout(res,100));
-        mk = window.MusicKit.getInstance();
-      }
-      if(!mk || typeof mk.authorize!=='function') throw new Error('MusicKit not initialized');
-
-      // 3. Call authorize(). Our hack will intercept it.
-      $msg('Opening Apple sign-in…');
-      try {
-        await mk.authorize();
-      } catch (e) {
-        // This may throw a 'null' error because we blocked it.
-        // We can safely ignore it as long as we got the URL.
-        console.log('authorize() threw a recoverable error:', e.message);
-      }
+      // We encode our state so it survives the redirect
+      authURL.searchParams.set('state', btoa(JSON.stringify(state)));
       
-      // 4. Restore the original window.open
-      window.open = originalWindowOpen;
+      const webAuth = {
+        developerToken,
+        appName: 'TapeDeck Time Machine'
+      };
+      authURL.searchParams.set('webAuthentication', JSON.stringify(webAuth));
 
-      // 5. Check if we captured the URL
-      if (!authURL) {
-        throw new Error('Could not capture the authorization URL. Auth flow failed.');
-      }
-
-      // 6. THIS IS THE FIX: Redirect the *entire page*
-      $msg('Redirecting to Apple…');
-      location.href = authURL; // This is a redirect, NOT a pop-up
+      // 2. Redirect the *entire page* to Apple's sign-in.
+      // This is just like clicking a link and will not be blocked.
+      location.href = authURL.toString();
 
     }catch(e){
       console.error(e);
@@ -125,10 +107,8 @@
     }
   }
 
-  // --- MODIFIED: Start the token prep, and listen for the click ---
   btn.addEventListener('click', doAuth, { passive: true });
-  prepareToken(); // Run pre-load
-  
+  init();
 })();
 </script>
 </html>
