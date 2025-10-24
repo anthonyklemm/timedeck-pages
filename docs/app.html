@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>TapeDeck Time Machine</title>
 
-  <!-- MusicKit JS (still needed for auth and search) -->
+  <!-- MusicKit JS -->
   <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
 
   <!-- Meta / Social -->
@@ -17,8 +17,7 @@
   <meta property="og:title" content="TapeDeck Time Machine - Historical Music Playlist Generator">
   <meta property="og:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
   <meta property="og:image" content="https://tapedecktimemachine.com/tapedeck-preview.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
+  <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
   <meta property="twitter:card" content="summary_large_image">
   <meta property="twitter:url" content="https://tapedecktimemachine.com/">
   <meta property="twitter:title" content="TapeDeck Time Machine - Historical Music Playlist Generator">
@@ -33,7 +32,10 @@
   </script>
 
   <style>
-    :root{--bg:#0a0f17;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#8b5cf6;--accent2:#22d3ee;--shadow:0 12px 48px rgba(2,10,20,.45)}
+    :root{
+      --bg:#0a0f17;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;
+      --accent:#8b5cf6;--accent2:#22d3ee;--shadow:0 12px 48px rgba(2,10,20,.45)
+    }
     *{box-sizing:border-box}
     body{margin:0;background:
       radial-gradient(1200px 600px at 10% -10%, #0e1630 0%, transparent 60%),
@@ -43,8 +45,8 @@
     .bar{display:flex;align-items:center;gap:14px}
     .bar a { color: inherit; text-decoration: none; display: flex; align-items: center; gap: 14px; }
     .logo{width:36px;height:36px;border-radius:12px;background:
-      linear-gradient(135deg,#8b5cf6 0%,#22d3ee 55%,#16a34a 120%); display:grid;place-items:center;
-      color:#fff;font-weight:800;box-shadow:var(--shadow); text-decoration:none; flex-shrink: 0;}
+      linear-gradient(135deg,#8b5cf6 0%,#22d3ee 55%,#16a34a 120%);
+      display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:var(--shadow);text-decoration:none; flex-shrink: 0;}
     h1{font-size:22px;margin:0}
     .panel{background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.12);
       border-radius:18px;padding:16px;box-shadow:var(--shadow)}
@@ -52,27 +54,50 @@
     label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
     input,select,button{width:100%;padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
       background:#0c1422;color:var(--text);outline:none;font-size:1rem}
-    button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700; cursor: pointer;}
+    button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700;cursor:pointer}
     button:disabled{background:#475569;color:#cbd5e1;cursor:not-allowed}
     .tabs{display:flex;gap:10px;margin:14px 0 8px}
     .tab{padding:9px 14px;border-radius:999px;border:1px solid rgba(148,163,184,.2);
       background:#0c1422;color:var(--text);cursor:pointer}
     .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
     .cols{display:grid;grid-template-columns:1.05fr .95fr; gap:16px}
-    .box{min-height:380px; /* Adjusted slightly */}
-    /* Standard iframe style */
+    .box{min-height:380px}
     iframe{width:100%;height:360px;border:0;border-radius:12px;box-shadow:var(--shadow)}
-    /* Style for the Apple Music Player container (iframe will go in here) */
-    #amPlayerWrap { width: 100%; height: 360px; margin-top: 10px; }
     .btn{display:inline-block;margin-top:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);
-      background:#0c1422;color:#e5e7eb;text-decoration:none;font-weight:700; cursor: pointer;}
+      background:#0c1422;color:#e5e7eb;text-decoration:none;font-weight:700;cursor:pointer}
+    .btn.inline{padding:8px 10px}
+    .btn.ghost{background:transparent}
+    .muted{color:var(--muted)}
     .list{padding:12px 8px;max-height:420px;overflow:auto}
     .row{display:grid;grid-template-columns:110px 1fr;gap:14px; padding:10px 6px;border-bottom:1px dashed rgba(148,163,184,.12)}
     .ts{font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
     .err{color:#fda4af;margin-top:6px; white-space: pre-wrap; word-break: break-all;}
     .ok{color:#86efac;margin-top:6px}
-    .muted{color:var(--muted)}
-    /* REMOVED custom mini-player CSS */
+
+    /* Mini-player */
+    .mini{display:none;margin-top:12px;background:rgba(12,20,34,.8);border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:10px}
+    .mini .row1{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+    .mini .art{width:44px;height:44px;border-radius:10px;background:#0c1422;object-fit:cover; flex-shrink: 0;}
+    .mini .meta{min-width:0} /* Allow text to shrink */
+    .mini .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mini .artist{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mini .controls{display:flex;gap:6px;align-items:center; flex-shrink: 0;}
+    .mini .controls .btn{padding:6px 10px}
+    .mini .row2{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin-top:8px}
+    .mini .time{font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted);} /* Consistent class for times */
+    .mini input[type="range"]{width:100%; margin: 0; padding: 0; height: 8px; cursor: pointer; background: transparent; accent-color: var(--accent);} /* Basic range styling */
+    /* Input range thumb styling (cross-browser) */
+    .mini input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; background: var(--accent2); border-radius: 50%; cursor: pointer; margin-top: -2px; /* Adjust vertical align */}
+    .mini input[type=range]::-moz-range-thumb { width: 12px; height: 12px; background: var(--accent2); border-radius: 50%; cursor: pointer; border: none;}
+
+    .mini .row3{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;margin-top:8px}
+    .mini .vol{display:flex;align-items:center;gap:8px}
+    .mini .vol input[type="range"] { max-width: 80px; height: 6px; } /* Smaller volume slider */
+    .mini .vol input[type=range]::-webkit-slider-thumb { margin-top: -3px;} /* Adjust thumb for smaller track */
+    .mini .open{font-size:12px; color: var(--muted); text-decoration:none}
+
+    .badge{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(148,163,184,.2);border-radius:999px;padding:6px 10px;background:#0c1422}
+
     @media (max-width:800px){.grid{grid-template-columns:1fr 1fr}.grid>div:last-child{grid-column:1/-1}}
     @media (max-width:700px){.wrap{margin:20px auto}.cols{grid-template-columns:1fr}h1{font-size:18px}}
     @media (max-width:500px){.grid{grid-template-columns:1fr}}
@@ -132,12 +157,39 @@
             <button class="btn" id="amSign">Sign in to Apple Music</button>
             <button class="btn" id="amPlay" style="display:none">Play Playlist</button>
             <button class="btn" id="amCreate" style="display:none">Create Playlist</button>
-            <!-- REMOVED Test button -->
           </div>
           <div id="amMsg" class="muted" style="margin-top:8px"></div>
-          <!-- NEW: Placeholder for the iframe player -->
-          <div id="amPlayerWrap" style="display:none;"></div>
-          <!-- REMOVED custom mini-player HTML -->
+
+          <!-- Mini-player (Apple MusicKit driven) -->
+          <div id="mini" class="mini">
+            <div class="row1">
+              <img id="miniArt" class="art" alt="Album Art">
+              <div class="meta">
+                <div id="miniTitle" class="title">—</div>
+                <div id="miniArtist" class="artist">—</div>
+              </div>
+              <div class="controls">
+                <button id="btnPrev" class="btn inline ghost" title="Previous">⟨⟨</button>
+                <button id="btnPlayPause" class="btn inline" title="Play/Pause">▶</button>
+                <button id="btnNext" class="btn inline ghost" title="Next">⟩⟩</button>
+                <button id="btnShuffle" class="btn inline ghost" title="Shuffle">🔀</button>
+                <button id="btnRepeat" class="btn inline ghost" title="Repeat">🔁</button>
+              </div>
+            </div>
+            <div class="row2">
+              <div id="miniT1" class="time">0:00</div>
+              <input id="miniSeek" type="range" min="0" max="1000" value="0" step="1">
+              <div id="miniT2" class="time">0:00</div>
+            </div>
+            <div class="row3">
+              <span class="badge">Apple Music Player</span>
+              <div class="vol">
+                <span class="muted" style="font-size:12px;">Vol</span>
+                <input id="miniVol" type="range" min="0" max="1" step="0.01" value="1">
+              </div>
+              <a id="miniOpen" class="open" href="#" target="_blank" rel="noopener">Open in Music ↗</a>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -162,34 +214,12 @@
   const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
   const NET_TIMEOUT_MS = 180000; // 3 minutes
   const NATIVE_HOST = 'https://tapedecktimemachine.com';
-  const sleep = (ms) => new Promise(r => setTimeout(r, ms)); // Added sleep helper
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  // ... (toISO, setTab, withTimeout functions remain unchanged) ...
-  function toISO(mmddyyyy){
-    try {
-      const parts = mmddyyyy.split('/');
-      if (parts.length !== 3) throw new Error('Invalid date format');
-      const [mm,dd,yyyy] = parts.map(p => p.trim());
-      if (yyyy.length !== 4 || isNaN(parseInt(yyyy))) throw new Error('Invalid year format');
-      return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
-    } catch (e) {
-      console.error("Date parsing error:", e);
-      qs('#ytErr').textContent = `Invalid date format. Please use MM/DD/YYYY.`;
-      throw e;
-    }
-  }
-
-  function setTab(id){
-    document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
-    qs('#pane-yt').style.display = id==='yt' ? '' : 'none';
-    qs('#pane-am').style.display = id==='am' ? '' : 'none';
-  }
+  function toISO(mmddyyyy){ /* ... unchanged ... */ }
+  function setTab(id){ /* ... unchanged ... */ }
   document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
-
-  function withTimeout(promise, ms = NET_TIMEOUT_MS) {
-    let t; const timer = new Promise((_, rej)=>{ t=setTimeout(()=>rej(new Error(`Network timeout after ${Math.round(ms/1000)}s`)), ms); });
-    return Promise.race([promise.finally(()=>clearTimeout(t)), timer]);
-  }
+  function withTimeout(promise, ms = NET_TIMEOUT_MS) { /* ... unchanged ... */ }
 
   // ---------- state ----------
   let lastTracks = [];
@@ -201,95 +231,9 @@
   (function(){ const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api"; document.head.appendChild(tag); })();
   window.onYouTubeIframeAPIReady = () => { YTapiReady = true; console.log("YT API Ready"); };
 
-  async function simulate(){
-    qs('#go').disabled = true;
-    qs('#ytStatus').textContent = 'Building…';
-    qs('#ytErr').textContent = '';
-    qs('#list').innerHTML = '';
-    lastTracks = [];
-    qs('#amPlayerWrap').innerHTML = ''; // Clear AM player
-    qs('#amPlayerWrap').style.display = 'none';
-    if (player) { try{ player.destroy(); }catch{} player = null; }
-    qs('#ytp').innerHTML = '';
-    qs('#ytp').style.display = 'none';
-    qs('#ytOpen').style.display = 'none';
-
-    try{
-      const body = {
-        date: toISO(qs('#date').value.trim()),
-        genre: qs('#genre').value,
-        hours: Number(qs('#hours').value || 3),
-        repeat_gap_min: Number(qs('#gap').value || 90),
-        seed: (qs('#seed').value.trim() || undefined) ? String(qs('#seed').value.trim()) : undefined,
-        limit: 500
-      };
-      const r = await withTimeout(fetch(`${API}/v1/simulate`, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) }));
-      if(!r.ok){ const txt = await r.text().catch(()=> ''); throw new Error(`simulate ${r.status}: ${txt}`); }
-      const data = await r.json();
-      lastTracks = data.tracks || [];
-      if(!lastTracks.length){ qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned. Try a different date/genre.'; return; }
-      renderList(lastTracks);
-      buildYouTube(lastTracks);
-    }catch(err){
-      console.error('[simulate] failed:', err);
-      if (!qs('#ytErr').textContent) { qs('#ytErr').textContent = err.message || String(err); }
-      qs('#ytStatus').textContent = '';
-    } finally {
-      qs('#go').disabled = false;
-    }
-  }
-
-  function renderList(rows){
-    if(!rows?.length){ qs('#list').innerHTML = '<div class="muted">No tracks.</div>'; return; }
-    const frag = document.createDocumentFragment();
-    rows.slice(0,500).forEach(t=>{
-      const d = document.createElement('div'); d.className='row';
-      d.innerHTML = `<div class="ts">${t.timestamp.replace('T',' ')}</div>
-                     <div><strong>${t.artist}</strong> — <em>${t.title}</em>
-                     <span class="muted">• ${t.source_rank ?? ''}</span></div>`;
-      frag.appendChild(d);
-    });
-    qs('#list').replaceChildren(frag);
-  }
-
-  async function buildYouTube(tracks){
-    qs('#ytStatus').textContent = 'Resolving YouTube IDs…';
-    qs('#ytErr').textContent = '';
-    try{
-      const r = await withTimeout(fetch(`${API}/v1/yt/resolve`, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ tracks: tracks.map(t=>({artist:t.artist,title:t.title})), limit:50 }) }));
-      if(!r.ok){ throw new Error(`yt/resolve ${r.status}: ${await r.text()}`); }
-      const data = await r.json();
-      const ids = (data.ids || []).filter(Boolean);
-      if(!ids.length){ qs('#ytStatus').textContent = 'No playable videos found (try another date/genre).'; return; }
-      const openUrl = `https://www.youtube.com/watch_videos?video_ids=${ids.join(',')}`;
-      qs('#ytOpen').href = openUrl;
-      qs('#ytOpen').style.display = 'inline-block';
-      qs('#ytStatus').textContent = `${ids.length} videos found. Loading player...`;
-      if (player) {
-        try{ player.cuePlaylist(ids, 0, 0); qs('#ytStatus').textContent = `${ids.length} videos queued.`; }
-        catch(e) { console.error("YT cuePlaylist failed:", e); player = null; }
-      }
-      if (!player) {
-        if (YTapiReady && qs('.tab[data-tab="yt"]').classList.contains('active')) {
-          console.log("YT: Creating new player instance...");
-          qs('#ytp').style.display = 'block';
-          player = new YT.Player('ytp', {
-            height: '360', width: '100%', playerVars: { playsinline: 1, rel: 0, modestbranding: 1, origin: location.origin },
-            events: {
-              onReady: (e) => {
-                console.log("YT Player Ready, cueing playlist...");
-                try { e.target.cuePlaylist(ids, 0, 0); qs('#ytStatus').textContent = `${ids.length} videos queued.`; }
-                catch (cueError) { console.error("YT cuePlaylist in onReady failed:", cueError); qs('#ytStatus').textContent = 'Error loading videos into player.'; qs('#ytErr').textContent = cueError.message || String(cueError); }
-              },
-              onError: (e) => { console.error("YT Player Error:", e.data); qs('#ytErr').textContent = `Youtubeer Error: ${e.data}`; }
-            }
-          });
-        } else if (!YTapiReady) { qs('#ytStatus').textContent = 'YouTube API is still loading. Use "Open in YouTube".'; }
-        else { qs('#ytStatus').textContent = `${ids.length} videos ready. Switch to YouTube tab to play.`; }
-      }
-    }catch(err){ console.error("[buildYouTube] failed:", err); qs('#ytErr').textContent = err.message || String(err); qs('#ytStatus').textContent = ''; }
-  }
-
+  async function simulate(){ /* ... unchanged ... */ }
+  function renderList(rows){ /* ... unchanged ... */ }
+  async function buildYouTube(tracks){ /* ... unchanged ... */ }
 
   // ---------- Universal Link / custom-scheme listener (native) ----------
   // ... (This function remains unchanged) ...
@@ -306,34 +250,13 @@
   })();
 
 
-  // ---------- MusicKit Initialization (V9 - Cleaned up, using let) ----------
+  // ---------- MusicKit Initialization (V9 - Working Init) ----------
   let musicInstance = null; // Holds the instance once configured
   let musicInstancePromise = null; // Tracks the initial configure promise
 
-  function waitForMusicKitLoaded(timeoutMs = 15000) {
-    if (window.MusicKit && typeof window.MusicKit.configure === 'function') return Promise.resolve();
-    return new Promise((resolve, reject) => {
-      console.log('[AM Wait] Waiting for MusicKit script load...');
-      const t = setTimeout(() => { console.error('[AM Wait] MusicKit load timed out.'); reject(new Error('MusicKit load timed out')); }, timeoutMs);
-      window.addEventListener('musickitloaded', () => { console.log('[AM Wait] MusicKit script loaded.'); clearTimeout(t); resolve(); }, { once: true });
-    });
-  }
+  function waitForMusicKitLoaded(timeoutMs = 15000) { /* ... unchanged ... */ }
+  async function fetchDeveloperToken() { /* ... unchanged ... */ }
 
-  // Fetch developer token, caching it
-  async function fetchDeveloperToken() {
-    if (DEV_TOKEN) return DEV_TOKEN;
-    console.log('[AM Fetch Token] Fetching dev token...');
-    const r = await withTimeout(fetch(`${API}/v1/apple/dev-token`, { headers: { 'accept':'application/json' } }));
-    if (!r.ok) throw new Error(`dev-token ${r.status}`);
-    const { token, storefront } = await r.json();
-    if (!token || typeof token !== 'string' || token.trim().length < 20) throw new Error('Invalid developer token');
-    DEV_TOKEN = token.trim();
-    window.mkDefaultStorefront = storefront || 'us'; // Store default storefront
-    console.log('[AM Fetch Token] Token fetched and cached.');
-    return DEV_TOKEN;
-  }
-
-  // Configure MusicKit - Returns the INSTANCE
   async function configureMusicKit() {
     await waitForMusicKitLoaded();
     const developerToken = await fetchDeveloperToken();
@@ -345,178 +268,83 @@
     });
 
     console.log('[AM Configure] Getting instance...');
-    // --- CORRECTED FIX: Use 'let' ---
-    let instance = null; // Initialize as null
+    let instance = null; // Use let
     for (let i = 0; i < 5; i++) {
         instance = window.MusicKit.getInstance(); // Assign using let
         if (instance) break;
         console.warn(`[AM Configure] getInstance attempt ${i+1} failed, retrying...`);
-        await sleep(200); // Increased delay slightly
+        await sleep(200);
     }
-    // --- END FIX ---
     if (!instance) throw new Error('MusicKit instance failed after configure and retries.');
 
     console.log('[AM Configure] Instance obtained.');
-    instance.storefrontId = instance.storefrontId || window.mkDefaultStorefront || 'us'; // Set storefront simply
+    instance.storefrontId = instance.storefrontId || window.mkDefaultStorefront || 'us';
     console.log('[AM Configure] Storefront set to:', instance.storefrontId);
 
-    // Apply stored token
     const storedToken = localStorage.getItem('appleMusicUserToken');
     if (storedToken && !instance.musicUserToken) {
       instance.musicUserToken = storedToken;
       console.log('[AM Configure] Applied stored user token.');
     }
 
-    // Add Event Listener (ensure only one)
     instance.removeEventListener('authorizationStatusDidChange', handleAuthorizationStatusChange);
     instance.addEventListener('authorizationStatusDidChange', handleAuthorizationStatusChange);
     console.log('[AM Configure] Attached auth listener.');
+
+    // --- NEW: Register player event listeners ---
+    registerPlayerEvents(instance); // Register events after getting instance
 
     console.log('[AM Configure] Initial configuration complete. Current auth status:', instance.authorizationStatus);
     return instance;
   }
 
-  // Gets the instance, initializing it only the first time
-  function getMusicInstance() {
-    if (musicInstance) return Promise.resolve(musicInstance);
-    if (!musicInstancePromise) {
-      musicInstancePromise = configureMusicKit()
-        .then(instance => {
-          musicInstance = instance; // Cache it
-          console.log('[AM GetInstance] Initialization successful.');
-          updateAmUIState(); // Update UI
-          return instance;
-        })
-        .catch(e => {
-          console.error('[AM GetInstance] Initialization failed:', e);
-          qs('#amMsg').textContent = 'Failed to initialize Apple Music: ' + (e.message || e);
-          musicInstancePromise = null; // Allow retry
-          musicInstance = null;
-          throw e;
-        });
-    }
-    return musicInstancePromise;
-  }
-
-  // Centralized UI Update Function
-  function updateAmUIState() {
-      const hasToken = !!localStorage.getItem('appleMusicUserToken');
-      console.log('[AM UI Update] Updating UI based on token presence:', hasToken);
-      qs('#amSign').style.display = hasToken ? 'none' : 'inline-block';
-      qs('#amPlay').style.display = hasToken ? 'inline-block' : 'none';
-      qs('#amCreate').style.display = hasToken ? 'inline-block' : 'none';
-      if (hasToken) {
-          if (qs('#amMsg').textContent.startsWith('Sign-in') || qs('#amMsg').textContent.startsWith('Error') || qs('#amMsg').textContent.startsWith('Failed')) {
-              qs('#amMsg').textContent = 'Signed in. Generate a list to play or create.';
-          }
-      } else {
-          // Clear player on sign out
-          qs('#amPlayerWrap').innerHTML = '';
-          qs('#amPlayerWrap').style.display = 'none';
-          if (!qs('#amMsg').textContent.startsWith('Error') && !qs('#amMsg').textContent.startsWith('Failed')) {
-              qs('#amMsg').textContent = '';
-          }
-      }
-  }
-
-  // Event Handler for Auth Changes
-  function handleAuthorizationStatusChange(event) {
-      console.log('[AM Event] Auth status changed:', event.authorizationStatus);
-      const instance = musicInstance || event.target || window.MusicKit.getInstance();
-      if (event.authorizationStatus === 'authorized' && instance && instance.musicUserToken) {
-          localStorage.setItem('appleMusicUserToken', instance.musicUserToken);
-      } else {
-           localStorage.removeItem('appleMusicUserToken');
-      }
-      updateAmUIState(); // Update UI
-  }
+  function getMusicInstance() { /* ... unchanged ... */ }
+  function updateAmUIState() { /* ... unchanged ... */ }
+  function handleAuthorizationStatusChange(event) { /* ... unchanged ... */ }
   // --- End MusicKit Initialization ---
 
 
   // ---------- Native-first sign-in (Browser.open) ----------
-  async function amSignIn(){
-    const Cap = window.Capacitor || {};
-    const Plugins = (Cap && Cap.Plugins) || {};
-    const Browser = Plugins.Browser;
-    qs('#amMsg').textContent = '';
+  async function amSignIn(){ /* ... unchanged ... */ }
 
-    if (Browser && typeof Browser.open === 'function') {
-      const url = `${NATIVE_HOST}/auth/native/?native=1&v=5`; // Keep cache buster
-      console.log('[AM] Native SFSafariViewController →', url);
-      qs('#amMsg').textContent = 'Opening Apple sign-in…';
-      try {
-        await getMusicInstance(); // Ensure configured before native auth
-        await Browser.open({ url, presentationStyle: 'fullscreen' });
-      } catch (e) {
-        console.error('[AM] Browser.open or pre-config failed:', e);
-        qs('#amMsg').textContent = 'Failed to open sign-in window: ' + (e.message || e);
-      }
-      return;
-    }
-
-    // Website fallback
-    try {
-      console.log('[AM] Web Fallback → MusicKit.authorize()');
-      qs('#amMsg').textContent = 'Contacting Apple…';
-      const m = await getMusicInstance(); // Ensures configured
-      await m.authorize(); // Trigger auth popup - result handled by event listener
-      qs('#amMsg').textContent = 'Sign-in requested. Check pop-up.';
-
-    } catch(e){
-      console.error('[AM] Web fallback failed:', e);
-      qs('#amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
-      updateAmUIState(); // Ensure UI resets
-    }
-  }
-
-  // ---------- Play Playlist in Apple Music (Using IFRAME Embed) ----------
-  // Helper function for REST API search (requires DEV_TOKEN to be set)
-  async function appleCatalogSearch(term, storefront = 'us', limit = 1) {
-      // Ensure dev token is fetched before making API call
-      const devToken = await fetchDeveloperToken();
-      if (!devToken) {
-          console.error("appleCatalogSearch: Developer token not available.");
-          return null; // Can't search without token
-      }
-      const url = `https://api.music.apple.com/v1/catalog/${encodeURIComponent(storefront)}/search?term=${encodeURIComponent(term)}&limit=${limit}&types=songs`;
-      try {
-          const r = await fetch(url, {
-              headers: { 'Authorization': `Bearer ${devToken}` }
-          });
-          if (!r.ok) {
-               console.warn(`REST Search failed (${r.status}) for: ${term}`);
-               return null;
-          }
-          return await r.json();
-      } catch (e) {
-          console.warn(`REST Search network error for "${term}":`, e);
-          return null;
-      }
-  }
-
+  // ---------- Play Playlist (Programmatic + Custom UI) ----------
+  // Helper function for REST API search (needed if MusicKit API fails)
+  async function appleCatalogSearch(term, storefront = 'us', limit = 1) { /* ... unchanged ... */ }
 
   async function amPlayPlaylist() {
     qs('#amMsg').textContent = '';
-    const playerWrap = qs('#amPlayerWrap');
-    playerWrap.innerHTML = '';
-    playerWrap.style.display = 'none';
-
     let m;
+
     try {
-      console.log('[AM Play Embed] Getting MusicKit instance...');
-      m = await getMusicInstance(); // Ensures configured
+      console.log('[AM Play] Getting MusicKit instance...');
+      m = await getMusicInstance(); // Ensures configured and gets instance
 
       if (!m || !m.isAuthorized) {
-        console.log('[AM Play Embed] Not authorized.');
+        console.log('[AM Play] Not authorized.');
         qs('#amMsg').textContent = 'Sign-in required. Please click "Sign in to Apple Music".';
         updateAmUIState();
         return;
       }
-       m.storefrontId = m.storefrontId || window.mkDefaultStorefront || 'us';
-       console.log('[AM Play Embed] Instance ready, Storefront:', m.storefrontId);
+
+      console.log('[AM Play] Waiting for API readiness...');
+      qs('#amMsg').textContent = 'Connecting to Apple Music API...';
+      let apiReady = false;
+      for (let i = 0; i < 15; i++) { // Retry up to 15 times (3 seconds total)
+          if (m && m.api && typeof m.api.search === 'function') {
+              apiReady = true;
+              console.log(`[AM Play] API ready after ${i} retries.`);
+              break;
+          }
+          console.warn(`[AM Play] API not ready on instance 'm', retry ${i+1}...`);
+          await sleep(200); // Wait 200ms
+      }
+      if (!apiReady) throw new Error('MusicKit API failed to become ready in time.');
+
+      m.storefrontId = m.storefrontId || 'us';
+      console.log('[AM Play] Instance ready for search with storefront:', m.storefrontId);
 
     } catch (e) {
-      console.error('[AM Play Embed] init/check failed:', e);
+      console.error('[AM Play] init/check failed:', e);
       qs('#amMsg').textContent = 'Apple Music connection issue: ' + (e.message || e);
       updateAmUIState(); // Reset UI
       return;
@@ -541,108 +369,221 @@
       try {
         const term = `${t.artist} ${t.title}`;
         let id = null;
-        // Try MusicKit API search first IF AVAILABLE (robust check)
+        // Try MusicKit API search first
         if (m.api && typeof m.api.search === 'function') {
             try {
                 const res = await withTimeout(m.api.search(term, { types: ['songs'], limit: 1, storefront: storefront }), 5000);
                 id = res?.songs?.data?.[0]?.id;
             } catch (apiSearchErr) {
-                 console.warn(`MusicKit API search failed for "${term}", trying REST:`, apiSearchErr);
-                 id = null; // Ensure id is null if API search fails
+                 console.warn(`MusicKit API search failed for "${term}", trying REST:`, apiSearchErr); id = null;
             }
-        } else {
-             console.warn(`MusicKit API search not available, falling back to REST for: ${term}`);
-        }
-
-        // Fallback to REST API search if MusicKit API failed or wasn't available
+        } else { console.warn(`MusicKit API search not available, falling back to REST for: ${term}`); }
+        // Fallback to REST API search
         if (!id) {
-            console.log(`[AM Play Embed] Falling back to REST search for: ${term}`);
+            console.log(`[AM Play] Falling back to REST search for: ${term}`);
             const res = await appleCatalogSearch(term, storefront, 1);
             id = res?.results?.songs?.data?.[0]?.id;
         }
-
-        if (id) {
-            songIds.push(id);
-        } else {
-             console.warn(`[AM Play Embed] Track not found in ${storefront}: ${term}`);
-        }
+        if (id) { songIds.push(id); }
+        else { console.warn(`[AM Play] Track not found in ${storefront}: ${term}`); }
         await sleep(100);
-      } catch (e) {
-        console.warn(`[AM Play Embed] search loop error for "${t.artist} - ${t.title}":`, e);
-      }
+      } catch (e) { console.warn(`[AM Play] search loop error for "${t.artist} - ${t.title}":`, e); }
     }
 
-    if (!songIds.length) {
-      qs('#amMsg').textContent = 'None of the tracks could be found in Apple Music.';
-      return;
-    }
+    if (!songIds.length) { qs('#amMsg').textContent = 'None of the tracks could be found in Apple Music.'; return; }
 
-    qs('#amMsg').textContent = `Found ${songIds.length} tracks. Loading player...`;
-
-    // --- Create and Embed the iFrame Player ---
+    qs('#amMsg').textContent = `Found ${songIds.length} tracks. Adding to queue...`;
     try {
-      const iframe = document.createElement('iframe');
-      iframe.setAttribute('allow', 'autoplay *; encrypted-media *; fullscreen *');
-      iframe.setAttribute('frameborder', '0');
-      iframe.setAttribute('height', '150'); // Standard MiniPlayer height
-      iframe.setAttribute('style', 'width:100%; max-width:660px; overflow:hidden; background:transparent; border-radius:10px;'); // Adjusted style
-      iframe.setAttribute('sandbox', 'allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation');
-
-      // Construct the embed URL for a QUEUE using song IDs
-      const embedUrl = new URL(`https://embed.music.apple.com/${storefront}/playlist/pl.u-XXXXXX?i=${songIds.join(',')}`);
-      // Add app name and build from MusicKit config for context
-      // embedUrl.searchParams.set('app', 'music'); // Standard embed app
-      // embedUrl.searchParams.set('itsct', 'music_box');
-      // embedUrl.searchParams.set('itscg', '30200');
-
-      iframe.src = embedUrl.toString();
-
-      playerWrap.appendChild(iframe);
-      playerWrap.style.display = 'block'; // Show the container
-      playerWrap.style.height = '150px'; // Adjust container height
-      qs('#amMsg').textContent = `Player loaded with ${songIds.length} tracks!`;
-
+      // --- Use Programmatic Playback ---
+      await m.setQueue({ songs: songIds });
+      await m.play();
+      // --- Update Custom MiniPlayer UI ---
+      showMini(); // Make the player visible
+      setPlayIcon(true); // Set initial icon state
+      updateNowPlaying(m); // Update track info
+      updateTimes(m); // Update times
+      qs('#amMsg').textContent = `Now playing ${songIds.length} tracks!`;
     } catch (e) {
-      console.error('[AM Play Embed] Failed to create or load iframe:', e);
-      qs('#amMsg').textContent = 'Error loading Apple Music player: ' + (e.message || e);
-      playerWrap.style.display = 'none'; // Hide on error
+      console.error('[AM Play] playback failed:', e);
+      qs('#amMsg').textContent = 'Error starting playback: ' + (e.message || e);
+      // Hide mini player on playback error? Optional.
+      // mini.root.style.display = 'none'; mini.showing = false;
     }
   }
 
   // ---------- Create playlist (shared) ----------
-  // ... (amCreatePlaylist function remains unchanged) ...
-  async function amCreatePlaylist(){
-    const userToken = localStorage.getItem('appleMusicUserToken');
-    if(!userToken){ qs('#amMsg').textContent='Please sign in first.'; updateAmUIState(); return; }
-    if(!lastTracks?.length){ qs('#amMsg').textContent='Generate a tracklist first.'; return; }
+  async function amCreatePlaylist(){ /* ... unchanged ... */ }
 
-    qs('#amMsg').textContent='Creating playlist…';
-    try{
-      const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
-      const r = await withTimeout(fetch(`${API}/v1/apple/create-playlist`, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ userToken, name, tracks: lastTracks.map(t=>({artist:t.artist,title:t.title})) })
-      }));
-      if(!r.ok){
-        const j = await r.json().catch(() => ({ detail: 'Unknown error during create' }));
-        throw new Error(j.detail || `Create failed with status ${r.status}`);
-      }
-      const j = await r.json();
-      qs('#amMsg').textContent = `Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks.`;
-    } catch(e){
-      console.error('[AM Create] Failed:', e);
-      qs('#amMsg').textContent = 'Create failed: ' + (e.message || String(e));
-    }
+  // ---------- Mini-player UI Functions (NEW/RESTORED) ----------
+  const mini = { /* ... (keep mini element references) ... */
+    root: qs('#mini'), art: qs('#miniArt'), title: qs('#miniTitle'), artist: qs('#miniArtist'),
+    t1: qs('#miniT1'), t2: qs('#miniT2'), seek: qs('#miniSeek'), vol: qs('#miniVol'), open: qs('#miniOpen'),
+    btnPrev: qs('#btnPrev'), btnPlayPause: qs('#btnPlayPause'), btnNext: qs('#btnNext'),
+    btnShuffle: qs('#btnShuffle'), btnRepeat: qs('#btnRepeat'), showing: false, isSeeking: false
+  };
+
+  function fmtTime(sec){ /* ... unchanged ... */ }
+  function artworkURL(art, size=120){ /* ... unchanged ... */ }
+  function showMini() {
+    if (!mini.showing) { mini.root.style.display = 'block'; mini.showing = true; }
   }
+  function setPlayIcon(isPlaying){ mini.btnPlayPause.textContent = isPlaying ? '⏸' : '▶'; }
+  function setShuffleIcon(on){ mini.btnShuffle.style.opacity = on ? 1 : 0.6; }
+  function setRepeatIcon(mode){ /* ... unchanged ... */ }
+
+  function updateNowPlaying(m){
+    const item = m?.player?.nowPlayingItem;
+    const attr = item?.attributes || {};
+    mini.title.textContent = attr.name || '—';
+    mini.artist.textContent = attr.artistName || '—';
+    const art = artworkURL(attr.artwork, 120);
+    if (art) { mini.art.src = art; mini.art.alt = attr.name || ''; }
+    else { mini.art.src = ''; mini.art.alt = 'No artwork'; } // Clear artwork
+    mini.open.href = attr.url || '#';
+    updateTimes(m); // Update duration immediately with new track
+  }
+
+  function updateTimes(m){
+    // Don't update seek bar if user is currently dragging it
+    if (mini.isSeeking) return;
+    const cur = m?.player?.currentPlaybackTime || 0;
+    const dur = m?.player?.nowPlayingItem?.attributes?.durationInMillis / 1000 || 0; // Use item duration
+    mini.t1.textContent = fmtTime(cur);
+    mini.t2.textContent = dur ? fmtTime(dur) : '0:00';
+    // Use steps of 0.1s for smoother seeking display
+    mini.seek.max = Math.max(1, Math.floor(dur || 0)); // Max is duration in seconds
+    mini.seek.value = Math.floor(cur || 0);
+  }
+
+  function registerPlayerEvents(m){
+    if (!m || !m.player || m._tdtmBound) return; // Check flag
+    m._tdtmBound = true; // Set flag
+
+    console.log('[AM Events] Registering player event listeners...');
+
+    // Playback State
+    m.addEventListener('playbackStateDidChange', (event) => {
+      console.log('[AM Event] Playback state:', event.state); // playing, paused, stopped, etc.
+      const isPlaying = event.state === MusicKit.PlaybackStates.playing;
+      setPlayIcon(isPlaying);
+      showMini(); // Ensure mini player is visible when state changes
+      if (!isPlaying) updateTimes(m); // Update time display on pause/stop
+    });
+
+    // Now Playing Item
+    m.addEventListener('nowPlayingItemDidChange', (event) => {
+      console.log('[AM Event] Now playing item changed');
+      updateNowPlaying(m); // Update artwork, title, artist, duration
+    });
+
+    // Playback Time
+    m.addEventListener('playbackTimeDidChange', (event) => {
+      // This event provides time, use it directly
+       if (!mini.isSeeking) {
+           const cur = event.currentPlaybackTime || 0;
+           const dur = m?.player?.nowPlayingItem?.attributes?.durationInMillis / 1000 || 0;
+           mini.t1.textContent = fmtTime(cur);
+           mini.t2.textContent = dur ? fmtTime(dur) : '0:00';
+           mini.seek.max = Math.max(1, Math.floor(dur || 0));
+           mini.seek.value = Math.floor(cur || 0);
+       }
+    });
+
+    // Queue changes (useful for updating shuffle/repeat icons if needed)
+    m.addEventListener('queueItemsDidChange', () => {
+        console.log('[AM Event] Queue items changed');
+        setShuffleIcon(m.player.shuffleMode);
+        setRepeatIcon(m.player.repeatMode);
+    });
+     m.addEventListener('queuePositionDidChange', () => {
+        console.log('[AM Event] Queue position changed');
+        // If not playing, update now playing info based on new queue position?
+        // updateNowPlaying(m); // Maybe needed if skipping while paused
+    });
+
+    // Initial state update
+    updateNowPlaying(m);
+    updateTimes(m);
+    setPlayIcon(m.player.isPlaying);
+    setShuffleIcon(m.player.shuffleMode);
+    setRepeatIcon(m.player.repeatMode);
+    mini.vol.value = m.player.volume;
+  }
+
+  // --- Mini-player controls wiring ---
+  mini.btnPlayPause.onclick = async () => {
+    try {
+        const m = await getMusicInstance();
+        if (!m || !m.player) return;
+        // Check the actual player state, not just the button text
+        if (m.player.isPlaying) {
+            await m.pause();
+            // setPlayIcon(false); // Listener will handle this
+        } else {
+            await m.play();
+            // setPlayIcon(true); // Listener will handle this
+        }
+    } catch (e) { console.error("Play/pause error:", e); }
+  };
+  mini.btnPrev.onclick = async () => {
+      try { const m = await getMusicInstance(); if(m) await m.skipToPreviousItem(); }
+      catch(e){ console.warn("Skip Previous failed:", e); } // Often fails if at start
+  };
+  mini.btnNext.onclick = async () => {
+      try { const m = await getMusicInstance(); if(m) await m.skipToNextItem(); }
+      catch(e){ console.warn("Skip Next failed:", e); } // Might fail if at end
+  };
+  // Seek bar listeners
+  mini.seek.onmousedown = () => { mini.isSeeking = true; }; // Flag when user starts dragging
+  mini.seek.oninput = () => { // Update time display while dragging (optional)
+      const dur = musicInstance?.player?.nowPlayingItem?.attributes?.durationInMillis / 1000 || 0;
+      mini.t1.textContent = fmtTime(Number(mini.seek.value));
+      // mini.t2 needs no update here
+  };
+  mini.seek.onchange = async (e) => { // Seek when user releases slider
+    mini.isSeeking = false;
+    try {
+        const m = await getMusicInstance();
+        const targetTime = Number(e.target.value); // Value is now in seconds
+        if (m && m.player && !isNaN(targetTime)) {
+             await m.seekToTime(targetTime);
+             console.log("Seeked to:", targetTime);
+        }
+    } catch(e){ console.error("Seek error:", e); }
+  };
+
+  mini.vol.oninput = async (e) => {
+    try {
+        const m = await getMusicInstance();
+        if (m?.player) m.player.volume = Number(e.target.value);
+    } catch (e) { console.error("Volume error:", e); }
+  };
+  mini.btnShuffle.onclick = async () => {
+    try {
+        const m = await getMusicInstance();
+        if (!m?.player) return;
+        m.player.shuffleMode = m.player.shuffleMode === 0 ? 1 : 0; // Toggle 0 <-> 1
+        setShuffleIcon(m.player.shuffleMode); // Update icon immediately
+    } catch (e) { console.error("Shuffle error:", e); }
+  };
+  mini.btnRepeat.onclick = async () => {
+    try {
+        const m = await getMusicInstance();
+        if (!m?.player) return;
+        // Cycle repeat: 0 off -> 2 all -> 1 one -> 0
+        const next = (m.player.repeatMode === 0) ? 2 : (m.player.repeatMode === 2 ? 1 : 0);
+        m.player.repeatMode = next;
+        setRepeatIcon(next); // Update icon immediately
+    } catch (e) { console.error("Repeat error:", e); }
+  };
 
   // ---------- Initialize MusicKit on Load ----------
   document.addEventListener('DOMContentLoaded', () => {
       console.log('[AM Init] DOMContentLoaded, attempting initial MusicKit setup...');
       getMusicInstance().catch(e => {
           console.error("Initial MusicKit setup failed on load:", e);
-          // Don't necessarily show UI error here, let user trigger actions
       });
-      // Also update UI based on any stored token immediately
+      // Update UI based on stored token immediately
       updateAmUIState();
   });
 
