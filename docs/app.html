@@ -375,18 +375,22 @@
   }
 
   // ---------- NEW: Play Playlist in Apple Music ----------
+// ---------- NEW: Play Playlist in Apple Music ----------
   async function amPlayPlaylist() {
     qs('#amMsg').textContent = ''; // Clear previous messages
     let musicInstance;
 
+    // --- MODIFIED: Re-fetch instance after explicit auth ---
     try {
-      musicInstance = await getWebMusicInstance(); // Ensures MusicKit is loaded & configured
+      musicInstance = await getWebMusicInstance(); // Get potentially cached instance
 
       // Explicitly try to authorize if not already authorized
       if (!musicInstance.isAuthorized) {
         qs('#amMsg').textContent = 'Authorizing...';
         try {
           await musicInstance.authorize(); // Attempt authorization
+          // *** NEW: Re-fetch the instance AFTER authorizing ***
+          musicInstance = await getWebMusicInstance(true); // Pass true to force re-fetch
         } catch (authErr) {
           console.error('[AM Play] Authorization failed:', authErr);
           qs('#amMsg').textContent = 'Sign-in needed or failed: ' + (authErr.message || authErr);
@@ -394,9 +398,9 @@
         }
       }
 
-      // After potentially authorizing, double-check if ready for API calls
-      if (!musicInstance.isAuthorized || !musicInstance.api || typeof musicInstance.api.search !== 'function') {
-           console.error('[AM Play] MusicKit instance not ready for search after auth attempt.');
+      // After potentially authorizing AND re-fetching, check if ready
+      if (!musicInstance || !musicInstance.isAuthorized || !musicInstance.api || typeof musicInstance.api.search !== 'function') {
+           console.error('[AM Play] MusicKit instance still not ready for search after auth attempt.');
            qs('#amMsg').textContent = 'Apple Music connection not ready. Please try signing in again.';
            // Force sign-out/clear token to encourage re-auth
            localStorage.removeItem('appleMusicUserToken');
