@@ -10,10 +10,13 @@
   <meta name="description" content="Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.">
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
   <link rel="alternate icon" href="/favicon.ico">
-  <link rel="apple-touch-icon" href="/logo.svg"> <meta property="og:type" content="website">
+  <link rel="apple-touch-icon" href="/logo.svg">
+  <meta property="og:type" content="website">
   <meta property="og:url" content="https://tapedecktimemachine.com/">
-  <meta property="og:title" content="TapeDeck Time Machine - Historical Music Playlist Generator"> <meta property="og:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
-  <meta property="og:image" content="https://tapedecktimemachine.com/tapedeck-preview.png"> <meta property="og:image:width" content="1200">
+  <meta property="og:title" content="TapeDeck Time Machine - Historical Music Playlist Generator">
+  <meta property="og:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
+  <meta property="og:image" content="https://tapedecktimemachine.com/tapedeck-preview.png">
+  <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="twitter:card" content="summary_large_image">
   <meta property="twitter:url" content="https://tapedecktimemachine.com/">
@@ -133,11 +136,11 @@
 
 <script>
   // ---------- config & helpers ----------
-  const qs = s => document.querySelector(s); // Moved to top
+  const qs = s => document.querySelector(s);
 
   const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
   const NET_TIMEOUT_MS = 180000; // 3 minutes
-  const NATIVE_HOST = 'https://tapedecktimemachine.com'; // Updated host
+  const NATIVE_HOST = 'https://tapedecktimemachine.com';
 
   function toISO(mmddyyyy){ const [mm,dd,yyyy] = mmddyyyy.split('/'); return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
 
@@ -179,7 +182,7 @@
     qs('#ytp').style.display = 'none';
     qs('#ytOpen').style.display = 'none';
     qs('#list').innerHTML = '';
-    lastTracks = []; // Clear previous tracks before simulating
+    lastTracks = [];
 
     try{
       const r = await withTimeout(fetch(`${API}/v1/simulate`, {
@@ -190,7 +193,7 @@
       lastTracks = data.tracks || [];
       if(!lastTracks.length){ qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned. Try a different date/genre.'; return; }
       renderList(lastTracks);
-      buildYouTube(lastTracks); // Build YouTube by default after simulation
+      buildYouTube(lastTracks);
     }catch(err){
       console.error('[simulate] failed:', err);
       qs('#ytStatus').textContent = '';
@@ -238,7 +241,6 @@
         catch { player = null; }
       }
       if (!player) {
-        // Only create player if YouTube API is ready and the YouTube tab is active
         if (YTapiReady && qs('.tab[data-tab="yt"]').classList.contains('active')) {
           qs('#ytp').style.display = 'block';
           player = new YT.Player('ytp', {
@@ -249,7 +251,6 @@
         } else if (!YTapiReady) {
           qs('#ytStatus').textContent = 'YouTube API is still loading. Use "Open in YouTube".';
         } else {
-          // YT API ready but tab not active, player will be created when tab is clicked
           qs('#ytStatus').textContent = `${ids.length} videos ready. Switch to YouTube tab to play.`;
         }
       }
@@ -274,15 +275,14 @@
     if (App && App.addListener) {
       App.addListener('appUrlOpen', ({ url }) => {
         console.log('[appUrlOpen]', url);
-        // Ensure we only handle our specific callback URL structure
         if (!url || !url.startsWith('com.tapedecktimemachine.app://auth/callback')) return;
         const q = parseQuery(url);
         if (q.token) {
           localStorage.setItem('appleMusicUserToken', q.token);
-          qs('#amSign').style.display = 'none'; // Hide sign-in button
-          qs('#amPlay').style.display = 'inline-block'; // Show Play button
-          qs('#amCreate').style.display = 'inline-block'; // Show create button
-          qs('#amMsg').textContent = 'Signed in. Generate a list to play or create.'; // Updated msg
+          qs('#amSign').style.display = 'none';
+          qs('#amPlay').style.display = 'inline-block';
+          qs('#amCreate').style.display = 'inline-block';
+          qs('#amMsg').textContent = 'Signed in. Generate a list to play or create.';
         } else {
            console.warn('[appUrlOpen] Received callback without token:', url);
            qs('#amMsg').textContent = 'Sign-in callback received, but no token found.';
@@ -297,40 +297,57 @@
   // ---------- Web MusicKit loader (website only) ----------
   let music = null;
   let musicInitPromise = null;
+
   function waitForMusicKitLoaded(timeoutMs = 10000){
-    if (window.MusicKit && typeof window.MusicKit.getInstance === 'function') return Promise.resolve();
+    if (window.MusicKit && typeof window.MusicKit.configure === 'function') return Promise.resolve();
     return new Promise((resolve, reject) => {
       const t = setTimeout(()=>reject(new Error('MusicKit load timed out')), timeoutMs);
       window.addEventListener('musickitloaded', () => { clearTimeout(t); resolve(); }, { once:true });
     });
   }
-  async function getWebMusicInstance(){
-    if (music) return music;
-    if (!musicInitPromise) {
+
+  async function getWebMusicInstance(force = false){
+    if (music && !force) return music;
+
+    if (!musicInitPromise || force) {
       musicInitPromise = (async () => {
         await waitForMusicKitLoaded();
+
+        // 1) Get dev token
         const r = await withTimeout(fetch(`${API}/v1/apple/dev-token`));
-        if(!r.ok) throw new Error(`dev-token ${r.status}`);
-        // Add check for empty/invalid token from backend response
-        const { token: developerToken, storefront: apiStorefront } = await r.json();
-        if(!developerToken || typeof developerToken !== 'string' || developerToken.trim().length === 0) {
-           throw new Error('No valid developer token received from API.');
-        }
-        window.MusicKit.configure({ 
-            developerToken: developerToken.trim(), // Use trimmed token
-            app:{ name:'TapeDeck Time Machine', build:'web' } 
+        if (!r.ok) throw new Error(`dev-token ${r.status}`);
+        const { token: developerToken } = await r.json();
+        if (!developerToken || typeof developerToken !== 'string') throw new Error('No developer token.');
+
+        // 2) Configure (idempotent)
+        window.MusicKit.configure({
+          developerToken,
+          app: { name: 'TapeDeck Time Machine', build: 'web' }
         });
-        let inst = window.MusicKit.getInstance();
-        for (let i=0; i<10 && (!inst || typeof inst.authorize !== 'function'); i++){
-          await new Promise(res=>setTimeout(res,100));
-          inst = window.MusicKit.getInstance();
+
+        // 3) Acquire instance
+        const inst = window.MusicKit.getInstance();
+        if (!inst) throw new Error('MusicKit instance missing after configure');
+
+        // 4) Apply stored user token (if any)
+        const stored = localStorage.getItem('appleMusicUserToken');
+        if (stored && !inst.musicUserToken) {
+          inst.musicUserToken = stored;
         }
-        if(!inst || typeof inst.authorize !== 'function') throw new Error('MusicKit not initialized');
-        // Store the storefront ID if available
-        if (apiStorefront) inst.storefrontId = apiStorefront; 
-        music = inst; 
+
+        // 5) Ensure storefront is set
+        try {
+          if (!inst.storefrontId) {
+            const sf = await inst.api.storefront();
+            inst.storefrontId = (sf && sf.data && sf.data[0] && sf.data[0].id) || 'us';
+          }
+        } catch {
+          inst.storefrontId = inst.storefrontId || 'us';
+        }
+
+        music = inst;
         return music;
-      })().catch(e=>{ musicInitPromise = null; throw e; });
+      })().catch(e => { musicInitPromise = null; throw e; });
     }
     return musicInitPromise;
   }
@@ -342,136 +359,119 @@
     const Browser = Plugins.Browser;
 
     if (Browser && typeof Browser.open === 'function') {
-      // Use the main domain now, fixed by AASA 'NOT /auth/*' rule
-      const url = `${NATIVE_HOST}/auth/native/?native=1&v=5`; // Added cache buster v=5
+      const url = `${NATIVE_HOST}/auth/native/?native=1&v=5`;
       console.log('[AM] Native SFSafariViewController →', url);
       qs('#amMsg').textContent = 'Opening Apple sign-in…';
       try {
         await Browser.open({ url, presentationStyle: 'fullscreen' });
-        // After Browser.open, iOS handles the rest via Universal Link (callback handled by appUrlOpen listener)
       } catch (e) {
-         console.error('[AM] Browser.open failed:', e);
-         qs('#amMsg').textContent = 'Failed to open sign-in window: ' + (e.message || e);
+        console.error('[AM] Browser.open failed:', e);
+        qs('#amMsg').textContent = 'Failed to open sign-in window: ' + (e.message || e);
       }
       return;
     }
 
     // Website fallback (uses standard MusicKit pop-up)
-    try{
+    try {
       console.log('[AM] Web Fallback → MusicKit.authorize()');
       qs('#amMsg').textContent = 'Contacting Apple…';
-      const m = await getWebMusicInstance();
-      const userToken = await m.authorize(); // Standard web pop-up
-      if(!userToken) throw new Error('Authorization failed');
-      qs('#amMsg').textContent = 'Signed in. Generate a list to play or create.'; // Updated msg
-      qs('#amSign').style.display = 'none'; // Hide sign-in
-      qs('#amPlay').style.display = 'inline-block'; // Show Play button
-      qs('#amCreate').style.display = 'inline-block'; // Show Create button
+      const m = await getWebMusicInstance(true);
+      const userToken = await m.authorize();
+      if (!userToken) throw new Error('Authorization failed');
+
+      // Persist + apply
       localStorage.setItem('appleMusicUserToken', userToken);
-    }catch(e){
+      m.musicUserToken = userToken;
+
+      qs('#amMsg').textContent = 'Signed in. Generate a list to play or create.';
+      qs('#amSign').style.display = 'none';
+      qs('#amPlay').style.display = 'inline-block';
+      qs('#amCreate').style.display = 'inline-block';
+    } catch(e){
       console.error('[AM] Web fallback failed:', e);
       qs('#amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
     }
   }
 
-  // ---------- NEW: Play Playlist in Apple Music ----------
-// ---------- NEW: Play Playlist in Apple Music ----------
+  // ---------- Play Playlist in Apple Music ----------
   async function amPlayPlaylist() {
-    qs('#amMsg').textContent = ''; // Clear previous messages
-    let musicInstance;
+    qs('#amMsg').textContent = '';
 
-    // --- MODIFIED: Re-fetch instance after explicit auth ---
+    let m;
     try {
-      musicInstance = await getWebMusicInstance(); // Get potentially cached instance
-
-      // Explicitly try to authorize if not already authorized
-      if (!musicInstance.isAuthorized) {
+      m = await getWebMusicInstance();
+      if (!m.isAuthorized) {
         qs('#amMsg').textContent = 'Authorizing...';
+        const tok = await m.authorize();
+        if (!tok) throw new Error('User denied authorization');
+        localStorage.setItem('appleMusicUserToken', tok);
+        m.musicUserToken = tok;
+      }
+
+      if (!m.storefrontId) {
         try {
-          await musicInstance.authorize(); // Attempt authorization
-          // *** NEW: Re-fetch the instance AFTER authorizing ***
-          musicInstance = await getWebMusicInstance(true); // Pass true to force re-fetch
-        } catch (authErr) {
-          console.error('[AM Play] Authorization failed:', authErr);
-          qs('#amMsg').textContent = 'Sign-in needed or failed: ' + (authErr.message || authErr);
-          return; // Stop if authorize fails
+          const sf = await m.api.storefront();
+          m.storefrontId = (sf?.data?.[0]?.id) || 'us';
+        } catch {
+          m.storefrontId = 'us';
         }
       }
 
-      // After potentially authorizing AND re-fetching, check if ready
-      if (!musicInstance || !musicInstance.isAuthorized || !musicInstance.api || typeof musicInstance.api.search !== 'function') {
-           console.error('[AM Play] MusicKit instance still not ready for search after auth attempt.');
-           qs('#amMsg').textContent = 'Apple Music connection not ready. Please try signing in again.';
-           // Force sign-out/clear token to encourage re-auth
-           localStorage.removeItem('appleMusicUserToken');
-           qs('#amSign').style.display = 'inline-block';
-           qs('#amPlay').style.display = 'none';
-           qs('#amCreate').style.display = 'none';
-           return;
+      if (!m.api || typeof m.api.search !== 'function') {
+        throw new Error('MusicKit API not ready after auth');
       }
-      // If we get here, musicInstance is authorized and should have .api.search
-
     } catch (e) {
-      console.error('[AM Play] MusicKit init/auth failed:', e);
-      qs('#amMsg').textContent = 'Could not initialize Apple Music: ' + (e.message || e);
+      console.error('[AM Play] init/auth:', e);
+      qs('#amMsg').textContent = 'Apple Music connection not ready. Please try signing in again.';
+      qs('#amSign').style.display = 'inline-block';
+      qs('#amPlay').style.display = 'none';
+      qs('#amCreate').style.display = 'none';
       return;
     }
+
     if (!lastTracks?.length) {
       qs('#amMsg').textContent = 'Generate a tracklist first.';
       return;
     }
 
-    qs('#amMsg').textContent = `Searching for ${lastTracks.length} tracks... (this may take a moment)`;
+    qs('#amMsg').textContent = `Searching for ${lastTracks.length} tracks...`;
     const songIds = [];
-    let searchCounter = 0;
+    let i = 0;
 
-    for (const track of lastTracks) {
-      searchCounter++;
-      // Update UI less aggressively to avoid flicker
-      if (searchCounter % 5 === 0 || searchCounter === lastTracks.length) {
-          qs('#amMsg').textContent = `Searching... (${searchCounter}/${lastTracks.length})`;
+    for (const t of lastTracks) {
+      i++;
+      if (i % 5 === 0 || i === lastTracks.length) {
+        qs('#amMsg').textContent = `Searching... (${i}/${lastTracks.length})`;
       }
       try {
-        const searchTerm = `${track.artist} ${track.title}`;
-        // Use stored storefront from init, default to 'us'
-        const storefront = musicInstance.storefrontId || 'us'; 
-        const res = await musicInstance.api.search(searchTerm, { 
-            types: ['songs'], 
-            limit: 1,
-            storefront: storefront // Use specific storefront
-        });
-        
-        if (res.songs && res.songs.data && res.songs.data.length > 0) {
-          songIds.push(res.songs.data[0].id);
-        } else {
-           console.warn(`[AM Play] Track not found in storefront ${storefront}: ${searchTerm}`);
-        }
-        // Add a small delay
-        await new Promise(resolve => setTimeout(resolve, 100)); // Reduced delay slightly
+        const term = `${t.artist} ${t.title}`;
+        const res = await m.api.search(term, { types: ['songs'], limit: 1, storefront: m.storefrontId });
+        const id = res?.songs?.data?.[0]?.id;
+        if (id) songIds.push(id);
+        await new Promise(r => setTimeout(r, 100));
       } catch (e) {
-        console.error(`[AM Play] Search failed for "${track.artist} - ${track.title}":`, e);
+        console.warn('[AM Play] search failed:', e);
       }
     }
 
-    if (songIds.length === 0) {
+    if (!songIds.length) {
       qs('#amMsg').textContent = 'None of the tracks could be found in Apple Music.';
       return;
     }
 
-    qs('#amMsg').textContent = `Found ${songIds.length} tracks. Adding to queue and playing...`;
+    qs('#amMsg').textContent = `Found ${songIds.length} tracks. Adding to queue...`;
     try {
-      await musicInstance.setQueue({ songs: songIds });
-      await musicInstance.play();
+      await m.setQueue({ songs: songIds });
+      await m.play();
       qs('#amMsg').textContent = `Now playing ${songIds.length} tracks!`;
     } catch (e) {
-      console.error('[AM Play] Playback failed:', e);
+      console.error('[AM Play] playback:', e);
       qs('#amMsg').textContent = 'Error starting playback: ' + (e.message || e);
     }
   }
 
   // ---------- Create playlist (shared) ----------
   async function amCreatePlaylist(){
-    // Use token from localStorage (set by native callback OR web fallback)
     const userToken = localStorage.getItem('appleMusicUserToken');
     if(!userToken){ qs('#amMsg').textContent='Please sign in first.'; return; }
     if(!lastTracks?.length){ qs('#amMsg').textContent='Generate a tracklist first.'; return; }
@@ -483,39 +483,38 @@
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ userToken, name, tracks: lastTracks.map(t=>({artist:t.artist,title:t.title})) })
       }));
-      if(!r.ok){ 
-          const j = await r.json().catch(() => ({ detail: 'Unknown error during create' })); // Safely parse JSON
-          throw new Error(j.detail || `Create failed with status ${r.status}`); 
+      if(!r.ok){
+        const j = await r.json().catch(() => ({ detail: 'Unknown error during create' }));
+        throw new Error(j.detail || `Create failed with status ${r.status}`);
       }
-      const j = await r.json(); // If OK, parse JSON
+      const j = await r.json();
       qs('#amMsg').textContent = `Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks.`;
     } catch(e){
       console.error('[AM Create] Failed:', e);
       qs('#amMsg').textContent = 'Create failed: ' + (e.message || String(e));
     }
   }
-  
+
   // ---------- Check initial signed-in state ----------
   (function(){
     const storedToken = localStorage.getItem('appleMusicUserToken');
     if (storedToken) {
       qs('#amSign').style.display = 'none';
-      qs('#amPlay').style.display = 'inline-block'; // Show Play on load if signed in
+      qs('#amPlay').style.display = 'inline-block';
       qs('#amCreate').style.display = 'inline-block';
       qs('#amMsg').textContent = 'Signed in. Generate a list to play or create.';
-      
-      // Attempt to initialize MusicKit silently in the background if already authorized
-      getWebMusicInstance().catch(e => console.warn("[AM Init BG] Background MusicKit init failed:", e));
+      // Reconfigure + apply token silently
+      getWebMusicInstance(true).catch(e => console.warn("[AM Init BG]", e));
     }
   })();
 
   // ---------- wire up ----------
   qs('#go').onclick = simulate;
   qs('#amSign').onclick = amSignIn; 
-  qs('#amPlay').onclick = amPlayPlaylist; // Wire up the Play button
+  qs('#amPlay').onclick = amPlayPlaylist;
   qs('#amCreate').onclick = amCreatePlaylist;
 
-  setTab('yt'); // Set initial tab
+  setTab('yt');
 </script>
 
 </body>
