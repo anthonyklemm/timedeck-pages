@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>TapeDeck Time Machine</title>
 
-  <!-- MusicKit JS (needed for sign-in and playback fallback) -->
+  <!-- MusicKit JS -->
   <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
 
   <!-- Meta / Social -->
@@ -43,9 +43,10 @@
       color:var(--text); font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;}
     .wrap{max-width:1100px;margin:40px auto;padding:0 18px}
     .bar{display:flex;align-items:center;gap:14px}
+    .bar a { color: inherit; text-decoration: none; display: flex; align-items: center; gap: 14px; }
     .logo{width:36px;height:36px;border-radius:12px;background:
       linear-gradient(135deg,#8b5cf6 0%,#22d3ee 55%,#16a34a 120%);
-      display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:var(--shadow);text-decoration:none}
+      display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:var(--shadow);text-decoration:none; flex-shrink: 0;}
     h1{font-size:22px;margin:0}
     .panel{background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.12);
       border-radius:18px;padding:16px;box-shadow:var(--shadow)}
@@ -54,6 +55,7 @@
     input,select,button{width:100%;padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
       background:#0c1422;color:var(--text);outline:none;font-size:1rem}
     button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700;cursor:pointer}
+    button:disabled{background:#475569;color:#cbd5e1;cursor:not-allowed}
     .tabs{display:flex;gap:10px;margin:14px 0 8px}
     .tab{padding:9px 14px;border-radius:999px;border:1px solid rgba(148,163,184,.2);
       background:#0c1422;color:var(--text);cursor:pointer}
@@ -63,48 +65,54 @@
     iframe{width:100%;height:360px;border:0;border-radius:12px;box-shadow:var(--shadow)}
     .btn{display:inline-block;margin-top:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);
       background:#0c1422;color:#e5e7eb;text-decoration:none;font-weight:700;cursor:pointer}
+    .btn.inline{padding:8px 10px}
+    .btn.ghost{background:transparent}
     .muted{color:var(--muted)}
     .list{padding:12px 8px;max-height:420px;overflow:auto}
     .row{display:grid;grid-template-columns:110px 1fr;gap:14px; padding:10px 6px;border-bottom:1px dashed rgba(148,163,184,.12)}
     .ts{font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
-    .err{color:#fda4af;margin-top:6px}
+    .err{color:#fda4af;margin-top:6px; white-space: pre-wrap; word-break: break-all;}
     .ok{color:#86efac;margin-top:6px}
 
-    /* Embed panel */
-    .embedWrap{display:none;margin-top:12px}
-    .embedBar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .linkRow{display:flex;gap:10px;flex-wrap:wrap}
+    /* Links container */
+    .linkRow{display:flex; gap:10px; flex-wrap:wrap}
 
-    /* Fallback mini-player (sleek) */
-    .mini{display:none;margin-top:12px;background:rgba(12,20,34,.8);border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:12px}
-    .mini .top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
-    .mini .art{width:52px;height:52px;border-radius:12px;background:#0c1422;object-fit:cover}
-    .mini .meta{min-width:0}
-    .mini .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .mini .artist{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .mini .controls{display:flex;gap:8px;align-items:center}
-    .mini .controls .btn{padding:8px 12px;border-radius:10px}
-    .mini .bottom{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;margin-top:10px}
-    .mini input[type="range"]{width:100%}
-    .mini .vol{display:flex;align-items:center;gap:8px}
+    /* Official Embed styles */
+    .embedWrap{display:none; margin-top:12px}
+    .embedBar{display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:8px; flex-wrap: wrap;}
+    #amEmbed { height: 150px; } /* Standard embed height */
+
+    /* Simple Player styles */
+    .simplePlayer { display: none; margin-top: 12px; background: rgba(12,20,34,.8); border:1px solid rgba(148,163,184,.12); border-radius:14px; padding:10px; }
+    .simplePlayer .spRow1 { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+    .simplePlayer .spMeta { min-width: 0; }
+    .simplePlayer .spTitle { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .simplePlayer .spControls { display: flex; gap: 6px; align-items: center; }
+    .simplePlayer .spControls .btn { padding: 6px 10px; margin-top: 0; }
+    .simplePlayer .spMsg { font-size: 11px; margin-top: 4px; color: var(--muted); }
+
+    @media (max-width:800px){.grid{grid-template-columns:1fr 1fr}.grid>div:last-child{grid-column:1/-1}}
+    @media (max-width:700px){.wrap{margin:20px auto}.cols{grid-template-columns:1fr}h1{font-size:18px}}
+    @media (max-width:500px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
 
 <div class="wrap">
+  <!-- Link added to logo/title -->
   <div class="bar" style="margin-bottom:14px">
-    <a class="logo" href="/" title="Back to home">TD</a>
-    <h1>TapeDeck Time Machine</h1>
+    <a href="/">
+      <div class="logo">TD</div>
+      <h1>TapeDeck Time Machine</h1>
+    </a>
   </div>
 
+  <!-- Controls -->
   <div class="panel">
     <div class="grid">
       <div><label>Date</label><input id="date" placeholder="mm/dd/yyyy" value="07/01/2002"></div>
       <div><label>Genre</label>
-        <select id="genre">
-          <option>Alternative</option><option>Hot-100</option><option>Pop</option>
-          <option>Rock</option><option>Country</option><option>R&B/Hip-Hop</option><option>Dance/Electronic</option>
-        </select>
+        <select id="genre"> <option>Alternative</option><option>Hot-100</option><option>Pop</option><option>Rock</option><option>Country</option><option>R&B/Hip-Hop</option><option>Dance/Electronic</option> </select>
       </div>
       <div><label>Hours</label><select id="hours"><option>0.5</option><option selected>1</option><option>2</option><option>3</option></select></div>
       <div><label>Repeat gap (min)</label><input id="gap" type="number" value="90"></div>
@@ -112,14 +120,11 @@
       <div><label>&nbsp;</label><button id="go" class="primary">Generate</button></div>
     </div>
 
-    <div class="tabs">
-      <button class="tab active" data-tab="yt">YouTube</button>
-      <button class="tab" data-tab="am">Apple Music</button>
-      <button class="tab" data-tab="sp" disabled title="Coming soon">Spotify</button>
-    </div>
+    <div class="tabs"> <button class="tab active" data-tab="yt">YouTube</button> <button class="tab" data-tab="am">Apple Music</button> <button class="tab" data-tab="sp" disabled title="Coming soon">Spotify</button> </div>
     <div class="muted" style="margin:-6px 0 8px 2px">Spotify sign-in is under construction. Coming soon!</div>
 
     <div class="cols">
+      <!-- YouTube -->
       <div class="panel box" id="pane-yt">
         <div id="ytWrap">
           <div class="muted" id="ytStatus">Waiting for a simulation…</div>
@@ -129,54 +134,44 @@
         </div>
       </div>
 
+      <!-- Apple Music Pane -->
       <div class="panel box" id="pane-am" style="display:none">
         <div id="amWrap">
-          <p class="muted" style="margin-bottom:8px">Generate a list, sign in, create the playlist, then play it below with the official Apple embed. If embeding isn’t possible, we’ll use a built-in player.</p>
+          <p class="muted" style="margin-bottom:8px">Generate a list, sign in, then create the playlist to play it.</p>
           <div class="linkRow">
             <button class="btn" id="amSign">Sign in to Apple Music</button>
             <button class="btn" id="amCreate" style="display:none">Create Playlist</button>
-            <button class="btn" id="amPlayEmbed" style="display:none">Play in Apple Embed</button>
-            <button class="btn" id="amPlayLocal" style="display:none">Play with Built-In Player</button>
+            <!-- RENAMED BUTTON -->
+            <button class="btn" id="amPlay" style="display:none">Play Playlist</button>
           </div>
           <div id="amMsg" class="muted" style="margin-top:8px"></div>
 
           <!-- Official Apple Music Embed -->
           <div id="embedWrap" class="embedWrap">
             <div class="embedBar">
-              <div class="muted">Apple Music Player</div>
+              <div class="muted">Apple Music Embed</div>
               <div class="linkRow">
                 <a id="openInAm" class="btn" href="#" target="_blank" rel="noopener">Open in Apple Music ↗</a>
                 <button id="copyLink" class="btn">Copy Link</button>
               </div>
             </div>
-            <iframe id="amEmbed" allow="autoplay *; encrypted-media *;" loading="lazy"></iframe>
-            <div id="embedNote" class="muted" style="margin-top:8px;display:none"></div>
+            <iframe id="amEmbed" allow="autoplay *; encrypted-media *;" sandbox="allow-forms allow-popups allow-same-origin allow-scripts allow-storage-access-by-user-activation allow-top-navigation-by-user-activation" loading="lazy"></iframe>
+            <div id="embedNote" class="muted" style="margin-top:8px; display:none;"></div>
           </div>
 
-          <!-- Fallback sleek mini-player -->
-          <div id="mini" class="mini">
-            <div class="top">
-              <img id="miniArt" class="art" alt="">
-              <div class="meta">
-                <div id="miniTitle" class="title">—</div>
-                <div id="miniArtist" class="artist">—</div>
+          <!-- Simple Player (Fallback) -->
+          <div id="simplePlayer" class="simplePlayer">
+            <div class="spRow1">
+              <div class="spMeta">
+                <div id="spTitle" class="spTitle">—</div>
               </div>
-              <div class="controls">
-                <button id="btnPrev" class="btn">⟨⟨</button>
-                <button id="btnPlayPause" class="btn">▶</button>
-                <button id="btnNext" class="btn">⟩⟩</button>
+              <div class="spControls">
+                <button id="spBtnPrev" class="btn inline ghost" title="Previous">⟨⟨</button>
+                <button id="spBtnPlayPause" class="btn inline" title="Play/Pause">▶</button>
+                <button id="spBtnNext" class="btn inline ghost" title="Next">⟩⟩</button>
               </div>
             </div>
-            <div class="bottom">
-              <div id="miniT1" class="muted" style="font-variant-numeric: tabular-nums;">0:00</div>
-              <input id="miniSeek" type="range" min="0" max="1000" value="0">
-              <div id="miniT2" class="muted" style="font-variant-numeric: tabular-nums;">0:00</div>
-            </div>
-            <div class="bottom" style="margin-top:8px">
-              <span class="muted" style="font-size:12px;">Volume</span>
-              <input id="miniVol" type="range" min="0" max="1" step="0.01" value="1">
-              <a id="miniOpen" class="muted" href="#" target="_blank" rel="noopener" style="text-decoration:none;justify-self:end">Open in Apple Music ↗</a>
-            </div>
+             <div id="spMsg" class="spMsg"></div>
           </div>
 
         </div>
@@ -184,32 +179,46 @@
     </div>
   </div>
 
+  <!-- Tracklist -->
   <div class="panel" style="margin-top:16px">
-    <h2>Your Music Time Machine Playlist</h2>
-    <p class="muted" style="margin-bottom:6px">
-      Ever wonder <strong>what songs were popular on your birthday?</strong>
-      Just pick a date and genre, and we'll <strong>generate a music playlist</strong>
-      of the top songs from that week, based on <strong>historical Billboard charts</strong>.
-      The tracklist will appear below.
-    </p>
-    <div id="list" class="list"></div>
+     <h2>Your Music Time Machine Playlist</h2>
+     <p class="muted" style="margin-bottom:6px">
+       Ever wonder <strong>what songs were popular on your birthday?</strong>
+       Just pick a date and genre, and we'll <strong>generate a music playlist</strong>
+       of the top songs from that week, based on <strong>historical Billboard charts</strong>.
+       The tracklist will appear below.
+     </p>
+     <div id="list" class="list"></div>
   </div>
 </div>
 
 <script>
-  // ---------- helpers / config ----------
+  // ---------- config & helpers ----------
   const qs = s => document.querySelector(s);
   const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
   const NET_TIMEOUT_MS = 180000;
+  const NATIVE_HOST = 'https://tapedecktimemachine.com';
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-  function toISO(mmddyyyy){ const [mm,dd,yyyy] = mmddyyyy.split('/'); return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
+  function toISO(mmddyyyy){
+    try {
+      const parts = mmddyyyy.split('/');
+      if (parts.length !== 3) throw new Error('Invalid date format');
+      const [mm,dd,yyyy] = parts.map(p => p.trim());
+      if (yyyy.length !== 4 || isNaN(parseInt(yyyy))) throw new Error('Invalid year format');
+      return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`;
+    } catch (e) {
+      console.error("Date parsing error:", e);
+      qs('#ytErr').textContent = `Invalid date format. Please use MM/DD/YYYY.`;
+      throw e;
+    }
+  }
   function setTab(id){
     document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
     qs('#pane-yt').style.display = id==='yt' ? '' : 'none';
     qs('#pane-am').style.display = id==='am' ? '' : 'none';
   }
-  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+  
   function withTimeout(promise, ms = NET_TIMEOUT_MS) {
     let t; const timer = new Promise((_, rej)=>{ t=setTimeout(()=>rej(new Error(`Network timeout after ${Math.round(ms/1000)}s`)), ms); });
     return Promise.race([promise.finally(()=>clearTimeout(t)), timer]);
@@ -217,51 +226,54 @@
 
   // ---------- state ----------
   let lastTracks = [];
-  let isAuthorizing = false;
   let DEV_TOKEN = null;
-  let resolvedSongIds = []; // for local player fallback
+  let currentPlaylistInfo = { id: null, url: null, storefront: 'us' };
 
   // ---------- YouTube ----------
   let player = null, YTapiReady = false;
   (function(){ const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api"; document.head.appendChild(tag); })();
-  window.onYouTubeIframeAPIReady = () => { YTapiReady = true; };
+  window.onYouTubeIframeAPIReady = () => { YTapiReady = true; console.log("YT API Ready"); };
 
   async function simulate(){
-    const body = {
-      date: toISO(qs('#date').value.trim()),
-      genre: qs('#genre').value,
-      hours: Number(qs('#hours').value || 3),
-      repeat_gap_min: Number(qs('#gap').value || 90),
-      seed: (qs('#seed').value.trim() || undefined) ? String(qs('#seed').value.trim()) : undefined,
-      limit: 500
-    };
+    qs('#go').disabled = true;
     qs('#ytStatus').textContent = 'Building…';
     qs('#ytErr').textContent = '';
-
+    qs('#list').innerHTML = '';
+    lastTracks = [];
+    showSimplePlayer(false); // Hide simple player
+    qs('#embedWrap').style.display = 'none'; // Hide embed
     if (player) { try{ player.destroy(); }catch{} player = null; }
-    qs('#ytp').innerHTML = ''; qs('#ytp').style.display = 'none';
-    qs('#ytOpen').style.display = 'none'; qs('#list').innerHTML = '';
-    lastTracks = []; resolvedSongIds = [];
+    qs('#ytp').innerHTML = '';
+    qs('#ytp').style.display = 'none';
+    qs('#ytOpen').style.display = 'none';
+    qs('#amMsg').textContent = ''; // Clear AM message
 
     try{
-      const r = await withTimeout(fetch(`${API}/v1/simulate`, {
-        method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)
-      }));
+      const body = {
+        date: toISO(qs('#date').value.trim()),
+        genre: qs('#genre').value,
+        hours: Number(qs('#hours').value || 3),
+        repeat_gap_min: Number(qs('#gap').value || 90),
+        seed: (qs('#seed').value.trim() || undefined) ? String(qs('#seed').value.trim()) : undefined,
+        limit: 500
+      };
+      const r = await withTimeout(fetch(`${API}/v1/simulate`, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body) }));
       if(!r.ok){ const txt = await r.text().catch(()=> ''); throw new Error(`simulate ${r.status}: ${txt}`); }
       const data = await r.json();
       lastTracks = data.tracks || [];
       if(!lastTracks.length){ qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned. Try a different date/genre.'; return; }
       renderList(lastTracks);
-      buildYouTube(lastTracks);
-      // hide previous embed/mini on new simulation
-      qs('#embedWrap').style.display='none';
-      qs('#mini').style.display='none';
-      qs('#amPlayEmbed').style.display='none';
-      qs('#amPlayLocal').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
-      qs('#amMsg').textContent = 'Playlist ready. Sign in and create it, or use the built-in player.';
+      if (qs('.tab[data-tab="yt"]').classList.contains('active')) {
+          buildYouTube(lastTracks);
+      } else {
+          qs('#ytStatus').textContent = 'Playlist generated. Switch to YouTube tab to play.';
+      }
     }catch(err){
+      console.error('[simulate] failed:', err);
+      if (!qs('#ytErr').textContent) { qs('#ytErr').textContent = err.message || String(err); }
       qs('#ytStatus').textContent = '';
-      qs('#ytErr').textContent = err.message || String(err);
+    } finally {
+      qs('#go').disabled = false;
     }
   }
 
@@ -280,171 +292,280 @@
 
   async function buildYouTube(tracks){
     qs('#ytStatus').textContent = 'Resolving YouTube IDs…';
+    qs('#ytErr').textContent = '';
     try{
-      const r = await withTimeout(fetch(`${API}/v1/yt/resolve`, {
-        method:'POST', headers:{'content-type':'application/json'},
-        body: JSON.stringify({ tracks: tracks.map(t=>({artist:t.artist,title:t.title})), limit:50 })
-      }));
+      const r = await withTimeout(fetch(`${API}/v1/yt/resolve`, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ tracks: tracks.map(t=>({artist:t.artist,title:t.title})), limit:50 }) }));
       if(!r.ok){ throw new Error(`yt/resolve ${r.status}: ${await r.text()}`); }
       const data = await r.json();
       const ids = (data.ids || []).filter(Boolean);
-
       if(!ids.length){ qs('#ytStatus').textContent = 'No playable videos found (try another date/genre).'; return; }
-
       const openUrl = `https://www.youtube.com/watch_videos?video_ids=${ids.join(',')}`;
-      qs('#ytOpen').href = openUrl; qs('#ytOpen').style.display = 'inline-block';
+      qs('#ytOpen').href = openUrl;
+      qs('#ytOpen').style.display = 'inline-block';
       qs('#ytStatus').textContent = `${ids.length} videos found. Loading player...`;
-
       if (player) {
         try{ player.cuePlaylist(ids, 0, 0); qs('#ytStatus').textContent = `${ids.length} videos queued.`; }
-        catch { player = null; }
+        catch(e) { console.error("YT cuePlaylist failed:", e); player = null; }
       }
       if (!player) {
         if (YTapiReady && qs('.tab[data-tab="yt"]').classList.contains('active')) {
+          console.log("YT: Creating new player instance...");
           qs('#ytp').style.display = 'block';
           player = new YT.Player('ytp', {
-            height: '360', width: '100%',
-            playerVars: { playsinline: 1, rel: 0, modestbranding: 1, origin: location.origin },
-            events: { onReady: (e) => { e.target.cuePlaylist(ids, 0, 0); qs('#ytStatus').textContent = `${ids.length} videos queued.`; } }
+            height: '360', width: '100%', playerVars: { playsinline: 1, rel: 0, modestbranding: 1, origin: location.origin },
+            events: {
+              onReady: (e) => {
+                console.log("YT Player Ready, cueing playlist...");
+                try { e.target.cuePlaylist(ids, 0, 0); qs('#ytStatus').textContent = `${ids.length} videos queued.`; }
+                catch (cueError) { console.error("YT cuePlaylist in onReady failed:", cueError); qs('#ytStatus').textContent = 'Error loading videos into player.'; qs('#ytErr').textContent = cueError.message || String(cueError); }
+              },
+              onError: (e) => { console.error("YT Player Error:", e.data); qs('#ytErr').textContent = `Youtubeer Error: ${e.data}`; }
+            }
           });
-        } else if (!YTapiReady) {
-          qs('#ytStatus').textContent = 'YouTube API is still loading. Use "Open in YouTube".';
-        } else {
-          qs('#ytStatus').textContent = `${ids.length} videos ready. Switch to YouTube tab to play.`;
-        }
+        } else if (!YTapiReady) { qs('#ytStatus').textContent = 'YouTube API is still loading. Use "Open in YouTube".'; }
+        else { qs('#ytStatus').textContent = `${ids.length} videos ready. Switch to YouTube tab to play.`; }
       }
-    }catch(err){
-      qs('#ytErr').textContent = err.message; qs('#ytStatus').textContent = '';
-    }
+    }catch(err){ console.error("[buildYouTube] failed:", err); qs('#ytErr').textContent = err.message || String(err); qs('#ytStatus').textContent = ''; }
   }
 
-  // ---------- MusicKit minimal (sign-in + fallback playback) ----------
-  let music = null, musicInitPromise = null;
 
-  function waitForMusicKitLoaded(timeoutMs = 10000){
+  // ---------- Universal Link / custom-scheme listener (native) ----------
+  (function(){
+    const Cap = window.Capacitor || {}; const App = Cap.Plugins && Cap.Plugins.App;
+    function parseQuery(u){ const i = u.indexOf('?'); if (i < 0) return {}; const q = u.slice(i+1).split('&'); const out = {}; for (const p of q) { const [k,v] = p.split('='); out[decodeURIComponent(k)] = decodeURIComponent(v||''); } return out; }
+    if (App && App.addListener) {
+      App.addListener('appUrlOpen', ({ url }) => {
+        console.log('[appUrlOpen]', url); if (!url || !url.startsWith('com.tapedecktimemachine.app://auth/callback')) return;
+        const q = parseQuery(url); if (q.token) { localStorage.setItem('appleMusicUserToken', q.token); updateAmUIState(); getMusicInstance().catch(e => console.warn("[AM Init BG after native auth]", e)); }
+        else { console.warn('[appUrlOpen] Received callback without token:', url); qs('#amMsg').textContent = 'Sign-in callback received, but no token found.'; }
+      }); console.log('[AM] appUrlOpen listener attached');
+    } else { console.warn('[AM] Capacitor App plugin not available for appUrlOpen listener.'); }
+  })();
+
+
+  // ---------- MusicKit Initialization (V13 - Fixed const/let) ----------
+  let musicInstance = null;
+  let musicInstancePromise = null;
+
+  function waitForMusicKitLoaded(timeoutMs = 15000) {
     if (window.MusicKit && typeof window.MusicKit.configure === 'function') return Promise.resolve();
     return new Promise((resolve, reject) => {
-      const t = setTimeout(()=>reject(new Error('MusicKit load timed out')), timeoutMs);
-      window.addEventListener('musickitloaded', () => { clearTimeout(t); resolve(); }, { once:true });
+      console.log('[AM Wait] Waiting for MusicKit script load...');
+      const t = setTimeout(() => { console.error('[AM Wait] MusicKit load timed out.'); reject(new Error('MusicKit load timed out')); }, timeoutMs);
+      window.addEventListener('musickitloaded', () => { console.log('[AM Wait] MusicKit script loaded.'); clearTimeout(t); resolve(); }, { once: true });
     });
   }
+
   async function fetchDeveloperToken() {
     if (DEV_TOKEN) return DEV_TOKEN;
+    console.log('[AM Fetch Token] Fetching dev token...');
     const r = await withTimeout(fetch(`${API}/v1/apple/dev-token`, { headers: { 'accept':'application/json' } }));
     if (!r.ok) throw new Error(`dev-token ${r.status}`);
-    const { token } = await r.json();
+    const { token, storefront } = await r.json();
     if (!token || typeof token !== 'string' || token.trim().length < 20) throw new Error('Invalid developer token');
     DEV_TOKEN = token.trim();
+    window.mkDefaultStorefront = storefront || 'us';
+    console.log('[AM Fetch Token] Token fetched and cached.');
     return DEV_TOKEN;
   }
-  async function getWebMusicInstance(force = false){
-    if (music && !force) return music;
-    if (!musicInitPromise || force) {
-      musicInitPromise = (async () => {
-        await waitForMusicKitLoaded();
-        const developerToken = await fetchDeveloperToken();
-        window.MusicKit.configure({ developerToken, app: { name:'TapeDeck Time Machine', build:'web' } });
 
-        let inst = null;
-        for (let i=0;i<40;i++){ try{ inst = window.MusicKit.getInstance(); }catch{} if(inst) break; await sleep(50); }
-        if (!inst) throw new Error('MusicKit instance missing');
+  async function configureMusicKit() {
+    await waitForMusicKitLoaded();
+    const developerToken = await fetchDeveloperToken();
 
-        const stored = localStorage.getItem('appleMusicUserToken');
-        if (stored) inst.musicUserToken = stored;
+    console.log('[AM Configure] Configuring MusicKit...');
+    window.MusicKit.configure({
+      developerToken: developerToken,
+      app: { name: 'TapeDeck Time Machine', build: 'web' }
+    });
 
-        // wire simple events (title/art/time)
-        if (!inst._tdtmBound) {
-          inst._tdtmBound = true;
-          inst.addEventListener('nowPlayingItemDidChange', ()=> updateNowPlaying(inst));
-          inst.addEventListener('playbackTimeDidChange', ()=> updateTimes(inst));
-          inst.addEventListener('playbackStateDidChange', ()=> setPlayIcon(!!inst.player.isPlaying));
-        }
-
-        music = inst;
-        return music;
-      })().catch(e=>{ musicInitPromise=null; throw e; });
+    console.log('[AM Configure] Getting instance...');
+    // --- CORRECTED FIX: Use 'let' ---
+    let instance = null; // Initialize as null, declare with let
+    for (let i = 0; i < 5; i++) {
+        instance = window.MusicKit.getInstance(); // Assign using let
+        if (instance) break;
+        console.warn(`[AM Configure] getInstance attempt ${i+1} failed, retrying...`);
+        await sleep(200);
     }
-    return musicInitPromise;
-  }
+    // --- END FIX ---
+    if (!instance) throw new Error('MusicKit instance failed after configure and retries.');
 
-  // ---------- Apple Music REST Catalog Search (dev token) ----------
-  async function appleCatalogSearch(term, storefront = 'us', limit = 1) {
-    const dev = await fetchDeveloperToken();
-    const url = new URL(`https://api.music.apple.com/v1/catalog/${encodeURIComponent(storefront)}/search`);
-    url.searchParams.set('term', term);
-    url.searchParams.set('types', 'songs');
-    url.searchParams.set('limit', String(limit));
-    const r = await withTimeout(fetch(url.toString(), { headers: { Authorization: `Bearer ${dev}` } }), 15000);
-    if (!r.ok) throw new Error(`Apple search ${r.status}`);
-    return r.json();
-  }
+    console.log('[AM Configure] Instance obtained.');
+    instance.storefrontId = instance.storefrontId || window.mkDefaultStorefront || 'us';
+    console.log('[AM Configure] Storefront set to:', instance.storefrontId);
 
-  // ---------- Embed helpers ----------
-  function isEmbeddableAppleUrl(url) {
-    try {
-      const u = new URL(url);
-      if (!/music\.apple\.com$/.test(u.hostname)) return false;
-      return !u.pathname.includes('/library/');
-    } catch { return false; }
-  }
-  function toEmbedUrl(url, id, storefront='us') {
-    if (url && isEmbeddableAppleUrl(url)) {
-      return url.replace('://music.apple.com/', '://embed.music.apple.com/');
+    const storedToken = localStorage.getItem('appleMusicUserToken');
+    if (storedToken && !instance.musicUserToken) {
+      instance.musicUserToken = storedToken;
+      console.log('[AM Configure] Applied stored user token.');
     }
-    if (id && id.startsWith('pl.')) {
-      return `https://embed.music.apple.com/${encodeURIComponent(storefront)}/playlist/${encodeURIComponent(id)}`;
+
+    instance.removeEventListener('authorizationStatusDidChange', handleAuthorizationStatusChange);
+    instance.addEventListener('authorizationStatusDidChange', handleAuthorizationStatusChange);
+    console.log('[AM Configure] Attached auth listener.');
+    
+    // Attach Simple Player listeners
+    instance.removeEventListener('playbackStateDidChange', simplePlayerStateChanged);
+    instance.removeEventListener('nowPlayingItemDidChange', simplePlayerItemChanged);
+    instance.addEventListener('playbackStateDidChange', simplePlayerStateChanged);
+    instance.addEventListener('nowPlayingItemDidChange', simplePlayerItemChanged);
+    console.log('[AM Configure] Attached player listeners.');
+
+    console.log('[AM Configure] Initial configuration complete. Current auth status:', instance.authorizationStatus);
+    return instance;
+  }
+
+  function getMusicInstance() {
+    if (musicInstance) return Promise.resolve(musicInstance);
+    if (!musicInstancePromise) {
+      musicInstancePromise = configureMusicKit()
+        .then(instance => {
+          musicInstance = instance;
+          console.log('[AM GetInstance] Initialization successful.');
+          updateAmUIState();
+          return instance;
+        })
+        .catch(e => {
+          console.error('[AM GetInstance] Initialization failed:', e);
+          qs('#amMsg').textContent = 'Failed to initialize Apple Music: ' + (e.message || e);
+          musicInstancePromise = null;
+          musicInstance = null;
+          throw e;
+        });
     }
-    return null;
-  }
-  function showEmbed(embedUrl, openUrl){
-    const frame = qs('#amEmbed');
-    const wrap = qs('#embedWrap');
-    const note = qs('#embedNote');
-    qs('#openInAm').href = openUrl || embedUrl;
-    frame.src = embedUrl;
-    wrap.style.display = '';
-    qs('#mini').style.display = 'none';
-    note.style.display = 'none';
+    return musicInstancePromise;
   }
 
-  // ---------- UI controls / visibility ----------
-  function showAmControls() {
-    qs('#amSign').style.display = 'none';
-    qs('#amCreate').style.display = 'inline-block';
-    // Play Local is available once signed in + we have a list
-    qs('#amPlayLocal').style.display = lastTracks.length ? 'inline-block' : 'none';
-  }
+  function updateAmUIState() {
+      const hasToken = !!localStorage.getItem('appleMusicUserToken');
+      console.log('[AM UI Update] Updating UI based on token presence:', hasToken);
 
-  async function amSignIn(){
-    if (isAuthorizing) return;
-    isAuthorizing = true;
-    try {
-      qs('#amMsg').textContent = 'Contacting Apple…';
-      let m = await getWebMusicInstance(true);
-      const tok = await m.authorize();
-      await sleep(120);
-      if (!tok || typeof tok !== 'string' || tok.length < 20) {
-        qs('#amMsg').textContent = 'Sign-in cancelled or failed. Apple Music subscription required for full playback.';
-        return;
+      qs('#amSign').style.display = hasToken ? 'none' : 'inline-block';
+      qs('#amCreate').style.display = hasToken ? 'inline-block' : 'none';
+      // Show "Play Playlist" if signed in AND a playlist has been created
+      qs('#amPlay').style.display = (hasToken && currentPlaylistInfo.id) ? 'inline-block' : 'none';
+
+      if (hasToken) {
+          if (qs('#amMsg').textContent.startsWith('Sign-in') || qs('#amMsg').textContent.startsWith('Error') || qs('#amMsg').textContent.startsWith('Failed')) {
+              qs('#amMsg').textContent = 'Signed in. Generate a list to play or create.';
+          }
+      } else {
+          showSimplePlayer(false); // Hide player
+          qs('#embedWrap').style.display = 'none'; // Hide embed
+          if (!qs('#amMsg').textContent.startsWith('Error') && !qs('#amMsg').textContent.startsWith('Failed')) {
+              qs('#amMsg').textContent = '';
+          }
       }
-      localStorage.setItem('appleMusicUserToken', tok);
-      m.musicUserToken = tok;
-      await getWebMusicInstance(true);
-      qs('#amMsg').textContent = 'Signed in. Create your playlist or use the built-in player.';
-      showAmControls();
-      if (lastTracks.length) qs('#amPlayLocal').style.display='inline-block';
-    } catch(e){
-      qs('#amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
-    } finally { isAuthorizing = false; }
   }
 
-  // ---------- Create playlist via backend, then embed if possible ----------
+  function handleAuthorizationStatusChange(event) {
+      console.log('[AM Event] Auth status changed:', event.authorizationStatus);
+      const instance = musicInstance || event.target || window.MusicKit.getInstance();
+      if (event.authorizationStatus === 'authorized' && instance && instance.musicUserToken) {
+          localStorage.setItem('appleMusicUserToken', instance.musicUserToken);
+      } else {
+           localStorage.removeItem('appleMusicUserToken');
+      }
+      updateAmUIState(); // Update UI
+  }
+  // --- End MusicKit Initialization ---
+
+
+  // ---------- Native-first sign-in ----------
+  async function amSignIn(){
+    const Cap = window.Capacitor || {};
+    const Plugins = (Cap && Cap.Plugins) || {};
+    const Browser = Plugins.Browser;
+    qs('#amMsg').textContent = '';
+
+    if (Browser && typeof Browser.open === 'function') {
+      const url = `${NATIVE_HOST}/auth/native/?native=1&v=5`;
+      console.log('[AM] Native SFSafariViewController →', url);
+      qs('#amMsg').textContent = 'Opening Apple sign-in…';
+      try {
+        await getMusicInstance(); // Ensure configured before native auth
+        await Browser.open({ url, presentationStyle: 'fullscreen' });
+      } catch (e) {
+        console.error('[AM] Browser.open or pre-config failed:', e);
+        qs('#amMsg').textContent = 'Failed to open sign-in window: ' + (e.message || e);
+      }
+      return;
+    }
+
+    // Website fallback
+    try {
+      console.log('[AM] Web Fallback → MusicKit.authorize()');
+      qs('#amMsg').textContent = 'Contacting Apple…';
+      const m = await getMusicInstance();
+      await m.authorize(); // Trigger auth popup
+      qs('#amMsg').textContent = 'Sign-in requested. Check pop-up.';
+    } catch(e){
+      console.error('[AM] Web fallback failed:', e);
+      qs('#amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
+      updateAmUIState(); // Ensure UI resets
+    }
+  }
+
+  // ---------- REST API Search Helper ----------
+  async function appleCatalogSearch(term, storefront = 'us', limit = 1) {
+    const devToken = await fetchDeveloperToken();
+    if (!devToken) { console.error("appleCatalogSearch: Dev token not available."); return null; }
+    const url = `https://api.music.apple.com/v1/catalog/${encodeURIComponent(storefront)}/search?term=${encodeURIComponent(term)}&limit=${limit}&types=songs`;
+    try {
+        const r = await fetch(url, { headers: { 'Authorization': `Bearer ${devToken}` } });
+        if (!r.ok) { console.warn(`REST Search failed (${r.status}) for: ${term}`); return null; }
+        return await r.json();
+    } catch (e) { console.warn(`REST Search network error for "${term}":`, e); return null; }
+  }
+
+
+  // ---------- Play Playlist (HYBRID: Tries embed, falls back to simple player) ----------
+  async function amPlay() {
+      qs('#amMsg').textContent = '';
+      showSimplePlayer(false); // Hide simple
+      qs('#embedWrap').style.display = 'none'; // Hide embed
+
+      // 1. Check for playlist info
+      const playlistId = currentPlaylistInfo.id;
+      const playlistUrl = currentPlaylistInfo.url;
+      const storefront = currentPlaylistInfo.storefront || 'us';
+
+      if (!playlistId && !playlistUrl) {
+          qs('#amMsg').textContent = 'Please create a playlist first.';
+          return;
+      }
+
+      // 2. Try to build an embed URL
+      let embedUrl = playlistUrl ? deriveEmbedFromUrl(playlistUrl) : null;
+      if (!embedUrl && playlistId) embedUrl = buildEmbedFromId(playlistId, storefront);
+      const openUrl = playlistUrl || (playlistId ? `https://music.apple.com/${storefront}/playlist/${encodeURIComponent(playlistId)}` : '#');
+
+      // 3. If embed URL exists AND it's not a library URL, show embed
+      if (embedUrl && !embedUrl.includes('/library/')) {
+          console.log('[AM Play] Attempting to load embed player:', embedUrl);
+          qs('#amMsg').textContent = 'Loading Apple Music player...';
+          showEmbed(embedUrl, openUrl, false);
+          qs('#embedNote').textContent = 'If player stays blank, try the "Simple Player" button.';
+          qs('#embedNote').style.display = 'block';
+      } else {
+          // 4. If embed fails or is library, use Simple Player
+          console.log('[AM Play] Embed not available or is library. Using Simple Player.');
+          await amPlaySimple(); // Call the simple player function
+      }
+  }
+
+  // ---------- Create playlist (NOW tries to embed) ----------
   async function amCreatePlaylist(){
     const userToken = localStorage.getItem('appleMusicUserToken');
-    if(!userToken){ qs('#amMsg').textContent='Please sign in first.'; return; }
+    if(!userToken){ qs('#amMsg').textContent='Please sign in first.'; updateAmUIState(); return; }
     if(!lastTracks?.length){ qs('#amMsg').textContent='Generate a tracklist first.'; return; }
 
     qs('#amMsg').textContent='Creating playlist…';
+    showSimplePlayer(false);
+    qs('#embedWrap').style.display = 'none';
+    currentPlaylistInfo = { id: null, url: null, storefront: 'us' }; // Reset
+
     try{
       const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
       const r = await withTimeout(fetch(`${API}/v1/apple/create-playlist`, {
@@ -455,193 +576,241 @@
         const j = await r.json().catch(() => ({ detail: 'Unknown error during create' }));
         throw new Error(j.detail || `Create failed with status ${r.status}`);
       }
-      const j = await r.json(); // { added_count, total_tracks, url?, id?, storefront? }
-      const { url, id, storefront } = j || {};
+      const j = await r.json();
+      const { playlist_id, playlist_url, storefront, added_count, total_tracks_searched } = j || {};
 
-      // Persist
-      if (url) localStorage.setItem('applePlaylistUrl', url);
-      if (id) localStorage.setItem('applePlaylistId', id);
-      if (storefront) localStorage.setItem('applePlaylistStorefront', storefront);
+      if (!playlist_id) throw new Error("Playlist created, but backend didn't return an ID.");
 
-      qs('#amMsg').textContent = `Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks.`;
+      // Store playlist info
+      currentPlaylistInfo.id = playlist_id;
+      currentPlaylistInfo.url = playlist_url;
+      currentPlaylistInfo.storefront = storefront || 'us';
+      localStorage.setItem('applePlaylistId', playlist_id); // Store ID for simple player
+      if (playlist_url) localStorage.setItem('applePlaylistUrl', playlist_url); else localStorage.removeItem('applePlaylistUrl');
+      if (storefront) localStorage.setItem('applePlaylistStorefront', storefront); else localStorage.removeItem('applePlaylistStorefront');
+      
+      qs('#amMsg').textContent = `Playlist created! Added ${added_count} of ${total_tracks_searched} tracks. Loading player...`;
+      
+      // --- Attempt to load Embed ---
+      let embedUrl = playlist_url ? deriveEmbedFromUrl(playlist_url) : null;
+      if (!embedUrl && playlist_id) embedUrl = buildEmbedFromId(playlist_id, currentPlaylistInfo.storefront);
+      const openUrl = playlist_url || (playlist_id ? `https://music.apple.com/${currentPlaylistInfo.storefront}/playlist/${encodeURIComponent(playlist_id)}` : '#');
 
-      // Decide embed vs local
-      const embedCandidate = toEmbedUrl(url, id, storefront || 'us');
-      if (embedCandidate) {
-        qs('#amPlayEmbed').style.display = 'inline-block';
-        showEmbed(embedCandidate, url || embedCandidate); // show immediately
+      if (embedUrl && !embedUrl.includes('/library/')) {
+        console.log('[AM Create] Attempting to load embed:', embedUrl);
+        showEmbed(embedUrl, openUrl, false);
+        qs('#embedNote').textContent = 'If player stays blank, try the "Play Playlist" button (uses simple player).';
+        qs('#embedNote').style.display = 'block';
       } else {
-        qs('#amPlayEmbed').style.display = 'none';
-        // surface "Open in Apple Music"
-        const open = url || (id ? `https://music.apple.com/${storefront||'us'}/playlist/${encodeURIComponent(id)}` : null);
-        if (open) {
-          const wrap = qs('#embedWrap');
-          wrap.style.display = '';
-          qs('#amEmbed').style.display = 'none';
-          qs('#openInAm').href = open;
-          const note = qs('#embedNote');
-          note.textContent = 'This playlist can’t be embedded (library/private). Use “Open in Apple Music”, or play below.';
-          note.style.display = 'block';
-        }
-        // enable local player option
-        qs('#amPlayLocal').style.display = 'inline-block';
+        console.warn('[AM Create] Embed not available (likely library playlist). Showing simple player button.');
+        showEmbed(null, openUrl, true); // Show with error/note
+        qs('#amMsg').textContent = `Playlist created! Added ${added_count}. Use "Play Playlist" to start.`;
       }
+
     } catch(e){
+      console.error('[AM Create] Failed:', e);
       qs('#amMsg').textContent = 'Create failed: ' + (e.message || String(e));
     }
+    updateAmUIState(); // Update UI (will show Play button)
   }
 
-  function amPlayEmbed(){
-    const url = localStorage.getItem('applePlaylistUrl');
-    const id  = localStorage.getItem('applePlaylistId');
-    const sf  = localStorage.getItem('applePlaylistStorefront') || 'us';
+  // --- Show Embed Function (for create) ---
+  function showEmbed(embedUrl, openUrl, showError = false){
+    const wrap = qs('#embedWrap');
+    const frame = qs('#amEmbed');
+    const note = qs('#embedNote');
+    qs('#openInAm').href = openUrl || '#';
+    wrap.style.display = 'block'; // Show the wrapper
 
-    const embedUrl = toEmbedUrl(url, id, sf);
-    const openUrl  = url || (id ? `https://music.apple.com/${sf}/playlist/${encodeURIComponent(id)}` : '#');
-
-    if (embedUrl) showEmbed(embedUrl, openUrl);
-    else {
-      qs('#embedWrap').style.display = '';
-      qs('#amEmbed').style.display = 'none';
-      qs('#openInAm').href = openUrl;
-      const note = qs('#embedNote');
-      note.textContent = 'This playlist can’t be embedded (library/private). Use “Open in Apple Music”, or play below.';
-      note.style.display = 'block';
+    if (embedUrl && !showError) {
+        frame.src = embedUrl;
+        frame.style.display = 'block';
+        note.textContent = 'If player stays blank or is private, use the "Play Playlist" button.';
+        note.style.display = 'block';
+    } else {
+        frame.style.display = 'none'; // Hide iframe
+        note.textContent = 'Embed unavailable (playlist is in your library). Use "Play Playlist" or "Open in Apple Music".';
+        note.style.display = 'block';
     }
   }
 
-  // ---------- Local sleek mini-player (fallback) ----------
-  const mini = {
-    root: qs('#mini'),
-    art: qs('#miniArt'),
-    title: qs('#miniTitle'),
-    artist: qs('#miniArtist'),
-    t1: qs('#miniT1'),
-    t2: qs('#miniT2'),
-    seek: qs('#miniSeek'),
-    vol: qs('#miniVol'),
-    open: qs('#miniOpen'),
-    btnPrev: qs('#btnPrev'),
-    btnPlayPause: qs('#btnPlayPause'),
-    btnNext: qs('#btnNext'),
-  };
-
-  function fmtTime(sec){
-    sec = Math.max(0, Math.floor(sec||0));
-    const m = Math.floor(sec/60), s = sec%60;
-    return `${m}:${String(s).padStart(2,'0')}`;
-  }
-  function artworkURL(art, size=200){
-    const u = art?.url || '';
-    return u ? u.replace('{w}', size).replace('{h}', size) : '';
-  }
-  function setPlayIcon(isPlaying){ mini.btnPlayPause.textContent = isPlaying ? '⏸' : '▶'; }
-  function updateNowPlaying(m){
-    const item = m?.player?.nowPlayingItem;
-    const a = item?.attributes || {};
-    mini.title.textContent = a.name || '—';
-    mini.artist.textContent = a.artistName || '—';
-    const art = artworkURL(a.artwork, 200);
-    if (art) { mini.art.src = art; mini.art.alt = a.name || ''; }
-    mini.open.href = a.url || '#';
-  }
-  function updateTimes(m){
-    const cur = m?.player?.currentPlaybackTime || 0;
-    const dur = m?.player?.currentPlaybackDuration || 0;
-    mini.t1.textContent = fmtTime(cur);
-    mini.t2.textContent = dur ? fmtTime(dur) : '0:00';
-    mini.seek.max = Math.max(1, Math.floor(dur*10));
-    mini.seek.value = Math.floor(cur*10);
-  }
-
-  // Build local queue (resolve catalog IDs then queue)
-  async function buildLocalQueueAndPlay(){
-    let m = await getWebMusicInstance();
-    if (!m.musicUserToken) {
-      qs('#amMsg').textContent = 'Please sign in to Apple Music first.';
-      return;
-    }
-    if (!lastTracks?.length) {
-      qs('#amMsg').textContent = 'Generate a tracklist first.';
-      return;
-    }
-    const storefront = m.storefrontId || 'us';
-
-    // Resolve once per simulation (cache in resolvedSongIds)
-    if (!resolvedSongIds.length) {
-      qs('#amMsg').textContent = `Resolving ${lastTracks.length} tracks for playback…`;
-      const ids = [];
-      for (let i=0;i<lastTracks.length;i++){
-        const t = lastTracks[i];
-        if ((i+1)%5===0 || i+1===lastTracks.length) qs('#amMsg').textContent = `Resolving… (${i+1}/${lastTracks.length})`;
+  // --- Copy Link Helper ---
+  qs('#copyLink').onclick = async () => {
+     const url = qs('#openInAm').href;
+     if (!url || url.endsWith('#')) {
+         qs('#amMsg').textContent = 'No link to copy yet.'; return;
+     }
+     try {
+        // Use Clipboard API
+        await navigator.clipboard.writeText(url);
+        qs('#amMsg').textContent = 'Link copied to clipboard!';
+     } catch (err) {
+        console.error('Failed to copy link:', err);
+        // Fallback for insecure contexts (like http)
         try {
-          const term = `${t.artist} ${t.title}`.replace(/\s+\(.*?\)|-+\s*(radio edit|remaster.*|remix.*)/ig, '').trim();
-          const res = await appleCatalogSearch(term, storefront, 1);
-          const id = res?.results?.songs?.data?.[0]?.id;
-          if (id) ids.push(id);
-          await sleep(50);
-        } catch {}
+            const textArea = document.createElement("textarea");
+            textArea.value = url;
+            document.body.appendChild(textArea);
+            textArea.focus(); textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            qs('#amMsg').textContent = 'Link copied to clipboard!';
+        } catch (execErr) {
+             console.error('Fallback copy failed:', execErr);
+             qs('#amMsg').textContent = 'Failed to copy link.';
+        }
+     }
+  };
+
+
+  // ---------- Simple Programmatic Player (Fallback) ----------
+  let simplePlayerInterval = null;
+
+  function showSimplePlayer(show = true) {
+      const sp = qs('#simplePlayer');
+      sp.style.display = show ? 'block' : 'none';
+      // Stop timer if hiding
+      if (!show && simplePlayerInterval) {
+          clearInterval(simplePlayerInterval);
+          simplePlayerInterval = null;
       }
-      resolvedSongIds = ids;
-    }
-
-    if (!resolvedSongIds.length) {
-      qs('#amMsg').textContent = 'No playable tracks were found in Apple Music.';
-      return;
-    }
-
-    // Guard against the MusicKit "play() without pause/stop" error:
-    // 1) Pause if something is playing
-    try { if (m.player.isPlaying) await m.pause(); } catch {}
-    // 2) Set a fresh queue
-    qs('#amMsg').textContent = 'Preparing player…';
-    await m.setQueue({ songs: resolvedSongIds });
-    // 3) Only then play (user-triggered click)
-    await m.play();
-
-    // Show sleek mini-player
-    mini.root.style.display = 'block';
-    updateNowPlaying(m); updateTimes(m); setPlayIcon(true);
-    qs('#embedWrap').style.display = 'none';
-    qs('#amMsg').textContent = `Now playing ${resolvedSongIds.length} tracks.`;
   }
 
-  // Controls (all are user gestures)
-  mini.btnPlayPause.onclick = async () => {
-    const m = await getWebMusicInstance();
-    if (m?.player?.isPlaying) { await m.pause(); setPlayIcon(false); }
-    else { await m.play(); setPlayIcon(true); }
-  };
-  mini.btnPrev.onclick = async () => { const m = await getWebMusicInstance(); try{ await m.skipToPreviousItem(); }catch{} };
-  mini.btnNext.onclick = async () => { const m = await getWebMusicInstance(); try{ await m.skipToNextItem(); }catch{} };
-  mini.seek.oninput = async (e) => {
-    const m = await getWebMusicInstance();
-    const dur = m?.player?.currentPlaybackDuration || 0;
-    const target = (Number(e.target.value)/10);
-    if (dur) { try{ await m.seekToTime(Math.min(target, dur-0.25)); }catch{} }
-  };
-  mini.vol.oninput = async (e) => { const m = await getWebMusicInstance(); if (m?.player) m.player.volume = Number(e.target.value); };
+  function updateSimplePlayerUI() {
+      if (!musicInstance || !musicInstance.player) {
+          qs('#spTitle').textContent = 'Player not ready...';
+          qs('#spBtnPlayPause').textContent = '▶';
+          return;
+      }
+      const item = musicInstance.player.nowPlayingItem;
+      if (!item) {
+          qs('#spTitle').textContent = 'Queue empty or loading...';
+          qs('#spBtnPlayPause').textContent = '▶';
+          return;
+      }
+      const attr = item.attributes || {};
+      qs('#spTitle').textContent = `${attr.artistName || 'Unknown Artist'} - ${attr.name || 'Unknown Track'}`;
+      qs('#spBtnPlayPause').textContent = musicInstance.player.isPlaying ? '⏸' : '▶';
+  }
+  function simplePlayerStateChanged(event) {
+      console.log('[AM Simple Player] State changed:', event.state);
+      updateSimplePlayerUI();
+  }
+  function simplePlayerItemChanged(event) {
+      console.log('[AM Simple Player] Item changed');
+      updateSimplePlayerUI();
+  }
 
-  // ---------- initial state ----------
-  (function(){
-    const storedToken = localStorage.getItem('appleMusicUserToken');
-    if (storedToken) {
-      qs('#amMsg').textContent = 'Signed in. Create your playlist or use the built-in player.';
-      showAmControls();
+  // This is the FALLBACK player, called by "Play Playlist"
+  async function amPlaySimple() {
+    qs('#amMsg').textContent = '';
+    qs('#embedWrap').style.display = 'none'; // Hide embed
+    showSimplePlayer(false); // Hide old player
+
+    let m;
+    try {
+      console.log('[AM Play Simple] Getting MusicKit instance...');
+      m = await getMusicInstance();
+
+      if (!m || !m.isAuthorized) {
+        console.log('[AM Play Simple] Not authorized.');
+        qs('#amMsg').textContent = 'Sign-in required.';
+        updateAmUIState(); return;
+      }
+
+      const playlistId = currentPlaylistInfo.id; // Get ID from create step
+      if (!playlistId) {
+          qs('#amMsg').textContent = 'Please create a playlist first.';
+          return;
+      }
+
+      if (!m.player || typeof m.play !== 'function' || typeof m.setQueue !== 'function') {
+           console.error('[AM Play Simple] Player API not ready.');
+           throw new Error('MusicKit Player failed to become ready.');
+      }
+      console.log('[AM Play Simple] Instance ready for playback.');
+
+    } catch (e) {
+      console.error('[AM Play Simple] init/check failed:', e);
+      qs('#amMsg').textContent = 'Apple Music connection issue: ' + (e.message || e);
+      updateAmUIState(); return;
     }
-    const haveSaved = localStorage.getItem('applePlaylistUrl') || localStorage.getItem('applePlaylistId');
-    if (haveSaved) { qs('#amPlayEmbed').style.display = 'inline-block'; }
-  })();
 
-  // ---------- wire up ----------
-  qs('#go').onclick = simulate;
-  qs('#amSign').onclick = amSignIn;
-  qs('#amCreate').onclick = amCreatePlaylist;
-  qs('#amPlayEmbed').onclick = amPlayEmbed;
-  qs('#amPlayLocal').onclick = buildLocalQueueAndPlay;
+    qs('#amMsg').textContent = `Loading playlist...`;
+    try {
+      console.log('[AM Play Simple] Setting queue with playlist ID:', playlistId);
+      // This sets the queue to the *library* playlist
+      await m.setQueue({ playlist: playlistId }); 
 
-  setTab('yt');
+      await m.play();
+      showSimplePlayer(true); // Show the simple player UI
+      updateSimplePlayerUI(); // Update with initial track
+      qs('#amMsg').textContent = `Now playing created playlist!`;
+      qs('#spMsg').textContent = '';
+    } catch (e) {
+      console.error('[AM Play Simple] playback failed:', e);
+      qs('#amMsg').textContent = 'Error starting simple playback: ' + (e.message || e);
+      qs('#spMsg').textContent = 'Playback Error: ' + (e.message || e);
+      showSimplePlayer(true);
+    }
+  }
+
+  // --- Simple Player Controls Wiring ---
+  qs('#spBtnPlayPause').onclick = async () => {
+    try { 
+        const m = await getMusicInstance(); 
+        if (!m || !m.player) return;
+        if (m.player.isPlaying) {
+            await m.pause();
+        } else {
+            if (m.player.playbackState === MusicKit.PlaybackStates.ended) {
+                 await m.play();
+            } else {
+                 await m.play();
+            }
+        }
+    } catch(e){ console.error("SP Play/pause error:", e);}
+  };
+  qs('#spBtnPrev').onclick = async () => {
+     try { const m = await getMusicInstance(); if(m && m.player) await m.skipToPreviousItem(); } 
+     catch(e){ console.warn("SP Skip Previous failed:", e); }
+  };
+  qs('#spBtnNext').onclick = async () => {
+     try { const m = await getMusicInstance(); if(m && m.player) await m.skipToNextItem(); }
+     catch(e){ console.warn("SP Skip Next failed:", e); }
+  };
+
+
+  // ---------- Initialize MusicKit on Load ----------
+  document.addEventListener('DOMContentLoaded', () => {
+      console.log('[AM Init] DOMContentLoaded, attempting initial MusicKit setup...');
+      // Retrieve stored playlist info on load
+      currentPlaylistInfo.id = localStorage.getItem('applePlaylistId');
+      currentPlaylistInfo.url = localStorage.getItem('applePlaylistUrl');
+      currentPlaylistInfo.storefront = localStorage.getItem('applePlaylistStorefront') || 'us';
+
+      getMusicInstance().catch(e => {
+          console.error("Initial MusicKit setup failed on load:", e);
+      });
+      // Update UI based on stored token *immediately*
+      updateAmUIState();
+
+      // --- FIX: Move wire-ups inside DOMContentLoaded ---
+      qs('#go').onclick = simulate;
+      qs('#amSign').onclick = amSignIn;
+      qs('#amCreate').onclick = amCreatePlaylist;
+      qs('#amPlay').onclick = amPlaySimple; // "Play Playlist" button now triggers simple player
+      qs('.tab[data-tab="yt"]').onclick = () => setTab('yt');
+      qs('.tab[data-tab="am"]').onclick = () => setTab('am');
+      qs('.tab[data-tab="sp"]').onclick = () => setTab('sp');
+
+      setTab('yt'); // Set initial tab
+  });
+
+  // --- REMOVED wire-ups from global scope ---
+
 </script>
 
 </body>
 </html>
+
