@@ -295,7 +295,7 @@
               },
               onError: (e) => {
                 console.error("YT Player Error:", e.data);
-                qs('#ytErr').textContent = `Youtubeer Error: ${e.data}`; // Typo fixed
+                qs('#ytErr').textContent = `Youtubeer Error: ${e.data}`;
               }
             }
           });
@@ -347,7 +347,7 @@
     }
   })();
 
-  // ---------- MusicKit Initialization (NEW APPROACH V3) ----------
+  // ---------- MusicKit Initialization (NEW APPROACH V4 - Event Driven) ----------
   let musicInstance = null;
   let musicInstancePromise = null;
 
@@ -360,8 +360,8 @@
     });
   }
 
-  // Configure and get instance ONCE
-  async function configureAndGetInstance() {
+  // Configure MusicKit - Returns the INSTANCE
+  async function configureMusicKit() {
     await waitForMusicKitLoaded();
     console.log('[AM Configure] Fetching dev token...');
     const r = await withTimeout(fetch(`${API}/v1/apple/dev-token`));
@@ -378,40 +378,66 @@
     console.log('[AM Configure] Getting instance...');
     let instance = window.MusicKit.getInstance();
     if (!instance) {
-        await new Promise(res => setTimeout(res, 300));
+        await new Promise(res => setTimeout(res, 300)); // Short delay
         instance = window.MusicKit.getInstance();
         if (!instance) throw new Error('MusicKit instance failed after configure and delay.');
     }
 
-    console.log('[AM Configure] Instance obtained. Applying stored token if needed.');
+    console.log('[AM Configure] Instance obtained.');
+    instance.storefrontId = apiStorefront || 'us'; // Set storefront
+    console.log('[AM Configure] Storefront set to:', instance.storefrontId);
+
+    // Apply stored token if available
     const storedToken = localStorage.getItem('appleMusicUserToken');
     if (storedToken && !instance.musicUserToken) {
       instance.musicUserToken = storedToken;
       console.log('[AM Configure] Applied stored user token.');
     }
-    // Set storefront
-    instance.storefrontId = apiStorefront || 'us';
-    console.log('[AM Configure] Storefront set to:', instance.storefrontId);
-    return instance;
+
+    // Check if the API is ready now, otherwise wait for an event
+    if (instance.api && typeof instance.api.search === 'function') {
+        console.log('[AM Configure] API is ready immediately after configure.');
+    } else {
+        console.warn('[AM Configure] API not ready immediately. Will rely on events.');
+    }
+
+    return instance; // Return the configured (but maybe not API-ready) instance
   }
 
   // Gets the instance, initializing it only the first time
   function getMusicInstance() {
-    if (musicInstance) return Promise.resolve(musicInstance);
+    if (musicInstance) return Promise.resolve(musicInstance); // Return cached ready instance
     if (!musicInstancePromise) {
-      musicInstancePromise = configureAndGetInstance()
+      // Start initialization
+      musicInstancePromise = configureMusicKit()
         .then(instance => {
-          musicInstance = instance;
-          console.log('[AM GetInstance] Initialization successful.');
+          musicInstance = instance; // Cache the instance
+          console.log('[AM GetInstance] Configuration successful.');
+          // Listen for authorization changes to potentially update UI or state
+          musicInstance.addEventListener('authorizationStatusDidChange', (event) => {
+              console.log('[AM Event] Auth status changed:', event.authorizationStatus);
+              if (event.authorizationStatus === 'authorized') {
+                  localStorage.setItem('appleMusicUserToken', musicInstance.musicUserToken);
+                  qs('#amSign').style.display = 'none';
+                  qs('#amPlay').style.display = 'inline-block';
+                  qs('#amCreate').style.display = 'inline-block';
+              } else {
+                  localStorage.removeItem('appleMusicUserToken');
+                  qs('#amSign').style.display = 'inline-block';
+                  qs('#amPlay').style.display = 'none';
+                  qs('#amCreate').style.display = 'none';
+              }
+          });
           return instance;
         })
         .catch(e => {
           console.error('[AM GetInstance] Initialization failed:', e);
           musicInstancePromise = null; // Allow retry on failure
-          throw e;
+          musicInstance = null;
+          throw e; // Re-throw error
         });
     }
-    return musicInstancePromise;
+    return musicInstancePromise; // Return the ongoing promise
   }
   // --- End MusicKit Initialization ---
 
@@ -428,29 +454,31 @@
       console.log('[AM] Native SFSafariViewController →', url);
       qs('#amMsg').textContent = 'Opening Apple sign-in…';
       try {
+        // We MUST ensure MusicKit is configured before calling native auth
+        // Because the callback relies on the MusicKit instance existing to handle events
+        await getMusicInstance();
         await Browser.open({ url, presentationStyle: 'fullscreen' });
       } catch (e) {
-        console.error('[AM] Browser.open failed:', e);
+        console.error('[AM] Browser.open or pre-config failed:', e);
         qs('#amMsg').textContent = 'Failed to open sign-in window: ' + (e.message || e);
       }
       return;
     }
 
-    // Website fallback - Uses the new getMusicInstance
+    // Website fallback - Simpler: Get instance, then authorize
     try {
       console.log('[AM] Web Fallback → MusicKit.authorize()');
       qs('#amMsg').textContent = 'Contacting Apple…';
-      const m = await getMusicInstance();
+      const m = await getMusicInstance(); // Ensures configured
       const userToken = await m.authorize(); // Trigger auth popup
       if (!userToken) throw new Error('Authorization failed (user cancelled?)');
 
-      localStorage.setItem('appleMusicUserToken', userToken);
-      m.musicUserToken = userToken; // Apply token to current instance
+      // Event listener added in getMusicInstance should handle UI updates
+      // localStorage.setItem('appleMusicUserToken', userToken); // Set by event listener
+      // m.musicUserToken = userToken; // Applied by event listener if needed
 
       qs('#amMsg').textContent = 'Signed in. Generate a list to play or create.';
-      qs('#amSign').style.display = 'none';
-      qs('#amPlay').style.display = 'inline-block';
-      qs('#amCreate').style.display = 'inline-block';
+
     } catch(e){
       console.error('[AM] Web fallback failed:', e);
       qs('#amMsg').textContent = 'Sign-in failed: ' + (e.message || e);
@@ -466,17 +494,35 @@
       console.log('[AM Play] Getting MusicKit instance...');
       m = await getMusicInstance(); // Ensures configured and gets instance
 
-      // Check authorization status
+      // Check authorization status - more robustly
       if (!m.isAuthorized) {
         console.log('[AM Play] Not authorized, attempting authorize...');
         qs('#amMsg').textContent = 'Authorizing...';
         try {
-          const userToken = await m.authorize(); // Trigger auth popup
-          if (!userToken) throw new Error('User denied authorization');
-          localStorage.setItem('appleMusicUserToken', userToken);
-          m.musicUserToken = userToken; // Apply token
-          console.log('[AM Play] Authorization successful.');
-          // No need for event listener or delay here, authorize promise resolves when ready
+          // Re-use the event-driven approach from the previous attempt
+          const authPromise = new Promise((resolve, reject) => {
+             if (!m) return reject(new Error("MusicKit instance lost before listener setup"));
+             const listener = (event) => {
+                 console.log('[AM Play] Auth status changed:', event.authorizationStatus);
+                 m.removeEventListener('authorizationStatusDidChange', listener);
+                 if (event.authorizationStatus === 'authorized') {
+                     resolve(m.musicUserToken);
+                 } else { reject(new Error('User denied or restricted authorization')); }
+             };
+             m.addEventListener('authorizationStatusDidChange', listener);
+             const timeout = setTimeout(() => {
+                 m.removeEventListener('authorizationStatusDidChange', listener);
+                 reject(new Error('Authorization status change timeout.'));
+             }, 20000); // 20s timeout
+
+             m.authorize().catch(err => { // Catch immediate errors
+                 clearTimeout(timeout);
+                 m.removeEventListener('authorizationStatusDidChange', listener);
+                 reject(err);
+             });
+          });
+          await authPromise; // Wait for authorization success via event
+          console.log('[AM Play] Authorization successful via event.');
         } catch (authErr) {
           console.error('[AM Play] Authorization failed:', authErr);
           qs('#amMsg').textContent = 'Sign-in needed or failed: ' + (authErr.message || authErr);
@@ -484,36 +530,18 @@
         }
       }
 
-      // At this point, 'm' should be authorized and ready
-      if (!m || !m.isAuthorized) {
-         throw new Error('Instance not authorized even after attempt.');
+      // Final check for API readiness *after* confirming authorization
+      if (!m || !m.isAuthorized || !m.api || typeof m.api.search !== 'function') {
+        console.error('[AM Play] Instance lacks .api.search after all checks.');
+        throw new Error('MusicKit API failed to become ready.');
       }
-      m.storefrontId = m.storefrontId || 'us'; // Ensure storefront default
-
-      // --- NEW: Retry loop specifically for API readiness ---
-      let apiReady = false;
-      for (let i = 0; i < 10; i++) { // Retry up to 10 times (2 seconds total)
-          if (m.api && typeof m.api.search === 'function') {
-              apiReady = true;
-              console.log(`[AM Play] API ready after ${i} retries.`);
-              break;
-          }
-          console.warn(`[AM Play] API not ready, retry ${i+1}...`);
-          await new Promise(res => setTimeout(res, 200)); // Wait 200ms
-      }
-
-      if (!apiReady) {
-          console.error('[AM Play] API object or search function not available after retries.');
-          throw new Error('MusicKit API failed to become ready.');
-      }
-      // --- END RETRY LOOP ---
-
+      m.storefrontId = m.storefrontId || 'us'; // Ensure default storefront
       console.log('[AM Play] Instance ready for search with storefront:', m.storefrontId);
 
     } catch (e) {
       console.error('[AM Play] init/auth failed:', e);
       qs('#amMsg').textContent = 'Apple Music connection not ready. Please try signing in again.';
-      localStorage.removeItem('appleMusicUserToken');
+      localStorage.removeItem('appleMusicUserToken'); // Reset on failure
       qs('#amSign').style.display = 'inline-block';
       qs('#amPlay').style.display = 'none';
       qs('#amCreate').style.display = 'none';
