@@ -380,57 +380,47 @@
     });
 
     console.log('[AM Configure] Getting instance...');
-    const instance = window.MusicKit.getInstance();
+    // --- FIX: Change const to let ---
+    let instance = window.MusicKit.getInstance(); 
     if (!instance) {
-        // Add a small delay and retry getInstance once if it fails initially
         await new Promise(res => setTimeout(res, 300));
-        instance = window.MusicKit.getInstance();
+        instance = window.MusicKit.getInstance(); // Reassign using let
         if (!instance) throw new Error('MusicKit instance failed after configure and delay.');
     }
+    // --- END FIX ---
 
     console.log('[AM Configure] Instance obtained. Applying stored token if needed.');
-    // Apply stored token if instance doesn't have one
     const storedToken = localStorage.getItem('appleMusicUserToken');
     if (storedToken && !instance.musicUserToken) {
       instance.musicUserToken = storedToken;
       console.log('[AM Configure] Applied stored user token.');
     }
 
-    // Set storefront (best effort)
+    // Set storefront - REMOVED background fetch which caused errors
     instance.storefrontId = apiStorefront || 'us';
     console.log('[AM Configure] Storefront set to:', instance.storefrontId);
-    // Asynchronously try to confirm/update storefront from API in background
-    instance.api.storefront().then(sf => {
-        const confirmedSf = sf?.data?.[0]?.id;
-        if (confirmedSf && confirmedSf !== instance.storefrontId) {
-            console.log(`[AM Configure] Updated storefront from ${instance.storefrontId} to ${confirmedSf}`);
-            instance.storefrontId = confirmedSf;
-        }
-    }).catch(e => console.warn('[AM Configure] Background storefront fetch failed:', e));
 
-    return instance; // Return the configured instance
+    return instance;
   }
 
   // Gets the instance, initializing it only the first time
   function getMusicInstance() {
-    if (musicInstance) return Promise.resolve(musicInstance); // Return cached instance
+    if (musicInstance) return Promise.resolve(musicInstance);
     if (!musicInstancePromise) {
-      // Start initialization only if it hasn't started yet
       musicInstancePromise = configureAndGetInstance()
         .then(instance => {
-          musicInstance = instance; // Cache the instance on success
+          musicInstance = instance;
           console.log('[AM GetInstance] Initialization successful.');
           return instance;
         })
         .catch(e => {
           console.error('[AM GetInstance] Initialization failed:', e);
-          musicInstancePromise = null; // Reset promise on failure
-          throw e; // Re-throw error
+          musicInstancePromise = null;
+          throw e;
         });
     }
-    return musicInstancePromise; // Return the ongoing promise
+    return musicInstancePromise;
   }
-
   // --- End MusicKit Initialization ---
 
 
@@ -439,7 +429,7 @@
     const Cap = window.Capacitor || {};
     const Plugins = (Cap && Cap.Plugins) || {};
     const Browser = Plugins.Browser;
-    qs('#amMsg').textContent = ''; // Clear previous messages
+    qs('#amMsg').textContent = '';
 
     if (Browser && typeof Browser.open === 'function') {
       const url = `${NATIVE_HOST}/auth/native/?native=1&v=5`;
@@ -458,12 +448,12 @@
     try {
       console.log('[AM] Web Fallback → MusicKit.authorize()');
       qs('#amMsg').textContent = 'Contacting Apple…';
-      const m = await getMusicInstance(); // Get or initialize instance
-      const userToken = await m.authorize(); // Authorize
+      const m = await getMusicInstance();
+      const userToken = await m.authorize();
       if (!userToken) throw new Error('Authorization failed (user cancelled?)');
 
       localStorage.setItem('appleMusicUserToken', userToken);
-      m.musicUserToken = userToken; // Apply token to current instance
+      m.musicUserToken = userToken;
 
       qs('#amMsg').textContent = 'Signed in. Generate a list to play or create.';
       qs('#amSign').style.display = 'none';
@@ -478,45 +468,50 @@
   // ---------- Play Playlist in Apple Music ----------
   async function amPlayPlaylist() {
     qs('#amMsg').textContent = '';
-    let m; // Use 'm' consistent with sign-in
+    let m;
 
     try {
       console.log('[AM Play] Getting MusicKit instance...');
-      m = await getMusicInstance(); // Get or initialize instance
+      m = await getMusicInstance();
 
       if (!m.isAuthorized) {
-        console.log('[AM Play] Not authorized, attempting authorize...');
+        console.log('[AM Play] Not authorized, attempting authorize using event listener...');
         qs('#amMsg').textContent = 'Authorizing...';
         try {
           // Listen for the status change event *before* calling authorize
           const authPromise = new Promise((resolve, reject) => {
+             // Ensure instance 'm' is available in listener scope
+             if (!m) return reject(new Error("MusicKit instance lost before listener setup"));
+
              const listener = (event) => {
                  console.log('[AM Play] Auth status changed:', event.authorizationStatus);
-                 // Check if authorized or denied/restricted
+                 m.removeEventListener('authorizationStatusDidChange', listener); // Remove immediately
                  if (event.authorizationStatus === 'authorized') {
-                     resolve(m.musicUserToken); // Resolve with the token
-                 } else if (event.authorizationStatus === 'denied' || event.authorizationStatus === 'restricted') {
+                     resolve(m.musicUserToken);
+                 } else {
                      reject(new Error('User denied or restricted authorization'));
                  }
-                 // Remove listener once status changes (or after timeout)
-                 m.removeEventListener('authorizationStatusDidChange', listener);
              };
              m.addEventListener('authorizationStatusDidChange', listener);
-             // Timeout for the listener
-             setTimeout(() => {
+
+             const timeout = setTimeout(() => {
                  m.removeEventListener('authorizationStatusDidChange', listener);
                  reject(new Error('Authorization status did not change in time.'));
-             }, 15000); // 15 second timeout
+             }, 20000); // Increased timeout to 20s
 
-             // Now trigger the authorization popup
-             m.authorize().catch(reject); // Catch immediate errors from authorize itself
+             // Trigger authorization
+             m.authorize().catch(err => { // Catch immediate errors
+                 clearTimeout(timeout);
+                 m.removeEventListener('authorizationStatusDidChange', listener);
+                 reject(err);
+             });
           });
 
-          const tok = await authPromise; // Wait for the event or timeout/error
+          const tok = await authPromise;
           if (!tok) throw new Error('Authorization failed or timed out.');
 
           localStorage.setItem('appleMusicUserToken', tok);
-          m.musicUserToken = tok; // Apply token
+          m.musicUserToken = tok;
           console.log('[AM Play] Authorization successful via event.');
 
         } catch (authErr) {
@@ -526,12 +521,15 @@
         }
       }
 
-      // Final check for readiness after potentially complex auth flow
+      // Final check for readiness
+      // Use 'm' which is confirmed/newly authorized instance
       if (!m || !m.isAuthorized || !m.api || typeof m.api.search !== 'function') {
         console.error('[AM Play] Instance lacks .api.search after all checks.');
         throw new Error('MusicKit API not ready after auth attempt.');
       }
-      console.log('[AM Play] Instance ready for search with storefront:', m.storefrontId || 'us');
+      // Ensure storefrontId is set on the instance we're using
+      m.storefrontId = m.storefrontId || 'us';
+      console.log('[AM Play] Instance ready for search with storefront:', m.storefrontId);
 
     } catch (e) {
       console.error('[AM Play] init/auth failed:', e);
@@ -548,11 +546,11 @@
       return;
     }
 
-    // --- Search logic remains the same ---
+    // --- Search logic ---
     qs('#amMsg').textContent = `Searching for ${lastTracks.length} tracks...`;
     const songIds = [];
     let i = 0;
-    const storefront = m.storefrontId || 'us';
+    const storefront = m.storefrontId; // Use the confirmed storefront
 
     for (const t of lastTracks) {
       i++;
@@ -642,4 +640,3 @@
 
 </body>
 </html>
-
