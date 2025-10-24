@@ -378,22 +378,40 @@
   async function amPlayPlaylist() {
     qs('#amMsg').textContent = ''; // Clear previous messages
     let musicInstance;
+
     try {
       musicInstance = await getWebMusicInstance(); // Ensures MusicKit is loaded & configured
+
+      // Explicitly try to authorize if not already authorized
       if (!musicInstance.isAuthorized) {
-        // Try authorizing silently first, maybe token expired but session exists
-        try { await musicInstance.authorize(); } catch {}
-        if (!musicInstance.isAuthorized) {
-            qs('#amMsg').textContent = 'Please sign in first.';
-            return;
+        qs('#amMsg').textContent = 'Authorizing...';
+        try {
+          await musicInstance.authorize(); // Attempt authorization
+        } catch (authErr) {
+          console.error('[AM Play] Authorization failed:', authErr);
+          qs('#amMsg').textContent = 'Sign-in needed or failed: ' + (authErr.message || authErr);
+          return; // Stop if authorize fails
         }
       }
+
+      // After potentially authorizing, double-check if ready for API calls
+      if (!musicInstance.isAuthorized || !musicInstance.api || typeof musicInstance.api.search !== 'function') {
+           console.error('[AM Play] MusicKit instance not ready for search after auth attempt.');
+           qs('#amMsg').textContent = 'Apple Music connection not ready. Please try signing in again.';
+           // Force sign-out/clear token to encourage re-auth
+           localStorage.removeItem('appleMusicUserToken');
+           qs('#amSign').style.display = 'inline-block';
+           qs('#amPlay').style.display = 'none';
+           qs('#amCreate').style.display = 'none';
+           return;
+      }
+      // If we get here, musicInstance is authorized and should have .api.search
+
     } catch (e) {
       console.error('[AM Play] MusicKit init/auth failed:', e);
       qs('#amMsg').textContent = 'Could not initialize Apple Music: ' + (e.message || e);
       return;
     }
-
     if (!lastTracks?.length) {
       qs('#amMsg').textContent = 'Generate a tracklist first.';
       return;
