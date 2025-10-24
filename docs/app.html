@@ -122,7 +122,14 @@
 
     <div class="cols">
       <!-- YouTube -->
-      <div class="panel box" id="pane-yt"> <!-- ... (unchanged) ... --> </div>
+      <div class="panel box" id="pane-yt">
+        <div id="ytWrap">
+          <div class="muted" id="ytStatus">Waiting for a simulation…</div>
+          <div id="ytp"></div>
+          <a class="btn" id="ytOpen" href="#" target="_blank" rel="noopener" style="display:none">Open in YouTube</a>
+          <div id="ytErr" class="err"></div>
+        </div>
+      </div>
 
       <!-- Apple Music Pane -->
       <div class="panel box" id="pane-am" style="display:none">
@@ -131,14 +138,11 @@
           <div class="linkRow">
             <button class="btn" id="amSign">Sign in to Apple Music</button>
             <button class="btn" id="amCreate" style="display:none">Create Playlist</button>
-            <!-- RENAMED BUTTON -->
             <button class="btn" id="amPlay" style="display:none">Play Playlist</button>
           </div>
           <div id="amMsg" class="muted" style="margin-top:8px"></div>
 
-          <!-- REMOVED Official Apple Music Embed -->
-
-          <!-- Simple Player (Fallback) -->
+          <!-- Simple Player (RESTORED) -->
           <div id="simplePlayer" class="simplePlayer">
             <div class="spRow1">
               <div class="spMeta">
@@ -159,7 +163,16 @@
   </div>
 
   <!-- Tracklist -->
-  <div class="panel" style="margin-top:16px"> <!-- ... (unchanged) ... --> </div>
+  <div class="panel" style="margin-top:16px">
+     <h2>Your Music Time Machine Playlist</h2>
+     <p class="muted" style="margin-bottom:6px">
+       Ever wonder <strong>what songs were popular on your birthday?</strong>
+       Just pick a date and genre, and we'll <strong>generate a music playlist</strong>
+       of the top songs from that week, based on <strong>historical Billboard charts</strong>.
+       The tracklist will appear below.
+     </p>
+     <div id="list" class="list"></div>
+  </div>
 </div>
 
 <script>
@@ -197,13 +210,13 @@
   // ---------- state ----------
   let lastTracks = [];
   let DEV_TOKEN = null;
-  let currentPlaylistInfo = { id: null, url: null, storefront: 'us' }; // Store created playlist info
+  let currentPlaylistInfo = { id: null, url: null, storefront: 'us' };
 
   // ---------- YouTube ----------
-  // ... (unchanged) ...
   let player = null, YTapiReady = false;
   (function(){ const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api"; document.head.appendChild(tag); })();
   window.onYouTubeIframeAPIReady = () => { YTapiReady = true; console.log("YT API Ready"); };
+
   async function simulate(){
     qs('#go').disabled = true;
     qs('#ytStatus').textContent = 'Building…';
@@ -215,6 +228,7 @@
     qs('#ytp').innerHTML = '';
     qs('#ytp').style.display = 'none';
     qs('#ytOpen').style.display = 'none';
+    qs('#amMsg').textContent = ''; // Clear AM message
 
     try{
       const body = {
@@ -231,7 +245,12 @@
       lastTracks = data.tracks || [];
       if(!lastTracks.length){ qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned. Try a different date/genre.'; return; }
       renderList(lastTracks);
-      buildYouTube(lastTracks);
+      // Only build YouTube if the tab is active
+      if (qs('.tab[data-tab="yt"]').classList.contains('active')) {
+          buildYouTube(lastTracks);
+      } else {
+          qs('#ytStatus').textContent = 'Playlist generated. Switch to YouTube tab to play.';
+      }
     }catch(err){
       console.error('[simulate] failed:', err);
       if (!qs('#ytErr').textContent) { qs('#ytErr').textContent = err.message || String(err); }
@@ -240,6 +259,7 @@
       qs('#go').disabled = false;
     }
   }
+
   function renderList(rows){
     if(!rows?.length){ qs('#list').innerHTML = '<div class="muted">No tracks.</div>'; return; }
     const frag = document.createDocumentFragment();
@@ -252,6 +272,7 @@
     });
     qs('#list').replaceChildren(frag);
   }
+
   async function buildYouTube(tracks){
     qs('#ytStatus').textContent = 'Resolving YouTube IDs…';
     qs('#ytErr').textContent = '';
@@ -292,21 +313,20 @@
 
 
   // ---------- Universal Link / custom-scheme listener (native) ----------
-  // ... (unchanged) ...
-   (function(){
+  (function(){
     const Cap = window.Capacitor || {}; const App = Cap.Plugins && Cap.Plugins.App;
-    function parseQuery(u){ /* ... */ }
+    function parseQuery(u){ const i = u.indexOf('?'); if (i < 0) return {}; const q = u.slice(i+1).split('&'); const out = {}; for (const p of q) { const [k,v] = p.split('='); out[decodeURIComponent(k)] = decodeURIComponent(v||''); } return out; }
     if (App && App.addListener) {
       App.addListener('appUrlOpen', ({ url }) => {
-        /* ... */
-        if (q.token) { localStorage.setItem('appleMusicUserToken', q.token); updateAmUIState(); getMusicInstance().catch(e => console.warn("[AM Init BG after native auth]", e)); }
-        else { /* ... */ }
+        console.log('[appUrlOpen]', url); if (!url || !url.startsWith('com.tapedecktimemachine.app://auth/callback')) return;
+        const q = parseQuery(url); if (q.token) { localStorage.setItem('appleMusicUserToken', q.token); updateAmUIState(); getMusicInstance().catch(e => console.warn("[AM Init BG after native auth]", e)); }
+        else { console.warn('[appUrlOpen] Received callback without token:', url); qs('#amMsg').textContent = 'Sign-in callback received, but no token found.'; }
       }); console.log('[AM] appUrlOpen listener attached');
     } else { console.warn('[AM] Capacitor App plugin not available for appUrlOpen listener.'); }
   })();
 
 
-  // ---------- MusicKit Initialization (V12 - const/let fix) ----------
+  // ---------- MusicKit Initialization (V13 - const/let fix applied) ----------
   let musicInstance = null;
   let musicInstancePromise = null;
 
@@ -370,6 +390,7 @@
     instance.addEventListener('authorizationStatusDidChange', handleAuthorizationStatusChange);
     console.log('[AM Configure] Attached auth listener.');
     
+    // Attach Simple Player listeners
     instance.removeEventListener('playbackStateDidChange', simplePlayerStateChanged);
     instance.removeEventListener('nowPlayingItemDidChange', simplePlayerItemChanged);
     instance.addEventListener('playbackStateDidChange', simplePlayerStateChanged);
@@ -488,7 +509,7 @@
 
 
   // ---------- Play Playlist (Programmatic + Custom UI) ----------
-  async function amPlayPlaylist() {
+  async function amPlay() { // Renamed from amPlayPlaylist
     qs('#amMsg').textContent = '';
     showSimplePlayer(false); // Hide old player
     
@@ -503,16 +524,18 @@
         updateAmUIState(); return;
       }
 
+       // --- Wait for API readiness loop ---
       console.log('[AM Play] Waiting for API readiness...');
       qs('#amMsg').textContent = 'Connecting to Apple Music API...';
       let apiReady = false;
-      for (let i = 0; i < 15; i++) {
+      for (let i = 0; i < 15; i++) { // Retry up to 15 times (3 seconds total)
           if (m && m.api && typeof m.api.search === 'function') {
               apiReady = true; console.log(`[AM Play] API ready after ${i} retries.`); break;
           }
           console.warn(`[AM Play] API not ready on instance 'm', retry ${i+1}...`); await sleep(200);
       }
       if (!apiReady) throw new Error('MusicKit API failed to become ready in time.');
+      // --- End Wait ---
 
       m.storefrontId = m.storefrontId || 'us';
       console.log('[AM Play] Instance ready for search with storefront:', m.storefrontId);
@@ -523,38 +546,59 @@
       updateAmUIState(); return;
     }
 
-    if (!lastTracks?.length) { qs('#amMsg').textContent = 'Generate a tracklist first.'; return; }
-
-    // --- Search logic ---
-    qs('#amMsg').textContent = `Searching for ${lastTracks.length} tracks...`;
-    const songIds = [];
-    let i = 0;
-    const storefront = m.storefrontId;
-    for (const t of lastTracks) {
-      i++;
-      if (i % 5 === 0 || i === lastTracks.length) { qs('#amMsg').textContent = `Searching... (${i}/${lastTracks.length})`; }
-      try {
-        const term = `${t.artist} ${t.title}`; let id = null;
-        if (m.api && typeof m.api.search === 'function') {
-            try { const res = await withTimeout(m.api.search(term, { types: ['songs'], limit: 1, storefront: storefront }), 5000); id = res?.songs?.data?.[0]?.id; }
-            catch (apiSearchErr) { console.warn(`MusicKit API search failed for "${term}", trying REST:`, apiSearchErr); id = null; }
-        } else { console.warn(`MusicKit API search not available, falling back to REST for: ${term}`); }
-        if (!id) { console.log(`[AM Play] Falling back to REST search for: ${term}`); const res = await appleCatalogSearch(term, storefront, 1); id = res?.results?.songs?.data?.[0]?.id; }
-        if (id) { songIds.push(id); } else { console.warn(`[AM Play] Track not found in ${storefront}: ${term}`); }
-        await sleep(100);
-      } catch (e) { console.warn(`[AM Play] search loop error for "${t.artist} - ${t.title}":`, e); }
+    // --- Check for tracks or created playlist ---
+    let queueOptions = {};
+    if (lastTracks?.length > 0) {
+        console.log('[AM Play] Searching for tracks from generated list...');
+        qs('#amMsg').textContent = `Searching for ${lastTracks.length} tracks...`;
+        const songIds = [];
+        let i = 0;
+        const storefront = m.storefrontId;
+        for (const t of lastTracks) {
+          i++;
+          if (i % 5 === 0 || i === lastTracks.length) { qs('#amMsg').textContent = `Searching... (${i}/${lastTracks.length})`; }
+          try {
+            const term = `${t.artist} ${t.title}`; let id = null;
+            if (m.api && typeof m.api.search === 'function') {
+                try { const res = await withTimeout(m.api.search(term, { types: ['songs'], limit: 1, storefront: storefront }), 5000); id = res?.songs?.data?.[0]?.id; }
+                catch (apiSearchErr) { console.warn(`MusicKit API search failed for "${term}", trying REST:`, apiSearchErr); id = null; }
+            } else { console.warn(`MusicKit API search not available, falling back to REST for: ${term}`); }
+            if (!id) { console.log(`[AM Play] Falling back to REST search for: ${term}`); const res = await appleCatalogSearch(term, storefront, 1); id = res?.results?.songs?.data?.[0]?.id; }
+            if (id) { songIds.push(id); } else { console.warn(`[AM Play] Track not found in ${storefront}: ${term}`); }
+            await sleep(100);
+          } catch (e) { console.warn(`[AM Play] search loop error for "${t.artist} - ${t.title}":`, e); }
+        }
+        if (!songIds.length) { qs('#amMsg').textContent = 'None of the tracks could be found in Apple Music.'; return; }
+        qs('#amMsg').textContent = `Found ${songIds.length} tracks. Adding to queue...`;
+        queueOptions = { songs: songIds };
+    } else if (currentPlaylistInfo.id) {
+        console.log('[AM Play] No generated tracks, playing created playlist ID:', currentPlaylistInfo.id);
+        qs('#amMsg').textContent = `Loading created playlist...`;
+        queueOptions = { playlist: currentPlaylistInfo.id }; // Play by library playlist ID
+    } else {
+        qs('#amMsg').textContent = 'Please generate a tracklist or create a playlist first.';
+        return;
     }
 
-    if (!songIds.length) { qs('#amMsg').textContent = 'None of the tracks could be found in Apple Music.'; return; }
-
-    qs('#amMsg').textContent = `Found ${songIds.length} tracks. Adding to queue...`;
+    // --- Play ---
     try {
-      await m.setQueue({ songs: songIds });
+      if (!m.player || typeof m.play !== 'function' || typeof m.setQueue !== 'function') {
+           console.error('[AM Play] Player API not ready at playback time.');
+           throw new Error('MusicKit Player failed to become ready.');
+      }
+      console.log('[AM Play] Setting queue...', queueOptions);
+      await m.setQueue(queueOptions);
       await m.play();
       showSimplePlayer(true); // Show the simple player
-      // UI updates will be handled by the event listeners
-      qs('#amMsg').textContent = `Now playing ${songIds.length} tracks!`;
-    } catch (e) { console.error('[AM Play] playback failed:', e); qs('#amMsg').textContent = 'Error starting playback: ' + (e.message || e); }
+      updateSimplePlayerUI(); // Update with initial track
+      qs('#amMsg').textContent = `Now playing!`;
+      qs('#spMsg').textContent = '';
+    } catch (e) {
+      console.error('[AM Play] playback failed:', e);
+      qs('#amMsg').textContent = 'Error starting playback: ' + (e.message || e);
+      qs('#spMsg').textContent = 'Playback Error: ' + (e.message || e);
+      showSimplePlayer(true);
+    }
   }
 
   // ---------- Create playlist (shared) ----------
@@ -565,7 +609,6 @@
 
     qs('#amMsg').textContent='Creating playlist…';
     showSimplePlayer(false); // Hide simple player
-    // --- REMOVED EMBED LOGIC ---
 
     try{
       const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
@@ -584,9 +627,8 @@
 
       // Store playlist info
       currentPlaylistInfo.id = playlist_id;
-      currentPlaylistInfo.url = j.playlist_url; // Use field from backend
+      currentPlaylistInfo.url = j.playlist_url;
       currentPlaylistInfo.storefront = j.storefront || 'us';
-      localStorage.setItem('applePlaylistId', playlist_id); // Store ID for simple player
       
       qs('#amMsg').textContent = `Playlist created! Added ${added_count} of ${total_tracks_searched} tracks.`;
 
@@ -594,15 +636,11 @@
       console.error('[AM Create] Failed:', e);
       qs('#amMsg').textContent = 'Create failed: ' + (e.message || String(e));
     }
-    // Update UI state *after* create is done (to show simple player button)
-    updateAmUIState();
+    updateAmUIState(); // Update UI (will show Play button now)
   }
 
-  // --- REMOVED Show Embed Function ---
-  // --- REMOVED Copy Link Helper ---
-
-  // ---------- Simple Programmatic Player (Fallback) ----------
-  let simplePlayerInterval = null; // To update simple player time
+  // ---------- Simple Programmatic Player (UI only) ----------
+  let simplePlayerInterval = null;
 
   function showSimplePlayer(show = true) {
       const sp = qs('#simplePlayer');
@@ -614,15 +652,21 @@
   }
 
   function updateSimplePlayerUI() {
-      if (!musicInstance || !musicInstance.player || !musicInstance.player.nowPlayingItem) {
-          qs('#spTitle').textContent = '—';
+      // Check if instance and player are ready
+      if (!musicInstance || !musicInstance.player) {
+          qs('#spTitle').textContent = 'Player not ready...';
           qs('#spBtnPlayPause').textContent = '▶';
           return;
       }
+      // Check if an item is loaded
       const item = musicInstance.player.nowPlayingItem;
+      if (!item) {
+          qs('#spTitle').textContent = 'Queue empty or loading...';
+          qs('#spBtnPlayPause').textContent = '▶';
+          return;
+      }
       const attr = item.attributes || {};
-      // Show Artist - Title
-      qs('#spTitle').textContent = `${attr.artistName || '?'} - ${attr.name || '?'}`; 
+      qs('#spTitle').textContent = `${attr.artistName || 'Unknown Artist'} - ${attr.name || 'Unknown Track'}`;
       qs('#spBtnPlayPause').textContent = musicInstance.player.isPlaying ? '⏸' : '▶';
   }
   function simplePlayerStateChanged(event) {
@@ -634,88 +678,32 @@
       updateSimplePlayerUI();
   }
 
-  // --- RENAMED: This is now the main Play button's action ---
-  async function amPlay() { // Renamed from amPlaySimple
-    qs('#amMsg').textContent = '';
-    showSimplePlayer(false); // Hide old player
-
-    let m;
-    try {
-      console.log('[AM Play] Getting MusicKit instance...');
-      m = await getMusicInstance();
-
-      if (!m || !m.isAuthorized) {
-        console.log('[AM Play] Not authorized.');
-        qs('#amMsg').textContent = 'Sign-in required.';
-        updateAmUIState(); return;
-      }
-
-      // --- Use lastTracks first, fall back to created playlist ID ---
-      let queueOptions = {};
-      if (lastTracks?.length > 0) {
-          // --- Search for tracks (same as previous amPlayPlaylist) ---
-          console.log('[AM Play] Searching for tracks from generated list...');
-          qs('#amMsg').textContent = `Searching for ${lastTracks.length} tracks...`;
-          const songIds = [];
-          let i = 0;
-          const storefront = m.storefrontId || 'us';
-          for (const t of lastTracks) {
-            i++;
-            if (i % 5 === 0 || i === lastTracks.length) { qs('#amMsg').textContent = `Searching... (${i}/${lastTracks.length})`; }
-            try {
-              const term = `${t.artist} ${t.title}`; let id = null;
-              if (m.api && typeof m.api.search === 'function') {
-                  try { const res = await withTimeout(m.api.search(term, { types: ['songs'], limit: 1, storefront: storefront }), 5000); id = res?.songs?.data?.[0]?.id; }
-                  catch (apiSearchErr) { console.warn(`MusicKit API search failed for "${term}", trying REST:`, apiSearchErr); id = null; }
-              } else { console.warn(`MusicKit API search not available, falling back to REST for: ${term}`); }
-              if (!id) { console.log(`[AM Play] Falling back to REST search for: ${term}`); const res = await appleCatalogSearch(term, storefront, 1); id = res?.results?.songs?.data?.[0]?.id; }
-              if (id) { songIds.push(id); } else { console.warn(`[AM Play] Track not found in ${storefront}: ${term}`); }
-              await sleep(100);
-            } catch (e) { console.warn(`[AM Play] search loop error for "${t.artist} - ${t.title}":`, e); }
-          }
-          if (!songIds.length) { qs('#amMsg').textContent = 'None of the tracks could be found in Apple Music.'; return; }
-          qs('#amMsg').textContent = `Found ${songIds.length} tracks. Adding to queue...`;
-          queueOptions = { songs: songIds };
-      } else if (currentPlaylistInfo.id) {
-          // --- Fallback to created playlist ID ---
-          console.log('[AM Play] No generated tracks, falling back to created playlist ID:', currentPlaylistInfo.id);
-          qs('#amMsg').textContent = `Loading created playlist...`;
-          queueOptions = { playlist: currentPlaylistInfo.id };
-      } else {
-          qs('#amMsg').textContent = 'Please generate a tracklist or create a playlist first.';
-          return;
-      }
-      
-      if (!m.player || typeof m.play !== 'function' || typeof m.setQueue !== 'function') {
-           console.error('[AM Play] Player API not ready.');
-           throw new Error('MusicKit Player failed to become ready.');
-      }
-
-      console.log('[AM Play] Setting queue...', queueOptions);
-      await m.setQueue(queueOptions); 
-      await m.play();
-      showSimplePlayer(true); // Show the simple player UI
-      updateSimplePlayerUI(); // Update with initial track
-      qs('#amMsg').textContent = `Now playing!`;
-      qs('#spMsg').textContent = '';
-    } catch (e) {
-      console.error('[AM Play] playback failed:', e);
-      qs('#amMsg').textContent = 'Error starting playback: ' + (e.message || e);
-      qs('#spMsg').textContent = 'Playback Error: ' + (e.message || e);
-      showSimplePlayer(true);
-    }
-  }
-
   // --- Simple Player Controls Wiring ---
   qs('#spBtnPlayPause').onclick = async () => {
     try { 
         const m = await getMusicInstance(); 
         if (!m || !m.player) return;
-        if (m.player.isPlaying) { await m.pause(); } else { await m.play(); }
+        if (m.player.isPlaying) {
+            await m.pause();
+        } else {
+            // Check if it's at the end of queue, if so, restart
+            if (m.player.playbackState === MusicKit.PlaybackStates.ended) {
+                 await m.play(); // Should restart queue
+            } else {
+                 await m.play();
+            }
+        }
+        // Event listener (simplePlayerStateChanged) will update the icon
     } catch(e){ console.error("SP Play/pause error:", e);}
   };
-  qs('#spBtnPrev').onclick = async () => { /* ... unchanged ... */ };
-  qs('#spBtnNext').onclick = async () => { /* ... unchanged ... */ };
+  qs('#spBtnPrev').onclick = async () => {
+     try { const m = await getMusicInstance(); if(m && m.player) await m.skipToPreviousItem(); } 
+     catch(e){ console.warn("SP Skip Previous failed:", e); }
+  };
+  qs('#spBtnNext').onclick = async () => {
+     try { const m = await getMusicInstance(); if(m && m.player) await m.skipToNextItem(); }
+     catch(e){ console.warn("SP Skip Next failed:", e); }
+  };
 
 
   // ---------- Initialize MusicKit on Load ----------
@@ -735,7 +723,7 @@
   qs('#go').onclick = simulate;
   qs('#amSign').onclick = amSignIn;
   qs('#amCreate').onclick = amCreatePlaylist;
-  qs('#amPlay').onclick = amPlay; // <-- Main "Play" button now calls amPlay
+  qs('#amPlay').onclick = amPlay; // Main "Play" button
 
   setTab('yt');
 </script>
