@@ -120,7 +120,7 @@
       authURL.searchParams.set('state', stateStr);
       logDiag('[AUTH] State param set:', stateStr);
 
-      const webAuth = { developerToken, appName: 'TapeDeck Time Machine' };
+      const webAuth = { developerToken };
       const webAuthStr = JSON.stringify(webAuth);
       authURL.searchParams.set('webAuthentication', webAuthStr);
       logDiag('[AUTH] webAuthentication param set. Length:', webAuthStr.length);
