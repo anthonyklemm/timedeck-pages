@@ -30,15 +30,15 @@
   const $msg = (t)=>document.getElementById('msg').textContent=t||'';
   const $err = (t)=>document.getElementById('err').textContent=t||'';
   const diagLogEl = document.getElementById('diagLog');
-  // --- New logging function ---
+  // --- Logging function ---
   const logDiag = (message, ...args) => {
       const ts = new Date().toLocaleTimeString();
       const text = args.length > 0 ? `${ts}: ${message} ${JSON.stringify(args)}` : `${ts}: ${message}`;
       diagLogEl.textContent += `\n${text}`;
       diagLogEl.scrollTop = diagLogEl.scrollHeight; // Auto-scroll
-      console.log(message, ...args); // Keep console log too, just in case
+      console.log(message, ...args); // Keep console log too
   };
-  // --- End new function ---
+  // --- End logging function ---
 
   const qs = new URLSearchParams(location.search);
   const API = qs.get('api') || 'https://timedeck-api.onrender.com';
@@ -86,7 +86,12 @@
 
       $msg('Tap the button to open Apple sign-in.');
       btn.disabled = false;
-      logDiag('[INIT] Initialization complete, button enabled.');
+
+      // --- NEW: Assign onclick AFTER button is enabled ---
+      btn.onclick = doAuth;
+      // --- END NEW ---
+
+      logDiag('[INIT] Initialization complete, button enabled and click handler assigned.'); // Updated log
     }catch(e){
       logDiag('[INIT] FAILED:', e.message || String(e));
       $msg('Initialization failed.');
@@ -120,15 +125,16 @@
       authURL.searchParams.set('state', stateStr);
       logDiag('[AUTH] State param set:', stateStr);
 
-      const webAuth = { developerToken };
+      // --- Using SIMPLIFIED webAuth OBJECT ---
+      const webAuth = { developerToken }; // ONLY send the token
       const webAuthStr = JSON.stringify(webAuth);
       authURL.searchParams.set('webAuthentication', webAuthStr);
-      logDiag('[AUTH] webAuthentication param set. Length:', webAuthStr.length);
+      logDiag('[AUTH] SIMPLIFIED webAuthentication param set. Length:', webAuthStr.length);
+      // --- END SIMPLIFIED BLOCK ---
 
       const finalUrlToLoad = authURL.toString();
 
       logDiag('[AUTH] Final URL generated. Length:', finalUrlToLoad.length);
-      // logDiag('[AUTH] Token being sent:', developerToken); // Maybe avoid logging full token to screen
       logDiag('[AUTH] Attempting redirect now...');
 
       location.href = finalUrlToLoad; // Redirect
@@ -141,7 +147,7 @@
     }
   }
 
-  btn.addEventListener('click', doAuth, { passive: true });
+  // init() will assign the click handler now
   init(); // Start loading the token
 })();
 </script>
