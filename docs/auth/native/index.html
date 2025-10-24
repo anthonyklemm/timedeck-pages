@@ -12,6 +12,8 @@
   .err{color:#fda4af;margin-top:.75rem;white-space:pre-wrap}
   button{display:block;width:100%;font-size:1.05rem;font-weight:700;color:#fff;background:#007aff;border:0;border-radius:12px;padding:12px 16px;cursor:pointer}
   button:disabled{background:#475569;color:#cbd5e1;cursor:not-allowed}
+  /* Style for diagnostic log */
+  #diagLog { margin-top: 1rem; padding: 0.5rem; background: #000; border: 1px dashed #444; font-size: 0.7rem; color: #888; max-height: 100px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
 </style>
 
 <div class="box">
@@ -19,6 +21,7 @@
   <p class="muted" id="msg">Initializing…</p>
   <button id="signInButton" disabled>Sign in with Apple Music</button>
   <pre id="err" class="err"></pre>
+  <pre id="diagLog">Diagnostic Log:</pre>
 </div>
 
 <script>
@@ -26,6 +29,17 @@
   const btn = document.getElementById('signInButton');
   const $msg = (t)=>document.getElementById('msg').textContent=t||'';
   const $err = (t)=>document.getElementById('err').textContent=t||'';
+  const diagLogEl = document.getElementById('diagLog');
+  // --- New logging function ---
+  const logDiag = (message, ...args) => {
+      const ts = new Date().toLocaleTimeString();
+      const text = args.length > 0 ? `${ts}: ${message} ${JSON.stringify(args)}` : `${ts}: ${message}`;
+      diagLogEl.textContent += `\n${text}`;
+      diagLogEl.scrollTop = diagLogEl.scrollHeight; // Auto-scroll
+      console.log(message, ...args); // Keep console log too, just in case
+  };
+  // --- End new function ---
+
   const qs = new URLSearchParams(location.search);
   const API = qs.get('api') || 'https://timedeck-api.onrender.com';
   const CALLBACK_HOST = 'https://tapedecktimemachine.com';
@@ -36,49 +50,61 @@
   }
 
   function waitForMusicKit(timeout=15000){
-    if (window.MusicKit && window.MusicKit.getInstance) return Promise.resolve();
+    logDiag('Waiting for MusicKit...');
+    if (window.MusicKit && window.MusicKit.getInstance) {
+        logDiag('MusicKit already loaded.');
+        return Promise.resolve();
+    }
     return new Promise((res, rej)=>{
-      const to = setTimeout(()=>rej(new Error('MusicKit load timed out')), timeout);
-      addEventListener('musickitloaded', ()=>{ clearTimeout(to); res(); }, { once:true });
+      const to = setTimeout(()=>{ logDiag('MusicKit load timed out.'); rej(new Error('MusicKit load timed out')); }, timeout);
+      addEventListener('musickitloaded', ()=>{ logDiag('MusicKit loaded via event.'); clearTimeout(to); res(); }, { once:true });
     });
   }
 
   async function init(){
     try{
+      logDiag('[INIT] Starting initialization...');
       $msg('Loading MusicKit…');
       await waitForMusicKit();
+      logDiag('[INIT] MusicKit wait complete.');
+
       $msg('Requesting developer token…');
+      logDiag('[INIT] Fetching dev token from:', API);
       const r = await fetch(`${API}/v1/apple/dev-token`, { cache: 'no-store' });
+      logDiag('[INIT] Fetch status:', r.status);
       if(!r.ok) throw new Error(`dev-token ${r.status}`);
       const j = await r.json();
+      logDiag('[INIT] Received JSON from API.');
 
       if (isInvalidToken(j.token)) {
-        console.error('API returned an invalid token:', j.token);
+        logDiag('[INIT] ERROR: API returned invalid token:', j.token);
         throw new Error('No developer token was returned from the API.');
       }
 
       developerToken = j.token.trim();
-      console.log(`[INIT] Developer token loaded successfully. Length: ${developerToken.length}`); // <-- Log token length
+      logDiag(`[INIT] Developer token loaded successfully. Length: ${developerToken.length}`);
 
       $msg('Tap the button to open Apple sign-in.');
       btn.disabled = false;
+      logDiag('[INIT] Initialization complete, button enabled.');
     }catch(e){
-      console.error('[INIT] Failed:', e); // <-- Add console error
+      logDiag('[INIT] FAILED:', e.message || String(e));
       $msg('Initialization failed.');
       $err(e.message || String(e));
     }
   }
 
   async function doAuth(){
+    logDiag('[AUTH] Button clicked.');
     btn.disabled = true; $err(''); $msg('Redirecting to Apple…');
 
     try{
       if (isInvalidToken(developerToken)) {
-        console.error('[AUTH] Developer token is invalid BEFORE redirect:', developerToken); // <-- Log invalid token
+        logDiag('[AUTH] ERROR: Developer token invalid/missing before redirect:', developerToken);
         throw new Error('Developer token is missing. Please refresh.');
       }
 
-      console.log('[AUTH] Using valid developer token. Length:', developerToken.length); // <-- Log valid token length
+      logDiag(`[AUTH] Using valid developer token. Length: ${developerToken.length}`);
 
       const redirectURL = `${CALLBACK_HOST}/auth/callback/`;
       const authURL = new URL('https://idmsa.apple.com/IDMSWebAuth/auth2');
@@ -90,30 +116,25 @@
       authURL.searchParams.set('sdkVersion', 'musickit.js/v3');
 
       const state = { api: qs.get('api'), native: '1' };
-      authURL.searchParams.set('state', btoa(JSON.stringify(state)));
+      const stateStr = btoa(JSON.stringify(state));
+      authURL.searchParams.set('state', stateStr);
+      logDiag('[AUTH] State param set:', stateStr);
 
-      const webAuth = {
-        developerToken, // Using the validated, trimmed token
-        appName: 'TapeDeck Time Machine'
-      };
+      const webAuth = { developerToken, appName: 'TapeDeck Time Machine' };
       const webAuthStr = JSON.stringify(webAuth);
       authURL.searchParams.set('webAuthentication', webAuthStr);
+      logDiag('[AUTH] webAuthentication param set. Length:', webAuthStr.length);
 
       const finalUrlToLoad = authURL.toString();
 
-      // --- CRITICAL LOGGING ---
-      console.log('[AUTH] Final URL being loaded:');
-      console.log(finalUrlToLoad);
-      console.log('[AUTH] Developer token being sent:');
-      console.log(developerToken); // Log the raw token string
-      console.log('[AUTH] webAuthentication parameter being sent:');
-      console.log(webAuthStr); // Log the stringified object
-      // --- END LOGGING ---
+      logDiag('[AUTH] Final URL generated. Length:', finalUrlToLoad.length);
+      // logDiag('[AUTH] Token being sent:', developerToken); // Maybe avoid logging full token to screen
+      logDiag('[AUTH] Attempting redirect now...');
 
       location.href = finalUrlToLoad; // Redirect
 
     }catch(e){
-      console.error('[AUTH] Failed:', e); // <-- Add console error
+      logDiag('[AUTH] FAILED:', e.message || String(e));
       $msg('Sign-in failed.');
       $err(e.message || String(e));
       btn.disabled = false; // allow retry
