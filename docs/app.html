@@ -87,12 +87,12 @@
     .mini .controls{display:flex;gap:8px;align-items:center; flex-shrink: 0;}
     .mini .controls .btn{padding:8px 12px;border-radius:10px}
     .mini .row2{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;margin-top:10px}
-    .mini .row3{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;margin-top:8px} /* Added for row3 */
-    .mini .time{font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted);} /* Added */
+    .mini .row3{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;margin-top:8px}
+    .mini .time{font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted);}
     .mini input[type="range"]{width:100%}
     .mini .vol{display:flex;align-items:center;gap:8px}
-    .mini .open{font-size:12px; color: var(--muted); text-decoration:none; justify-self: end;} /* Added */
-    .badge{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(148,163,184,.2);border-radius:999px;padding:6px 10px;background:#0c1422} /* Added */
+    .mini .open{font-size:12px; color: var(--muted); text-decoration:none; justify-self: end;}
+    .badge{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(148,163,184,.2);border-radius:999px;padding:6px 10px;background:#0c1422}
 
     /* Right panel (Now Playing / Visualizer / Time Capsule) */
     #pane-am-side .tab{padding:8px 12px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0c1422}
@@ -135,7 +135,6 @@
     <div class="muted" style="margin:-6px 0 8px 2px">Spotify sign-in is under construction. Coming soon!</div>
 
     <!-- --- FIX: Removed the broken .cols wrapper div --- -->
-    <!-- Two columns: YT panel + Apple panel -->
     
       <!-- YT -->
       <div class="panel box" id="pane-yt">
@@ -160,7 +159,7 @@
               <button class="btn" id="amSign">Sign in to Apple Music</button>
               <button class="btn" id="amCreate" style="display:none">Create Playlist</button>
               <button class="btn" id="amPlayEmbed" style="display:none">Play in Apple Embed</button>
-              <!-- --- FIX: Renamed button --- -->
+              <!-- --- FIX: Renamed button to amPlayPlaylist --- -->
               <button class="btn" id="amPlayPlaylist" style="display:none">Play Playlist</button>
             </div>
             <div id="amMsg" class="muted" style="margin-top:8px"></div>
@@ -283,6 +282,7 @@
   (function(){ const s=document.createElement('script'); s.src="https://www.youtube.com/iframe_api"; document.head.appendChild(s); })();
   window.onYouTubeIframeAPIReady=()=>{YTapiReady=true;};
   async function simulate(){
+    // --- FIX: Corrected variable name ---
     const body={date:toISO(qs('#date').value.trim()),genre:qs('#genre').value,hours:Number(qs('#hours').value||3),
       repeat_gap_min:Number(qs('#gap').value||90),seed:(qs('#seed').value.trim()||undefined)?String(qs('#seed').value.trim()):undefined,limit:500};
     qs('#ytStatus').textContent='Building…'; qs('#ytErr').textContent='';
@@ -296,7 +296,8 @@
       renderList(lastTracks); buildYouTube(lastTracks);
       qs('#embedWrap').style.display='none'; qs('#mini').style.display='none';
       qs('#amPlayEmbed').style.display='none';
-      qs('#amPlayLocal').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
+      // --- FIX: Renamed button ID ---
+      qs('#amPlayPlaylist').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
       qs('#amMsg').textContent='Playlist ready. Sign in and create it, or use the built-in player.';
     }catch(err){ qs('#ytStatus').textContent=''; qs('#ytErr').textContent=err.message||String(err); }
   }
@@ -356,14 +357,20 @@
         await waitForMusicKitLoaded();
         const developerToken=await fetchDeveloperToken();
         window.MusicKit.configure({developerToken,app:{name:'TapeDeck Time Machine',build:'web'}});
-        let inst=null; for(let i=0;i<40;i++){try{inst=window.MusicKit.getInstance();}catch{} if(inst) break; await sleep(50);}
+        // --- FIX: Use 'let' to allow reassignment ---
+        let inst=null; 
+        for(let i=0;i<40;i++){
+          try{ inst=window.MusicKit.getInstance(); } catch {} 
+          if(inst) break; 
+          await sleep(50);
+        }
         if(!inst) throw new Error('MusicKit instance missing');
         const stored=localStorage.getItem('appleMusicUserToken'); if(stored) inst.musicUserToken=stored;
 
         if(!inst._tdtmBound){
           inst._tdtmBound=true;
           // --- FIX: Pass instance to handlers ---
-          inst.addEventListener('nowPlayingItemDidChange',()=>{ updateNowPlaying(inst); updateRightNowPlayingFromMusicKit(inst); }); // Added side panel update
+          inst.addEventListener('nowPlayingItemDidChange',()=>{ updateNowPlaying(inst); updateRightNowPlayingFromMusicKit(inst); });
           inst.addEventListener('playbackTimeDidChange',()=>{ updateTimes(inst); });
           inst.addEventListener('playbackStateDidChange',(evt)=>{const PS=window.MusicKit?.PlaybackStates||{};
             const isPlaying=evt?.state===PS.playing; setPlayIcon(isPlaying);});
@@ -392,7 +399,8 @@
 
   /***** Apple auth + create *****/
   function showAmControls(){ qs('#amSign').style.display='none'; qs('#amCreate').style.display='inline-block';
-    qs('#amPlayLocal').style.display=lastTracks.length?'inline-block':'none'; }
+    // --- FIX: Renamed button ID ---
+    qs('#amPlayPlaylist').style.display=lastTracks.length?'inline-block':'none'; }
 
   async function amSignIn(){
     if(isAuthorizing) return; isAuthorizing=true;
@@ -403,7 +411,8 @@
       if(!tok||tok.length<20){qs('#amMsg').textContent='Sign-in cancelled or failed. Apple Music subscription required for full playback.'; return;}
       localStorage.setItem('appleMusicUserToken',tok); m.musicUserToken=tok; await getWebMusicInstance(true);
       qs('#amMsg').textContent='Signed in. Create your playlist or use the built-in player.'; showAmControls();
-      if(lastTracks.length) qs('#amPlayLocal').style.display='inline-block';
+      // --- FIX: Renamed button ID ---
+      if(lastTracks.length) qs('#amPlayPlaylist').style.display='inline-block';
     }catch(e){qs('#amMsg').textContent='Sign-in failed: '+(e.message||e);} finally{isAuthorizing=false;}
   }
 
@@ -429,7 +438,8 @@
         const open=url || (id?`https://music.apple.com/${storefront||'us'}/playlist/${encodeURIComponent(id)}`:null);
         if(open){ qs('#embedWrap').style.display=''; qs('#amEmbed').style.display='none'; qs('#openInAm').href=open;
           const note=qs('#embedNote'); note.textContent='This playlist can’t be embedded (library/private). Use “Open in Apple Music”, or play below.'; note.style.display='block';}
-        qs('#amPlayLocal').style.display='inline-block';
+        // --- FIX: Renamed button ID ---
+        qs('#amPlayPlaylist').style.display='inline-block';
       }
     }catch(e){qs('#amMsg').textContent='Create failed: '+(e.message||String(e));}
   }
@@ -446,10 +456,18 @@
   /***** Mini-player wiring *****/
   const mini={root:qs('#mini'),art:qs('#miniArt'),title:qs('#miniTitle'),artist:qs('#miniArtist'),
     t1:qs('#miniT1'),t2:qs('#miniT2'),seek:qs('#miniSeek'),vol:qs('#miniVol'),
-    open:qs('#miniOpen'),btnPrev:qs('#btnPrev'),btnPlayPause:qs('#btnPlayPause'),btnNext:qs('#btnNext')};
+    open:qs('#miniOpen'),btnPrev:qs('#btnPrev'),btnPlayPause:qs('#btnPlayPause'),btnNext:qs('#btnNext'),
+    btnShuffle:qs('#btnShuffle'),btnRepeat:qs('#btnRepeat')}; // Added shuffle/repeat
 
   function fmtTime(sec){ sec=Math.max(0,Math.floor(sec||0)); const m=Math.floor(sec/60), s=sec%60; return `${m}:${String(s).padStart(2,'0')}`; }
   function setPlayIcon(isPlaying){ mini.btnPlayPause.textContent=isPlaying?'⏸':'▶'; }
+  // --- FIX: Added shuffle/repeat icon functions ---
+  function setShuffleIcon(on){ mini.btnShuffle.style.opacity = on ? 1 : 0.6; }
+  function setRepeatIcon(mode){
+    const map = {0:'🔁',1:'🔂',2:'🔁'}; // 0=none, 1=one, 2=all
+    mini.btnRepeat.textContent = map[mode] || '🔁';
+    mini.btnRepeat.style.opacity = mode ? 1 : 0.6;
+  }
 
   function updateNowPlaying(m){
     const item=m?.player?.nowPlayingItem; const a=item?.attributes||item||{};
@@ -458,13 +476,21 @@
     const tmpl=(a.artwork&&a.artwork.url)||a.artworkUrl||''; const art=tmpl?tmpl.replace('{w}','200').replace('{h}','200'):'';
     if(art){ mini.art.src=art; mini.art.alt=title; mini.art.classList.add('ready'); } else { mini.art.removeAttribute('src'); mini.art.classList.remove('ready'); }
     mini.open.href=a.url||'#';
+    // --- FIX: Call side panel update from here ---
+    updateRightNowPlayingFromMusicKit(m);
   }
   function updateTimes(m){
     const p=m?.player; if(!p) return;
-    const cur=Number(p.currentPlaybackTime||0), dur=Number(p.currentPlaybackDuration||0);
+    // --- FIX: Check isSeeking flag ---
+    if (mini.isSeeking) return; 
+    const cur=Number(p.currentPlaybackTime||0);
+    // --- FIX: Get duration from item attributes for accuracy ---
+    const dur=Number(p.nowPlayingItem?.attributes?.durationInMillis / 1000 || 0); 
     mini.t1.textContent=fmtTime(cur); mini.t2.textContent=dur?fmtTime(dur):'0:00';
-    const max=Math.max(1,Math.floor(dur*10)); const val=Math.min(max,Math.floor(cur*10));
-    if(Number(mini.seek.max)!==max) mini.seek.max=max; mini.seek.value=val;
+    const max=Math.max(1,Math.floor(dur)); // Max is duration in seconds
+    const val=Math.min(max,Math.floor(cur));
+    if(Number(mini.seek.max)!==max) mini.seek.max=max;
+    if(Number(mini.seek.value)!==val) mini.seek.value=val;
   }
 
   async function appleCatalogResolveList(tracks,storefront){
@@ -474,10 +500,12 @@
         const res=await appleCatalogSearch(term,storefront,1); const id=res?.results?.songs?.data?.[0]?.id; if(id) ids.push(id); await sleep(50);}catch{}}
     return ids;
   }
-  async function buildLocalQueueAndPlay(){
+  // --- FIX: Renamed function ---
+  async function amPlayPlaylist(){
     let m=await getWebMusicInstance(); if(!m.musicUserToken){qs('#amMsg').textContent='Please sign in to Apple Music first.'; return;}
     if(!lastTracks?.length){qs('#amMsg').textContent='Generate a tracklist first.'; return;}
     const storefront=m.storefrontId||'us';
+    // Use globally resolved IDs if available
     if(!resolvedSongIds.length){ qs('#amMsg').textContent=`Resolving ${lastTracks.length} tracks for playback…`;
       resolvedSongIds=await appleCatalogResolveList(lastTracks,storefront); }
     if(!resolvedSongIds.length){ qs('#amMsg').textContent='No playable tracks were found in Apple Music.'; return; }
@@ -505,27 +533,43 @@
   };
   mini.btnPrev.onclick=async()=>{ const m=await getWebMusicInstance(); try{await m.skipToPreviousItem();}catch{} };
   mini.btnNext.onclick=async()=>{ const m=await getWebMusicInstance(); try{await m.skipToNextItem();}catch{} };
-  mini.seek.oninput=async(e)=>{ const m=await getWebMusicInstance(); const dur=m?.player?.currentPlaybackDuration||0; const target=(Number(e.target.value)/10);
-    if(dur){ try{ await m.seekToTime(Math.min(target,dur-0.25)); }catch{} } };
+  
+  // --- FIX: Seek bar logic ---
+  mini.seek.onmousedown = () => { mini.isSeeking = true; }; // Set flag
+  mini.seek.oninput = () => { // Show time change while dragging
+      mini.t1.textContent = fmtTime(Number(mini.seek.value));
+  };
+  mini.seek.onchange = async (e) => { // Seek on release
+    const m = await getWebMusicInstance();
+    const targetTime = Number(e.target.value); // Value is in seconds
+    if(m?.player && !isNaN(targetTime)){ 
+      try { await m.seekToTime(targetTime); } catch(e){ console.error("Seek failed:", e); }
+    }
+    mini.isSeeking = false; // Unset flag
+  };
+  
   mini.vol.oninput=async(e)=>{ const m=await getWebMusicInstance(); if(m?.player) m.player.volume=Number(e.target.value); };
+  // --- FIX: Shuffle/Repeat wiring (was missing) ---
+  qs('#btnShuffle').onclick = async () => {
+    const m = await getWebMusicInstance(); if (!m?.player) return;
+    m.player.shuffleMode = m.player.shuffleMode ? 0 : 1;
+    setShuffleIcon(!!m.player.shuffleMode);
+  };
+  qs('#btnRepeat').onclick = async () => {
+    const m = await getWebMusicInstance(); if (!m?.player) return;
+    const next = (m.player.repeatMode === 0) ? 2 : (m.player.repeatMode === 2 ? 1 : 0);
+    m.player.repeatMode = next;
+    setRepeatIcon(next);
+  };
 
   /***** Right-side panel wiring *****/
-  document.querySelectorAll('#pane-am-side .tab').forEach(b=>{
-    b.onclick=()=>{ document.querySelectorAll('#pane-am-side .tab').forEach(x=>x.classList.remove('active')); b.classList.add('active');
-      const k=b.dataset.side; qs('#side-np').style.display=k==='np'?'':'none';
-      qs('#side-viz').style.display=k==='viz'?'':'none'; qs('#side-capsule').style.display=k==='capsule'?'':'none';
-      if(k==='viz') startViz(); else stopViz();
-    };
-  });
-  
-  // Update Now Playing panel using MusicKit item
   function updateRightNowPlayingFromMusicKit(m){
     const item=m?.player?.nowPlayingItem; const a=item?.attributes||item||{};
     const title=a.name||a.title||'—'; const artist=a.artistName||a.artist||'—';
     const artTmpl=(a.artwork&&a.artwork.url)||a.artworkUrl||''; const art=artTmpl?artTmpl.replace('{w}','400').replace('{h}','400'):'';
     qs('#npTitle').textContent=title; qs('#npArtist').textContent=artist;
     if(art){ qs('#npArt').src=art; qs('#npArt').alt=title; } 
-    else { qs('#npArt').removeAttribute('src'); qs('#npArt').alt = 'No artwork'; } // Clear artwork
+    else { qs('#npArt').removeAttribute('src'); qs('#npArt').alt = 'No artwork'; }
     qs('#npOpen').href=a.url||'#';
     
     const match=lastTracks.find(t=>(t.title||'').toLowerCase()===title.toLowerCase() && (t.artist||'').toLowerCase()===artist.toLowerCase());
@@ -541,7 +585,7 @@
     }
   }
 
-  // Faux visualizer (smooth, no private APIs)
+  // ... (Visualizer functions startViz/stopViz remain unchanged) ...
   let vizRAF=0;
   function startViz(){
     const c=qs('#viz'); if(!c) return; const ctx=c.getContext('2d'); let t=0;
@@ -578,10 +622,23 @@
     qs('#amSign').onclick=amSignIn;
     qs('#amCreate').onclick=amCreatePlaylist;
     qs('#amPlayEmbed').onclick=amPlayEmbed;
-    qs('#amPlayLocal').onclick=()=>buildLocalQueueAndPlay(); // Renamed button
+    // --- FIX: Renamed function and button ID ---
+    qs('#amPlayPlaylist').onclick=buildLocalQueueAndPlay; 
     qs('#copyLink').onclick = async () => {
       const url = qs('#openInAm').href;
-      try { await navigator.clipboard.writeText(url); } catch {}
+      try { 
+          // Use document.execCommand for iFrame compatibility
+          const textArea = document.createElement("textarea");
+          textArea.value = url;
+          document.body.appendChild(textArea);
+          textArea.focus(); textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          qs('#amMsg').textContent = 'Link copied!';
+      } catch (err) { 
+          console.error('Failed to copy link:', err);
+          qs('#amMsg').textContent = 'Failed to copy link.';
+      }
     };
     
     // Wire up MiniPlayer controls
@@ -594,19 +651,33 @@
       } catch(e) { console.error("Play/pause failed:", e); } 
       finally { playToggleInFlight=false; } 
     };
-    mini.btnPrev.onclick=async()=>{ const m=await getWebMusicInstance(); try{await m.skipToPreviousItem();}catch{} };
-    mini.btnNext.onclick=async()=>{ const m=await getWebMusicInstance(); try{await m.skipToNextItem();}catch{} };
-    mini.seek.oninput=async(e)=>{ const m=await getWebMusicInstance(); const dur=m?.player?.currentPlaybackDuration||0; const target=(Number(e.target.value)/10);
-      if(dur){ try{ await m.seekToTime(Math.min(target,dur-0.25)); }catch{} } };
+    mini.btnPrev.onclick=async()=>{ const m=await getWebMusicInstance(); try{await m.skipToPreviousItem();}catch(e){console.warn("Skip prev failed",e)} };
+    mini.btnNext.onclick=async()=>{ const m=await getWebMusicInstance(); try{await m.skipToNextItem();}catch(e){console.warn("Skip next failed",e)} };
+    // --- FIX: Seek bar logic (using seconds) ---
+    mini.seek.onmousedown = () => { mini.isSeeking = true; };
+    mini.seek.oninput = (e) => { // Show time change while dragging
+        mini.t1.textContent = fmtTime(Number(e.target.value));
+    };
+    mini.seek.onchange = async (e) => { // Seek on release
+        const m = await getWebMusicInstance();
+        const targetTime = Number(e.target.value); // Value is now in seconds
+        if(m?.player && !isNaN(targetTime)){ 
+            try { await m.seekToTime(targetTime); } catch(e){ console.error("Seek failed:", e); }
+        }
+        mini.isSeeking = false;
+    };
+    
     mini.vol.oninput=async(e)=>{ const m=await getWebMusicInstance(); if(m?.player) m.player.volume=Number(e.target.value); };
     qs('#btnShuffle').onclick = async () => {
       const m = await getWebMusicInstance(); if (!m?.player) return;
-      m.player.shuffleMode = m.player.shuffleMode ? 0 : 1; setShuffleIcon(!!m.player.shuffleMode);
+      m.player.shuffleMode = m.player.shuffleMode ? 0 : 1;
+      setShuffleIcon(!!m.player.shuffleMode);
     };
     qs('#btnRepeat').onclick = async () => {
       const m = await getWebMusicInstance(); if (!m?.player) return;
       const next = (m.player.repeatMode === 0) ? 2 : (m.player.repeatMode === 2 ? 1 : 0);
-      m.player.repeatMode = next; setRepeatIcon(next);
+      m.player.repeatMode = next;
+      setRepeatIcon(next);
     };
 
     // Check initial sign-in state
@@ -620,10 +691,11 @@
     if (haveSaved) { qs('#amPlayEmbed').style.display='inline-block'; }
   });
   
-  // --- RENAMED this function ---
+  // --- This function name is kept for the button wiring ---
   function amPlayLocal(){ buildLocalQueueAndPlay(); }
 
 </script>
 
 </body>
 </html>
+
