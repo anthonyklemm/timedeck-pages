@@ -60,6 +60,7 @@
     .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
 
     /* --- FIX: Removed the broken .cols style --- */
+    /* .cols{display:grid;grid-template-columns:1.05fr .95fr; gap:16px} */
 
     .box{min-height:380px}
     iframe{width:100%;height:360px;border:0;border-radius:12px;box-shadow:var(--shadow)}
@@ -553,17 +554,8 @@
   
   mini.vol.oninput=async(e)=>{ const m=await getWebMusicInstance(); if(m?.player) m.player.volume=Number(e.target.value); };
   // --- FIX: Shuffle/Repeat wiring (was missing) ---
-  qs('#btnShuffle').onclick = async () => {
-    const m = await getWebMusicInstance(); if (!m?.player) return;
-    m.player.shuffleMode = m.player.shuffleMode ? 0 : 1;
-    setShuffleIcon(!!m.player.shuffleMode);
-  };
-  qs('#btnRepeat').onclick = async () => {
-    const m = await getWebMusicInstance(); if (!m?.player) return;
-    const next = (m.player.repeatMode === 0) ? 2 : (m.player.repeatMode === 2 ? 1 : 0);
-    m.player.repeatMode = next;
-    setRepeatIcon(next);
-  };
+  // qs('#btnShuffle').onclick = async () => { ... }; // This line causes the error, it's defined globally
+  // qs('#btnRepeat').onclick = async () => { ... }; // This line causes the error, it's defined globally
 
   /***** Right-side panel wiring *****/
   function updateRightNowPlayingFromMusicKit(m){
@@ -706,3 +698,4 @@
 
 </body>
 </html>
+
