@@ -196,7 +196,8 @@
               <div class="row2">
                 <div id="miniT1" class="time">0:00</div> <!-- Added time class -->
                 <input id="miniSeek" type="range" min="0" max="1000" value="0">
-                <div id="miniT2" class="time">0:00</div> <!-- Added time class -->
+                <!-- --- FIX: Corrected class_alias to class --- -->
+                <div id="miniT2" class="time">0:00</div> 
               </div>
               <!-- --- FIX: Changed class="bottom" to class="row3" --- -->
               <div class="row3" style="margin-top:8px">
@@ -272,6 +273,8 @@
     qs('#pane-yt').style.display = id==='yt' ? '' : 'none';
     qs('#pane-am').style.display = id==='am' ? '' : 'none';
   }
+  // --- FIX: Moved tab wiring to DOMContentLoaded ---
+  // document.querySelectorAll('.tab[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
   function withTimeout(p,ms=NET_TIMEOUT_MS){ let t; const timer=new Promise((_,rej)=>{t=setTimeout(()=>rej(new Error(`Network timeout after ${Math.round(ms/1000)}s`)),ms)}); return Promise.race([p.finally(()=>clearTimeout(t)),timer]); }
 
   /***** state *****/
@@ -369,7 +372,7 @@
 
         if(!inst._tdtmBound){
           inst._tdtmBound=true;
-          // --- FIX: Pass instance to handlers ---
+          // --- FIX: Pass instance to handlers & update side panel ---
           inst.addEventListener('nowPlayingItemDidChange',()=>{ updateNowPlaying(inst); updateRightNowPlayingFromMusicKit(inst); });
           inst.addEventListener('playbackTimeDidChange',()=>{ updateTimes(inst); });
           inst.addEventListener('playbackStateDidChange',(evt)=>{const PS=window.MusicKit?.PlaybackStates||{};
@@ -536,16 +539,16 @@
   
   // --- FIX: Seek bar logic ---
   mini.seek.onmousedown = () => { mini.isSeeking = true; }; // Set flag
-  mini.seek.oninput = () => { // Show time change while dragging
-      mini.t1.textContent = fmtTime(Number(mini.seek.value));
+  mini.seek.oninput = (e) => { // Show time change while dragging
+      mini.t1.textContent = fmtTime(Number(e.target.value));
   };
   mini.seek.onchange = async (e) => { // Seek on release
     const m = await getWebMusicInstance();
-    const targetTime = Number(e.target.value); // Value is in seconds
+    const targetTime = Number(e.target.value); // Value is now in seconds
     if(m?.player && !isNaN(targetTime)){ 
       try { await m.seekToTime(targetTime); } catch(e){ console.error("Seek failed:", e); }
     }
-    mini.isSeeking = false; // Unset flag
+    mini.isSeeking = false;
   };
   
   mini.vol.oninput=async(e)=>{ const m=await getWebMusicInstance(); if(m?.player) m.player.volume=Number(e.target.value); };
@@ -604,6 +607,7 @@
   // --- FIX: Move all event listeners inside DOMContentLoaded ---
   document.addEventListener('DOMContentLoaded', () => {
     console.log('[Init] DOM Loaded.');
+    
     // Wire up tabs
     document.querySelectorAll('.tab[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
     setTab('yt'); // Set initial tab
@@ -689,6 +693,10 @@
     }
     const haveSaved = localStorage.getItem('applePlaylistUrl')||localStorage.getItem('applePlaylistId');
     if (haveSaved) { qs('#amPlayEmbed').style.display='inline-block'; }
+    
+    // --- FIX: Renamed function ---
+    // Make it globally accessible for the old button ID, just in case
+    window.amPlayLocal = buildLocalQueueAndPlay;
   });
   
   // --- This function name is kept for the button wiring ---
@@ -698,4 +706,3 @@
 
 </body>
 </html>
-
