@@ -41,9 +41,11 @@
       color:var(--text); font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif}
     .wrap{max-width:1100px;margin:40px auto;padding:0 18px}
     .bar{display:flex;align-items:center;gap:14px}
+    /* --- FIX: Made logo and title a single link --- */
+    .bar a { color: inherit; text-decoration: none; display: flex; align-items: center; gap: 14px; }
     .logo{width:36px;height:36px;border-radius:12px;background:
       linear-gradient(135deg,#8b5cf6 0%,#22d3ee 55%,#16a34a 120%);
-      display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:var(--shadow);text-decoration:none}
+      display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:var(--shadow);text-decoration:none; flex-shrink: 0;}
     h1{font-size:22px;margin:0}
 
     .panel{background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.12);
@@ -57,7 +59,8 @@
     .tab{padding:9px 14px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0c1422;color:var(--text);cursor:pointer}
     .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
 
-    .cols{display:grid;grid-template-columns:1.05fr .95fr; gap:16px}
+    /* --- FIX: Removed the broken .cols style --- */
+
     .box{min-height:380px}
     iframe{width:100%;height:360px;border:0;border-radius:12px;box-shadow:var(--shadow)}
     .btn{display:inline-block;margin-top:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);
@@ -75,16 +78,21 @@
 
     /* Mini player */
     .mini{display:none;margin-top:12px;background:rgba(12,20,34,.8);border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:12px}
-    .mini .top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
-    .mini .art{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(34,211,238,.12));object-fit:cover;display:none}
+    .mini .row1{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+    .mini .art{width:52px;height:52px;border-radius:12px;background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(34,211,238,.12));object-fit:cover;display:none; flex-shrink: 0;}
     .mini .art.ready{display:block}
     .mini .meta{min-width:0}
     .mini .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .mini .artist{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .mini .controls{display:flex;gap:8px;align-items:center}
+    .mini .controls{display:flex;gap:8px;align-items:center; flex-shrink: 0;}
     .mini .controls .btn{padding:8px 12px;border-radius:10px}
-    .mini .bottom{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;margin-top:10px}
+    .mini .row2{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;margin-top:10px}
+    .mini .row3{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;margin-top:8px} /* Added for row3 */
+    .mini .time{font-size: 11px; font-variant-numeric: tabular-nums; color: var(--muted);} /* Added */
     .mini input[type="range"]{width:100%}
+    .mini .vol{display:flex;align-items:center;gap:8px}
+    .mini .open{font-size:12px; color: var(--muted); text-decoration:none; justify-self: end;} /* Added */
+    .badge{display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(148,163,184,.2);border-radius:999px;padding:6px 10px;background:#0c1422} /* Added */
 
     /* Right panel (Now Playing / Visualizer / Time Capsule) */
     #pane-am-side .tab{padding:8px 12px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0c1422}
@@ -95,8 +103,11 @@
 
 <div class="wrap">
   <div class="bar" style="margin-bottom:14px">
-    <a class="logo" href="/" title="Back to home">TD</a>
-    <h1>TapeDeck Time Machine</h1>
+    <!-- --- FIX: Wrapped logo and title in <a> tag --- -->
+    <a href="/" title="Back to home">
+      <div class="logo">TD</div>
+      <h1>TapeDeck Time Machine</h1>
+    </a>
   </div>
 
   <div class="panel">
@@ -123,8 +134,9 @@
     </div>
     <div class="muted" style="margin:-6px 0 8px 2px">Spotify sign-in is under construction. Coming soon!</div>
 
+    <!-- --- FIX: Removed the broken .cols wrapper div --- -->
     <!-- Two columns: YT panel + Apple panel -->
-    <div class="cols">
+    
       <!-- YT -->
       <div class="panel box" id="pane-yt">
         <div id="ytWrap">
@@ -148,7 +160,8 @@
               <button class="btn" id="amSign">Sign in to Apple Music</button>
               <button class="btn" id="amCreate" style="display:none">Create Playlist</button>
               <button class="btn" id="amPlayEmbed" style="display:none">Play in Apple Embed</button>
-              <button class="btn" id="amPlayLocal" style="display:none">Play with Built-In Player</button>
+              <!-- --- FIX: Renamed button --- -->
+              <button class="btn" id="amPlayPlaylist" style="display:none">Play Playlist</button>
             </div>
             <div id="amMsg" class="muted" style="margin-top:8px"></div>
 
@@ -167,7 +180,8 @@
 
             <!-- Mini player (fallback) -->
             <div id="mini" class="mini">
-              <div class="top">
+              <!-- --- FIX: Changed class="top" to class="row1" --- -->
+              <div class="row1"> 
                 <img id="miniArt" class="art" alt="">
                 <div class="meta">
                   <div id="miniTitle" class="title">—</div>
@@ -179,15 +193,20 @@
                   <button id="btnNext" class="btn">⟩⟩</button>
                 </div>
               </div>
-              <div class="bottom">
-                <div id="miniT1" class="muted" style="font-variant-numeric: tabular-nums;">0:00</div>
+              <!-- --- FIX: Changed class="bottom" to class="row2" --- -->
+              <div class="row2">
+                <div id="miniT1" class="time">0:00</div> <!-- Added time class -->
                 <input id="miniSeek" type="range" min="0" max="1000" value="0">
-                <div id="miniT2" class="muted" style="font-variant-numeric: tabular-nums;">0:00</div>
+                <div id="miniT2" class="time">0:00</div> <!-- Added time class -->
               </div>
-              <div class="bottom" style="margin-top:8px">
-                <span class="muted" style="font-size:12px;">Volume</span>
-                <input id="miniVol" type="range" min="0" max="1" step="0.01" value="1">
-                <a id="miniOpen" class="muted" href="#" target="_blank" rel="noopener" style="text-decoration:none;justify-self:end">Open in Apple Music ↗</a>
+              <!-- --- FIX: Changed class="bottom" to class="row3" --- -->
+              <div class="row3" style="margin-top:8px">
+                <span class="badge">TapeDeck Player</span> <!-- Renamed -->
+                <div class="vol">
+                  <span class="muted" style="font-size:12px;">Volume</span>
+                  <input id="miniVol" type="range" min="0" max="1" step="0.01" value="1">
+                </div>
+                <a id="miniOpen" class="open" href="#" target="_blank" rel="noopener">Open ↗</a>
               </div>
             </div>
           </div>
@@ -226,8 +245,8 @@
           </div>
         </div><!-- /.am-grid -->
       </div>
-    </div>
-  </div>
+    
+  </div> <!-- This was the missing closing div for .panel -->
 
   <!-- Tracklist -->
   <div class="panel" style="margin-top:16px">
@@ -254,7 +273,6 @@
     qs('#pane-yt').style.display = id==='yt' ? '' : 'none';
     qs('#pane-am').style.display = id==='am' ? '' : 'none';
   }
-  document.querySelectorAll('.tab[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
   function withTimeout(p,ms=NET_TIMEOUT_MS){ let t; const timer=new Promise((_,rej)=>{t=setTimeout(()=>rej(new Error(`Network timeout after ${Math.round(ms/1000)}s`)),ms)}); return Promise.race([p.finally(()=>clearTimeout(t)),timer]); }
 
   /***** state *****/
@@ -276,8 +294,6 @@
       const data=await r.json(); lastTracks=data.tracks||[];
       if(!lastTracks.length){ qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned. Try a different date/genre.'; return; }
       renderList(lastTracks); buildYouTube(lastTracks);
-
-      // reset apple area
       qs('#embedWrap').style.display='none'; qs('#mini').style.display='none';
       qs('#amPlayEmbed').style.display='none';
       qs('#amPlayLocal').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
@@ -290,8 +306,8 @@
     rows.slice(0,500).forEach(t=>{
       const d=document.createElement('div'); d.className='row';
       d.innerHTML=`<div class="ts">${t.timestamp.replace('T',' ')}</div>
-                   <div><strong>${t.artist}</strong> — <em>${t.title}</em>
-                   <span class="muted">• ${t.source_rank ?? ''}</span></div>`;
+                     <div><strong>${t.artist}</strong> — <em>${t.title}</em>
+                     <span class="muted">• ${t.source_rank ?? ''}</span></div>`;
       frag.appendChild(d);
     });
     qs('#list').replaceChildren(frag);
@@ -346,8 +362,9 @@
 
         if(!inst._tdtmBound){
           inst._tdtmBound=true;
-          inst.addEventListener('nowPlayingItemDidChange',()=>{updateNowPlaying(inst);});
-          inst.addEventListener('playbackTimeDidChange',()=>{updateTimes(inst);});
+          // --- FIX: Pass instance to handlers ---
+          inst.addEventListener('nowPlayingItemDidChange',()=>{ updateNowPlaying(inst); updateRightNowPlayingFromMusicKit(inst); }); // Added side panel update
+          inst.addEventListener('playbackTimeDidChange',()=>{ updateTimes(inst); });
           inst.addEventListener('playbackStateDidChange',(evt)=>{const PS=window.MusicKit?.PlaybackStates||{};
             const isPlaying=evt?.state===PS.playing; setPlayIcon(isPlaying);});
         }
@@ -441,7 +458,6 @@
     const tmpl=(a.artwork&&a.artwork.url)||a.artworkUrl||''; const art=tmpl?tmpl.replace('{w}','200').replace('{h}','200'):'';
     if(art){ mini.art.src=art; mini.art.alt=title; mini.art.classList.add('ready'); } else { mini.art.removeAttribute('src'); mini.art.classList.remove('ready'); }
     mini.open.href=a.url||'#';
-    updateRightNowPlayingFromMusicKit(m); // update the right-hand panel too
   }
   function updateTimes(m){
     const p=m?.player; if(!p) return;
@@ -473,10 +489,20 @@
     mini.root.style.display='block'; updateNowPlaying(m); updateTimes(m); setPlayIcon(true);
     qs('#embedWrap').style.display='none'; qs('#amMsg').textContent=`Now playing ${resolvedSongIds.length} tracks.`;
   }
-  mini.btnPlayPause.onclick=async()=>{ const m=await getWebMusicInstance(); if(!m?.player) return;
+  
+  // --- FIX: Play/Pause button logic ---
+  mini.btnPlayPause.onclick=async()=>{ 
+    const m=await getWebMusicInstance(); if(!m?.player) return;
     if(playToggleInFlight) return; playToggleInFlight=true;
-    try{ if(m.player.isPlaying){ await m.pause(); setPlayIcon(false);} else { await m.play(); setPlayIcon(true);} }
-    finally{ playToggleInFlight=false; } };
+    try{ 
+      if(m.player.isPlaying){ await m.pause(); } // Event listener will set icon to ▶
+      else { await m.play(); } // Event listener will set icon to ⏸
+    } catch(e) {
+      console.error("Play/pause failed:", e);
+    } finally { 
+      playToggleInFlight=false; 
+    } 
+  };
   mini.btnPrev.onclick=async()=>{ const m=await getWebMusicInstance(); try{await m.skipToPreviousItem();}catch{} };
   mini.btnNext.onclick=async()=>{ const m=await getWebMusicInstance(); try{await m.skipToNextItem();}catch{} };
   mini.seek.oninput=async(e)=>{ const m=await getWebMusicInstance(); const dur=m?.player?.currentPlaybackDuration||0; const target=(Number(e.target.value)/10);
@@ -484,7 +510,6 @@
   mini.vol.oninput=async(e)=>{ const m=await getWebMusicInstance(); if(m?.player) m.player.volume=Number(e.target.value); };
 
   /***** Right-side panel wiring *****/
-  // Tabs
   document.querySelectorAll('#pane-am-side .tab').forEach(b=>{
     b.onclick=()=>{ document.querySelectorAll('#pane-am-side .tab').forEach(x=>x.classList.remove('active')); b.classList.add('active');
       const k=b.dataset.side; qs('#side-np').style.display=k==='np'?'':'none';
@@ -492,21 +517,21 @@
       if(k==='viz') startViz(); else stopViz();
     };
   });
+  
   // Update Now Playing panel using MusicKit item
   function updateRightNowPlayingFromMusicKit(m){
     const item=m?.player?.nowPlayingItem; const a=item?.attributes||item||{};
     const title=a.name||a.title||'—'; const artist=a.artistName||a.artist||'—';
     const artTmpl=(a.artwork&&a.artwork.url)||a.artworkUrl||''; const art=artTmpl?artTmpl.replace('{w}','400').replace('{h}','400'):'';
     qs('#npTitle').textContent=title; qs('#npArtist').textContent=artist;
-    if(art){ qs('#npArt').src=art; qs('#npArt').alt=title; }
+    if(art){ qs('#npArt').src=art; qs('#npArt').alt=title; } 
+    else { qs('#npArt').removeAttribute('src'); qs('#npArt').alt = 'No artwork'; } // Clear artwork
     qs('#npOpen').href=a.url||'#';
-
-    // try to match this item back to lastTracks to show rank + date
+    
     const match=lastTracks.find(t=>(t.title||'').toLowerCase()===title.toLowerCase() && (t.artist||'').toLowerCase()===artist.toLowerCase());
     const rank = match?.source_rank ? `Rank this week: #${match.source_rank}` : '';
     const when = match?.timestamp ? ` • ${match.timestamp.slice(0,10)}` : '';
     qs('#npMeta').textContent = `${rank}${when}` || '—';
-
     if(match){
       qs('#capsuleBody').innerHTML =
         `<div><strong>Week of:</strong> ${match.timestamp.slice(0,10)}</div>
@@ -532,21 +557,72 @@
   function stopViz(){ cancelAnimationFrame(vizRAF); vizRAF=0; }
 
   /***** init *****/
-  (function(){
-    const tok=localStorage.getItem('appleMusicUserToken');
-    if(tok){ qs('#amMsg').textContent='Signed in. Create your playlist or use the built-in player.'; showAmControls(); }
-    const have=localStorage.getItem('applePlaylistUrl')||localStorage.getItem('applePlaylistId');
-    if(have) qs('#amPlayEmbed').style.display='inline-block';
-  })();
+  // --- FIX: Move all event listeners inside DOMContentLoaded ---
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('[Init] DOM Loaded.');
+    // Wire up tabs
+    document.querySelectorAll('.tab[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+    setTab('yt'); // Set initial tab
+    
+    // Wire up side tabs
+    document.querySelectorAll('#pane-am-side .tab').forEach(b=>{
+      b.onclick=()=>{ document.querySelectorAll('#pane-am-side .tab').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+        const k=b.dataset.side; qs('#side-np').style.display=k==='np'?'':'none';
+        qs('#side-viz').style.display=k==='viz'?'':'none'; qs('#side-capsule').style.display=k==='capsule'?'':'none';
+        if(k==='viz') startViz(); else stopViz();
+      };
+    });
 
-  /***** wire *****/
-  qs('#go').onclick=simulate;
-  qs('#amSign').onclick=amSignIn;
-  qs('#amCreate').onclick=amCreatePlaylist;
-  qs('#amPlayEmbed').onclick=amPlayEmbed;
-  qs('#amPlayLocal').onclick=()=>buildLocalQueueAndPlay();
+    // Wire up main controls
+    qs('#go').onclick=simulate;
+    qs('#amSign').onclick=amSignIn;
+    qs('#amCreate').onclick=amCreatePlaylist;
+    qs('#amPlayEmbed').onclick=amPlayEmbed;
+    qs('#amPlayLocal').onclick=()=>buildLocalQueueAndPlay(); // Renamed button
+    qs('#copyLink').onclick = async () => {
+      const url = qs('#openInAm').href;
+      try { await navigator.clipboard.writeText(url); } catch {}
+    };
+    
+    // Wire up MiniPlayer controls
+    mini.btnPlayPause.onclick=async()=>{ 
+      const m=await getWebMusicInstance(); if(!m?.player) return;
+      if(playToggleInFlight) return; playToggleInFlight=true;
+      try{ 
+        if(m.player.isPlaying){ await m.pause(); } 
+        else { await m.play(); }
+      } catch(e) { console.error("Play/pause failed:", e); } 
+      finally { playToggleInFlight=false; } 
+    };
+    mini.btnPrev.onclick=async()=>{ const m=await getWebMusicInstance(); try{await m.skipToPreviousItem();}catch{} };
+    mini.btnNext.onclick=async()=>{ const m=await getWebMusicInstance(); try{await m.skipToNextItem();}catch{} };
+    mini.seek.oninput=async(e)=>{ const m=await getWebMusicInstance(); const dur=m?.player?.currentPlaybackDuration||0; const target=(Number(e.target.value)/10);
+      if(dur){ try{ await m.seekToTime(Math.min(target,dur-0.25)); }catch{} } };
+    mini.vol.oninput=async(e)=>{ const m=await getWebMusicInstance(); if(m?.player) m.player.volume=Number(e.target.value); };
+    qs('#btnShuffle').onclick = async () => {
+      const m = await getWebMusicInstance(); if (!m?.player) return;
+      m.player.shuffleMode = m.player.shuffleMode ? 0 : 1; setShuffleIcon(!!m.player.shuffleMode);
+    };
+    qs('#btnRepeat').onclick = async () => {
+      const m = await getWebMusicInstance(); if (!m?.player) return;
+      const next = (m.player.repeatMode === 0) ? 2 : (m.player.repeatMode === 2 ? 1 : 0);
+      m.player.repeatMode = next; setRepeatIcon(next);
+    };
 
-  setTab('yt');
+    // Check initial sign-in state
+    const storedToken = localStorage.getItem('appleMusicUserToken');
+    if (storedToken) { 
+      qs('#amMsg').textContent='Signed in. Create your playlist or use the built-in player.'; 
+      showAmControls(); 
+      getWebMusicInstance(true).catch(()=>{}); // Init on load
+    }
+    const haveSaved = localStorage.getItem('applePlaylistUrl')||localStorage.getItem('applePlaylistId');
+    if (haveSaved) { qs('#amPlayEmbed').style.display='inline-block'; }
+  });
+  
+  // --- RENAMED this function ---
+  function amPlayLocal(){ buildLocalQueueAndPlay(); }
+
 </script>
 
 </body>
