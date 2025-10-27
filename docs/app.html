@@ -314,7 +314,7 @@
             openBtn.style.display = 'inline-block';
           },
           'onError': (e) => {
-             qs('#ytErr').textContent = `Youtubeer Error: ${e.data}`;
+             qs('#ytErr').textContent = `Youtubeer Error: ${e.data}`; // Typo: Youtubeer -> YouTube
           }
         }
       });
@@ -370,11 +370,10 @@
              updateNowPlaying(inst,true);
           });
 
-          // Reverted: This listener handles state icon AND Now Playing visibility
+          // Reverted: This listener handles Now Playing visibility based on state
           inst.addEventListener('playbackStateDidChange',(evt)=>{
             const PS=window.MusicKit?.PlaybackStates||{};
             const isPlaying=evt?.state===PS.playing;
-            // setPlayIcon(isPlaying); // We don't have the icon, so commented out
 
             if(evt.state === PS.stopped || evt.state === PS.completed) {
               qs('#amNowPlaying').style.display = 'none';
@@ -426,6 +425,7 @@
       const j=await r.json();
 
       qs('#amMsg').textContent=`Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks.`;
+      // Ensure Play button is visible after creating
       qs('#amPlayLocal').style.display='inline-block';
 
     }catch(e){qs('#amMsg').textContent='Create failed: '+(e.message||String(e));}
@@ -433,21 +433,37 @@
 
   /* ===== Catalog helpers (backend-first) ===== */
   async function backendSongMeta(id,storefront='us'){
-    console.log(`Fetching backend metadata for ID: ${id}`);
+    // console.log(`Fetching backend metadata for ID: ${id}`); // Keep console logs temporarily removed for clarity unless needed
     const url=`${API}/v1/apple/song-meta?id=${encodeURIComponent(id)}&storefront=${encodeURIComponent(storefront)}`;
     const r=await withTimeout(fetch(url),15000);
     if(!r.ok) {
-       console.error(`Backend metadata fetch failed: ${r.status}`);
+       // console.error(`Backend metadata fetch failed: ${r.status}`);
        throw new Error('backend meta not available');
     }
     const data = await r.json();
-    console.log('Backend metadata received:', data);
+    // console.log('Backend metadata received:', data);
     return data;
   }
-  async function appleSongById(id,storefront='us'){ /* ... no changes ... */ return null;}
-  async function appleCatalogSearch(term,storefront='us',limit=1){ /* ... no changes ... */ return null;}
+  async function appleSongById(id,storefront='us'){
+    const dev=await fetchDeveloperToken();
+    const url=`https://api.music.apple.com/v1/catalog/${encodeURIComponent(storefront)}/songs/${encodeURIComponent(id)}`;
+    const r=await withTimeout(fetch(url,{headers:{Authorization:`Bearer ${dev}`}}),15000);
+    if(!r.ok) return null; const j=await r.json(); return j?.data?.[0]?.attributes||null;
+  }
+  async function appleCatalogSearch(term,storefront='us',limit=1){
+    const dev=await fetchDeveloperToken();
+    const url=new URL(`https://api.music.apple.com/v1/catalog/${encodeURIComponent(storefront)}/search`);
+    url.searchParams.set('term',term); url.searchParams.set('types','songs'); url.searchParams.set('limit',String(limit));
+    const r=await withTimeout(fetch(url.toString(),{headers:{Authorization:`Bearer ${dev}`}}),15000);
+    // Add check for rate limiting or other errors
+    if (!r.ok) {
+        console.error(`Apple search failed for "${term}": ${r.status}`);
+        // Consider retrying or throwing a more specific error if needed
+        throw new Error(`Apple search ${r.status}`);
+    }
+    return r.json();
+  }
   async function appleCatalogResolveList(tracks,storefront){
-      // Reverted: Added console log for debugging
       console.log(`Resolving ${tracks.length} tracks via Apple Catalog Search...`);
       const ids=[]; for(let i=0;i<tracks.length;i++){
         const t=tracks[i];
@@ -457,18 +473,21 @@
             console.log(msg); // Log progress
         }
         try{
-          const term=`${t.artist} ${t.title}`.replace(/\s+\(.*?\)|-+\s*(radio edit|remaster.*|remix.*)/ig,'').trim();
-          const res=await appleCatalogSearch(term,storefront,1);
-          const id=res?.results?.songs?.data?.[0]?.id;
+          // Refined term for potentially better matching
+          const term = `${t.artist} ${t.title}`.replace(/\s*\(.*?\)|feat\.|ft\./ig, '').replace(/[-:]/g, ' ').replace(/\s+/g, ' ').trim();
+          const res = await appleCatalogSearch(term, storefront, 1);
+          const id = res?.results?.songs?.data?.[0]?.id;
           if(id) {
               ids.push(id);
-              console.log(`Resolved: ${t.artist} - ${t.title} -> ${id}`);
+              // console.log(`Resolved: ${t.artist} - ${t.title} -> ${id}`); // Reduce console noise
           } else {
-              console.warn(`Could not resolve: ${t.artist} - ${t.title}`);
+              console.warn(`Could not resolve: ${t.artist} - ${t.title} (term: "${term}")`);
           }
-          await sleep(50); // Keep rate limiting
+          await sleep(60); // Slightly increased delay for API politeness
         }catch(e){
            console.error(`Error resolving ${t.artist} - ${t.title}:`, e);
+           // Optional: Implement retry logic here if needed
+           await sleep(200); // Longer delay after error
         }
       }
       console.log(`Finished resolving. Found ${ids.length} Apple Music IDs.`);
@@ -481,47 +500,55 @@
     if(!lastTracks?.length){qs('#amMsg').textContent='Generate a tracklist first.'; return;}
     const storefront=m.storefrontId||'us';
 
-    // Show resolving state immediately
+    // Reset resolved IDs for a fresh attempt
+    resolvedSongIds = [];
     qs('#amMsg').style.display = 'none';
     qs('#amNowPlaying').style.display = 'block';
     qs('#amNowPlaying').innerHTML = `<span class="muted">Resolving tracks...</span>`;
-    resolvedSongIds = []; // Clear previous resolved IDs
 
-    // Reverted: Separate resolving step with UI updates
     try {
         qs('#amMsg').textContent = `Resolving ${lastTracks.length} tracks for playback…`;
         qs('#amMsg').style.display = ''; // Show resolving message
-        qs('#amNowPlaying').style.display = 'none'; // Hide Now Playing during resolve
+        qs('#amNowPlaying').style.display = 'none';
 
         resolvedSongIds = await appleCatalogResolveList(lastTracks, storefront);
 
-        qs('#amMsg').style.display = 'none'; // Hide resolving message
-        qs('#amNowPlaying').style.display = 'block'; // Show Now Playing area
+        qs('#amMsg').style.display = 'none';
+        qs('#amNowPlaying').style.display = 'block';
     } catch (e) {
         console.error("Error during track resolution:", e);
         qs('#amMsg').textContent = 'Error resolving tracks: ' + (e.message || 'Unknown error');
         qs('#amMsg').style.display = '';
         qs('#amNowPlaying').style.display = 'none';
-        return; // Stop if resolution fails
+        return;
     }
 
-
     if(!resolvedSongIds.length){
-         qs('#amNowPlaying').innerHTML = `<span class="muted">No playable tracks found.</span>`; // Error in Now Playing area
+         // Display error in the main message area, not NowPlaying
+         qs('#amMsg').textContent = 'No playable tracks found after resolving.';
+         qs('#amMsg').style.display = '';
+         qs('#amNowPlaying').style.display = 'none';
          return;
     }
 
-    try{ if(m.player?.playbackState===MusicKit.PlaybackStates.playing) await m.pause(); }catch{}
+    try{ if(m.player?.playbackState===MusicKit.PlaybackStates.playing) await m.pause(); }catch(e){console.warn("Couldn't pause before play:", e)}
 
     qs('#amNowPlaying').innerHTML = `<span class="muted">Preparing player...</span>`;
 
-    await m.setQueue({songs:resolvedSongIds});
-    await sleep(200);
-    await m.play();
+    try {
+        await m.setQueue({songs:resolvedSongIds});
+        await sleep(200);
+        await m.play();
+        // The event listeners should now handle the rest of the UI updates
+    } catch (e) {
+        console.error("Error setting queue or playing:", e);
+        qs('#amNowPlaying').style.display = 'none';
+        qs('#amMsg').textContent = 'Error starting playback: ' + (e.message || 'Unknown error');
+        qs('#amMsg').style.display = '';
+    }
   }
 
   /* ===== Now Playing UI ===== */
-  // Reverted: Back to the version that had 'tryFetchIfMissing'
   async function updateNowPlaying(m, tryFetchIfMissing) {
     const it = m?.player?.nowPlayingItem;
     const npDiv = qs('#amNowPlaying');
@@ -531,13 +558,11 @@
       return;
     }
 
-    // Read metadata from the item
     const a = it.attributes || {};
     let title = a.name || a.title || it.title || 'Loading...';
-    let artist = a.artistName || it.artistName || a.artist || 'Loading...'; // Also default artist
+    let artist = a.artistName || it.artistName || a.artist || 'Loading...';
     const id = a.playParams?.id || it.id;
 
-    // Fetch if metadata looks sparse
     if (tryFetchIfMissing && id && (title === 'Loading...' || artist === 'Loading...')) {
       npDiv.innerHTML = `<span class="muted">Loading metadata...</span>`;
       try {
@@ -546,12 +571,11 @@
         artist = meta?.artistName || 'Unknown Artist';
       } catch (e) {
         console.warn('Failed to fetch sparse meta in updateNowPlaying:', e);
-        // Keep "Loading..." or use fallback if fetch fails? Let's use fallback.
         if (title === 'Loading...') title = 'Unknown Title';
         if (artist === 'Loading...') artist = 'Unknown Artist';
       }
     } else if (title === 'Loading...') {
-        title = 'Unknown Title'; // Fallback if no ID and still loading
+        title = 'Unknown Title';
         artist = 'Unknown Artist';
     }
 
@@ -568,28 +592,25 @@
     };
   });
   let vizRAF=0;
-  // Reverted: Ensure the viz function is present and correct
   function startViz(){
     const c=qs('#viz'); if(!c) return; const ctx=c.getContext('2d'); let t=0;
-    cancelAnimationFrame(vizRAF); // Clear previous frame
+    cancelAnimationFrame(vizRAF);
     const loop=()=>{
-      if(!vizRAF) return; // Stop if cancelled
+      // Check if still active before drawing
+      if(!vizRAF) return;
       const w=c.width,h=c.height; ctx.clearRect(0,0,w,h);
       const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#8b5cf6'); g.addColorStop(1,'#22d3ee'); ctx.fillStyle=g;
       const bars=48,pad=6; for(let i=0;i<bars;i++){ const p=i/(bars-1); const phase=t*0.05+i*0.35; const amp=(Math.sin(phase)+1)/2;
         const ease=0.8-Math.abs(p-0.5); const hBar=(amp*ease)*h*0.9+6; const bw=(w-pad*(bars+1))/bars; const x=pad+i*(bw+pad); const y=h-hBar;
         ctx.fillRect(x,y,bw,hBar); ctx.globalAlpha=0.08; ctx.fillRect(x,y-12,bw,hBar+24); ctx.globalAlpha=1; }
       t+=1;
-      vizRAF=requestAnimationFrame(loop); // Continue loop
+      vizRAF=requestAnimationFrame(loop);
      };
-    vizRAF=requestAnimationFrame(loop); // Start loop
+    vizRAF=requestAnimationFrame(loop); // Assign ID immediately
   }
   function stopViz(){
      cancelAnimationFrame(vizRAF);
-     vizRAF = 0; // Explicitly set to 0 to stop loop check
-     // Optionally clear canvas
-     // const c=qs('#viz'); if(!c) return; const ctx=c.getContext('2d');
-     // ctx.clearRect(0,0,c.width,c.height);
+     vizRAF = 0; // Ensure loop stops checking
   }
 
   /* ===== Init ===== */
@@ -626,7 +647,7 @@
   };
   qs('#spCreate').onclick = async () => { /* ... no changes ... */ };
 
-  setTab('am'); startViz(); // Ensure viz starts on load if AM tab is default
+  setTab('am'); startViz();
 </script>
 
 </body>
