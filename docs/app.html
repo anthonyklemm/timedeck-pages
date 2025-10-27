@@ -1,141 +1,124 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>TapeDeck Time Machine</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TapeDeck Time Machine</title>
 
-<!-- MusicKit v3 -->
-<script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
+  <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
 
-<link rel="icon" href="/logo.svg" type="image/svg+xml">
-<link rel="alternate icon" href="/favicon.ico">
-<link rel="apple-touch-icon" href="/logo.svg">
-<meta name="description" content="Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.">
+  <meta name="description" content="Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.">
+  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/logo.svg">
 
-<style>
-  :root{
-    --bg:#0a0f17;--panel:#111827;--muted:#9aa6b2;--text:#e5e7eb;
-    --accent:#8b5cf6;--accent2:#22d3ee;--shadow:0 12px 48px rgba(2,10,20,.45)
-  }
-  *{box-sizing:border-box}
-  html,body{margin:0;background:
-    radial-gradient(1200px 600px at 10% -10%, #0e1630 0%, transparent 60%),
-    radial-gradient(700px 400px at 120% 10%, #06101f 0%, transparent 60%), #0a0f17;
-    color:var(--text); font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif;}
-  a{color:inherit;text-decoration:none}
-  .wrap{max-width:1100px;margin:28px auto;padding:0 18px;overflow-x:hidden}
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tapedecktimemachine.com/">
+  <meta property="og:title" content="TapeDeck Time Machine - Historical Music Playlist Generator">
+  <meta property="og:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
+  <meta property="og:image" content="https://tapedecktimemachine.com/tapedeck-preview.png">
+  <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://tapedecktimemachine.com/">
+  <meta property="twitter:title" content="TapeDeck Time Machine - Historical Music Playlist Generator">
+  <meta property="twitter:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
+  <meta property="twitter:image" content="https://tapedecktimemachine.com/tapedeck-preview.png">
 
-  /* Header */
-  .bar{display:flex;align-items:center;gap:14px;margin-bottom:14px}
-  .logo{
-    flex:0 0 36px; width:36px;height:36px;border-radius:12px;
-    background:linear-gradient(135deg,#8b5cf6 0%,#22d3ee 55%,#16a34a 120%);
-    display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:var(--shadow)
-  }
-  h1{font-size:22px;margin:0}
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HPZT6BMJVD"></script>
+  <script>
+    window.dataLayer=window.dataLayer||[];
+    function gtag(){dataLayer.push(arguments)}
+    gtag('js',new Date()); gtag('config','G-HPZT6BMJVD');
+  </script>
 
-  .panel{background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.12);
-    border-radius:18px;padding:16px;box-shadow:var(--shadow)}
-  .muted{color:var(--muted)}
+  <style>
+    :root{--bg:#0a0f17;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#8b5cf6;--accent2:#22d3ee;--shadow:0 12px 48px rgba(2,10,20,.45)}
+    *{box-sizing:border-box}
+    body{margin:0;background:
+      radial-gradient(1200px 600px at 10% -10%, #0e1630 0%, transparent 60%),
+      radial-gradient(700px 400px at 120% 10%, #06101f 0%, transparent 60%), #0a0f17;
+      color:var(--text); font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+    .wrap{max-width:1100px;margin:40px auto;padding:0 18px}
+    .bar{display:flex;align-items:center;gap:14px}
+    .logo{width:36px;height:36px;border-radius:12px;background:
+      linear-gradient(135deg,#8b5cf6 0%,#22d3ee 55%,#16a34a 120%);
+      display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:var(--shadow);text-decoration:none}
+    h1{font-size:22px;margin:0}
 
-  /* Top grid — phone:1, tablet:2, desktop:6 */
-  .grid{display:grid;gap:12px;align-items:end}
-  @media (min-width:0px){.grid{grid-template-columns:1fr}}
-  @media (min-width:640px){.grid{grid-template-columns:1fr 1fr}}
-  @media (min-width:980px){.grid{grid-template-columns:1.1fr 1fr .8fr .9fr 1.1fr auto}}
-  .grid>div{min-width:0} /* prevent tiny overflow on iOS */
-  label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
+    .panel{background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.12);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+    .grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr auto;gap:12px;align-items:end}
+    label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
+    input,select,button{width:100%; min-width: 0; padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
+      background:#0c1422;color:var(--text);outline:none;font-size:1rem}
+    
+    input[type="date"] { color-scheme: dark; }
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
 
-  input,select,button{
-    width:100%;max-width:100%;
-    padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
-    background:#0c1422;color:var(--text);outline:none;font-size:1rem
-  }
-  input[type="date"]{-webkit-appearance:none;appearance:none}
-  button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700;cursor:pointer}
+    button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700;cursor:pointer}
+    button.primary:disabled{opacity:0.6;background:var(--panel);cursor:not-allowed}
+    .tabs{display:flex;gap:10px;margin:14px 0 8px}
+    .tab{padding:9px 14px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0c1422;color:var(--text);cursor:pointer}
+    .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
 
-  /* Tabs */
-  .tabs{display:flex;gap:10px;margin:14px 0 8px}
-  .tab{padding:9px 14px;border-radius:999px;border:1px solid rgba(148,163,184,.2);
-    background:#0c1422;color:var(--text);cursor:pointer}
-  .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
+    .cols{display:grid;grid-template-columns:1.05fr .95fr; gap:16px}
+    .box{min-height:380px}
+    /* Removed iframe styles, added #ytp iframe styles */
+    #ytp iframe{width:100%;height:auto;min-height:300px; aspect-ratio: 16/9; border-radius:12px;box-shadow:var(--shadow)}
+    .btn{display:inline-block;margin-top:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);
+      background:#0c1422;color:#e5e7eb;text-decoration:none;font-weight:700;cursor:pointer}
+    .muted{color:var(--muted)}
+    .list{padding:12px 8px;max-height:420px;overflow:auto}
+    .row{display:grid;grid-template-columns:110px 1fr;gap:14px;padding:10px 6px;border-bottom:1px dashed rgba(148,163,184,.12)}
+    .ts{font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+    .err{color:#fda4af;margin-top:6px}
 
-  /* Two-column main area */
-  .cols{display:grid;gap:16px}
-  @media (min-width:0px){.cols{grid-template-columns:1fr}}
-  @media (min-width:980px){.cols{grid-template-columns:1.05fr 1fr}}
-  .box{min-height:240px}
+    /* ===== Mini-player (flat row) ===== */
+    .mini{display:none;margin-top:12px;background:rgba(12,20,34,.8);border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:10px 12px}
+    .mini .np{display:flex;align-items:center;gap:16px}
+    .mini .np-text{min-width:0;flex:1; overflow: hidden;}
+    .mini .title{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mini .artist{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mini .controls{display:flex;align-items:center;gap:8px}
+    .mini .icon{width:44px;min-width:44px;height:40px;border-radius:10px;border:1px solid rgba(148,163,184,.22);background:#0c1422;color:#e5e7eb;cursor:pointer}
+    .mini .open{padding:9px 12px;border-radius:10px;border:1px solid rgba(148,163,184,.22);background:#0c1422;color:#e5e7eb;text-decoration:none}
 
-  .btn{display:inline-block;padding:11px 16px;border-radius:12px;border:1px solid rgba(148,163,184,.2);
-    background:#0c1422;color:var(--text);font-weight:700;text-align:center;cursor:pointer}
+    /* Right panel tabs */
+    #pane-am-right .tab{padding:8px 12px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0c1422}
+    #pane-am-right .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
 
-  /* Controls */
-  .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .pill{display:inline-grid;place-items:center;width:46px;height:42px;border-radius:12px;border:1px solid rgba(148,163,184,.2);background:#0c1422;cursor:pointer;font-weight:700}
-  .openBtn{padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);background:#0c1422;font-weight:700}
-
-  /* Now-playing line (respects small widths) */
-  .nowline{display:flex;gap:10px;align-items:center;margin:8px 0 10px;min-width:0}
-  .titletext{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#c6d0db}
-
-  /* Visualizer */
-  .viz{height:260px;border-radius:16px;background:linear-gradient(180deg,#111b33 0%,#0c1222 100%);
-    position:relative;overflow:hidden;border:1px solid rgba(148,163,184,.12)}
-  .bars{position:absolute;inset:12px;display:flex;align-items:flex-end;gap:6px}
-  .bar{width:10px;background:linear-gradient(180deg,#25e0ff,#7b6cff);opacity:.85;border-radius:6px}
-  .rtabs{display:flex;gap:10px;margin-bottom:10px}
-  .rtab{padding:8px 12px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0c1422}
-  .rtab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
-
-  /* Track list rows */
-  .list{padding:12px 8px;max-height:420px;overflow:auto}
-  .row{display:grid;grid-template-columns:110px 1fr;gap:14px; padding:10px 6px;border-bottom:1px dashed rgba(148,163,184,.12)}
-  .ts{font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
-</style>
+    @media (max-width:900px){
+      .cols{grid-template-columns:1fr}
+      .grid{grid-template-columns: 1fr 1fr; gap: 10px;}
+      #ytp iframe{min-height:220px}
+    }
+    @media (max-width:500px){
+      .grid{grid-template-columns: 1fr;}
+    }
+  </style>
 </head>
 <body>
-<div class="wrap">
 
-  <!-- Header -->
-  <a class="bar" href="/index.html">
-    <div class="logo">TD</div>
+<div class="wrap">
+  <div class="bar" style="margin-bottom:14px">
+    <a class="logo" href="/index.html" title="Back to home">TD</a>
     <h1>TapeDeck Time Machine</h1>
-  </a>
+  </div>
 
   <div class="panel">
-    <!-- Top form -->
     <div class="grid">
-      <div>
-        <label>Date</label>
-        <input id="date" type="date" value="2002-07-01">
-      </div>
-      <div>
-        <label>Genre</label>
+      <div><label>Date</label><input id="date" type="date" value="2002-07-01"></div>
+      <div><label>Genre</label>
         <select id="genre">
           <option>Alternative</option><option>Hot-100</option><option>Pop</option>
           <option>Rock</option><option>Country</option><option>R&B/Hip-Hop</option><option>Dance/Electronic</option>
         </select>
       </div>
-      <div>
-        <label>Hours</label>
-        <select id="hours"><option>0.5</option><option selected>1</option><option>2</option><option>3</option></select>
-      </div>
-      <div>
-        <label>Repeat gap (min)</label>
-        <input id="gap" type="number" value="90">
-      </div>
-      <div>
-        <label>Seed (opt)</label>
-        <input id="seed" placeholder="e.g. 20020701">
-      </div>
-      <div>
-        <label>&nbsp;</label>
-        <button id="go" class="primary">Generate</button>
-      </div>
+      <div><label>Hours</label><select id="hours"><option>0.5</option><option selected>1</option><option>2</option><option>3</option></select></div>
+      <div><label>Repeat gap (min)</label><input id="gap" type="number" value="90"></div>
+      <div><label>Seed (opt)</label><input id="seed" placeholder="e.g. 20020701"></div>
+      <div><label>&nbsp;</label><button id="go" class="primary">Generate</button></div>
     </div>
 
-    <!-- Tabs -->
     <div class="tabs">
       <button class="tab" data-tab="yt">YouTube</button>
       <button class="tab active" data-tab="am">Apple Music</button>
@@ -144,46 +127,59 @@
     <div class="muted" style="margin:-6px 0 8px 2px">Spotify sign-in is under construction. Coming soon!</div>
 
     <div class="cols">
-      <!-- Left: Apple Music actions + mini controls -->
-      <div class="panel box" id="pane-am">
-        <p class="muted" style="margin-top:0">Generate a list, sign in, create the playlist, then play it below with the
-          official Apple embed. If embedding isn’t possible, we’ll use a built-in player.</p>
+      <div class="panel box" id="pane-am-left">
+        <p class="muted" style="margin-bottom:8px">
+          Generate a list, sign in, create the playlist, then play it with our built-in player.
+        </p>
 
-        <div style="display:grid;gap:12px;margin-bottom:12px">
-          <button class="btn" id="amCreate">Create Playlist</button>
-          <button class="btn" id="amPlay">Play with Built-In Player</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn" id="amSign">Sign in to Apple Music</button>
+          <button class="btn" id="amCreate" style="display:none">Create Playlist</button>
+          <button class="btn" id="amPlayLocal" style="display:none">Play with Built-In Player</button>
+        </div>
+        <div id="amMsg" class="muted" style="margin-top:8px"></div>
+
+        <div id="mini" class="mini">
+          <div class="np">
+            <div class="np-text">
+              <div class="title" id="miniTitle">—</div>
+              <div class="artist" id="miniArtist">—</div>
+            </div>
+            <div class="controls">
+              <button id="btnPrev" class="icon" title="Previous">⟨⟨</button>
+              <button id="btnPlayPause" class="icon" title="Play">▶</button>
+              <button id="btnNext" class="icon" title="Next">⟩⟩</button>
+              <a id="miniOpen" class="open" href="#" target="_blank" rel="noopener">Open ↗</a>
+            </div>
+          </div>
         </div>
 
-        <div id="amMsg" class="muted" style="margin:4px 0 8px"></div>
-
-        <!-- Now playing line -->
-        <div class="nowline">
-          <div class="titletext" id="amNow">—</div>
         </div>
 
-        <!-- Controls row -->
-        <div class="controls" style="margin-top:6px">
-          <button class="pill" id="btnPrev" title="Previous">≪</button>
-          <button class="pill" id="btnPlayPause" title="Play / Pause">⏯</button>
-          <button class="pill" id="btnNext" title="Next">≫</button>
-          <button class="openBtn" id="btnOpen" title="Open in Apple Music">Open ↗</button>
+      <div class="panel box" id="pane-am-right">
+        <div class="tabs" style="margin-top:0">
+          <button class="tab active" data-side="viz">Visualizer</button>
+          <button class="tab" data-side="capsule">Time Capsule</button>
+        </div>
+        <div id="side-viz" style="margin-top:6px">
+          <canvas id="viz" width="600" height="220" style="width:100%;height:220px;border-radius:12px;background:linear-gradient(180deg,rgba(139,92,246,.08),rgba(34,211,238,.06));"></canvas>
+        </div>
+        <div id="side-capsule" style="display:none;margin-top:6px">
+          <div id="capsuleBody" class="muted">Generate a list and start playback to see weekly trivia here.</div>
         </div>
       </div>
 
-      <!-- Right: Visualizer -->
-      <div class="panel box">
-        <div class="rtabs">
-          <div class="rtab active">Visualizer</div>
-          <div class="rtab">Time Capsule</div>
-        </div>
-        <div class="viz" id="viz">
-          <div class="bars" id="bars"></div>
+      <div class="panel box" id="pane-yt" style="display:none">
+        <div id="ytWrap">
+          <div class="muted" id="ytStatus">Waiting for a simulation…</div>
+          <div id="ytp"></div>
+          <a class="btn" id="ytOpen" href="#" target="_blank" rel="noopener" style="display:none">Open in YouTube</a>
+          <div id="ytErr" class="err"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Track list -->
   <div class="panel" style="margin-top:16px">
     <h2>Your Music Time Machine Playlist</h2>
     <p class="muted" style="margin-bottom:6px">
@@ -197,258 +193,377 @@
 </div>
 
 <script>
-/* ---------- config & helpers ---------- */
-const qs = s => document.querySelector(s);
-const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
-const NET_TIMEOUT_MS = 180000;
-const delay = ms => new Promise(r=>setTimeout(r,ms));
+  /* ===== Helpers & config ===== */
+  const qs = s => document.querySelector(s);
+  const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
+  const NET_TIMEOUT_MS = 180000;
+  const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+  function withTimeout(p,ms=NET_TIMEOUT_MS){ let t; const timer=new Promise((_,rej)=>{t=setTimeout(()=>rej(new Error(`Network timeout after ${Math.round(ms/1000)}s`)),ms)}); return Promise.race([p.finally(()=>clearTimeout(t)),timer]); }
 
-function withTimeout(promise, ms = NET_TIMEOUT_MS) {
-  let t; const timer = new Promise((_, rej)=>{ t=setTimeout(()=>rej(new Error(`Network timeout after ${Math.round(ms/1000)}s`)), ms); });
-  return Promise.race([promise.finally(()=>clearTimeout(t)), timer]);
-}
-function fmtDateForAPI(value){
-  if(!value) return '';
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  const m = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (m){ const [_,mm,dd,yyyy]=m; return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
-  return value;
-}
-
-/* ---------- state ---------- */
-let lastTracks = [];
-let music = null;
-let amCurrentSongURL = null;
-let amPlayLock = false;
-
-/* ---------- Visualizer ---------- */
-(function makeBars(){
-  const bars = qs('#bars');
-  const n = 28;
-  for(let i=0;i<n;i++){
-    const b = document.createElement('div');
-    b.className = 'bar';
-    b.style.height = (Math.random()*70 + 20) + '%';
-    bars.appendChild(b);
+  /* ===== Tabs ===== */
+  function setTab(id){
+    document.querySelectorAll('.tab[data-tab]').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
+    const yt=qs('#pane-yt'), aml=qs('#pane-am-left'), amr=qs('#pane-am-right');
+    if(id==='yt'){
+      yt.style.display=''; aml.style.display='none'; amr.style.display='none';
+      if(lastTracks.length > 0 && !player) buildYtPlayer(lastTracks);
+    }
+    else { yt.style.display='none'; aml.style.display=''; amr.style.display=''; }
   }
-  function animate(){
-    [...bars.children].forEach((b,i)=>{
-      const t = (performance.now()/800 + i*0.15);
-      const h = 18 + 62*(0.5+0.5*Math.sin(t));
-      b.style.height = h + '%';
-    });
-    requestAnimationFrame(animate);
-  }
-  animate();
-})();
+  document.querySelectorAll('.tab[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 
-/* ---------- Tabs (visual) ---------- */
-function setTab(id){ document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active', b.dataset.tab===id)); }
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+  /* ===== State ===== */
+  let lastTracks=[]; let resolvedSongIds=[]; let DEV_TOKEN=null;
+  let lastToggleTS=0;
 
-/* ---------- List rendering ---------- */
-function renderList(rows){
-  const wrap = qs('#list');
-  if(!rows?.length){ wrap.innerHTML = '<div class="muted">No tracks.</div>'; return; }
-  const frag = document.createDocumentFragment();
-  rows.slice(0,500).forEach(t=>{
-    const d = document.createElement('div'); d.className='row';
-    d.innerHTML = `<div class="ts">${t.timestamp.replace('T',' ')}</div>
-                   <div><strong>${t.artist}</strong> — <em>${t.title}</em>
-                   <span class="muted">• ${t.source_rank ?? ''}</span></div>`;
-    frag.appendChild(d);
-  });
-  wrap.replaceChildren(frag);
-}
+  /* ===== YouTube minimal ===== */
+  let player=null, YTapiReady=false;
+  (function(){ const s=document.createElement('script'); s.src="https://www.youtube.com/iframe_api"; document.head.appendChild(s); })();
+  window.onYouTubeIframeAPIReady=()=>{YTapiReady=true;};
 
-/* ---------- Simulate ---------- */
-async function simulate(){
-  const body = {
-    date: fmtDateForAPI(qs('#date').value.trim()),
-    genre: qs('#genre').value,
-    hours: Number(qs('#hours').value || 3),
-    repeat_gap_min: Number(qs('#gap').value || 90),
-    seed: (qs('#seed').value.trim() || undefined) ? String(qs('#seed').value.trim()) : undefined,
-    limit: 500
-  };
-  qs('#amMsg').textContent = 'Building…';
-  lastTracks = [];
-  try{
-    const r = await withTimeout(fetch(`${API}/v1/simulate`, {
-      method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(body)
-    }));
-    if(!r.ok){ throw new Error(`simulate ${r.status}`); }
-    const data = await r.json();
-    lastTracks = data.tracks || [];
-    renderList(lastTracks);
-    qs('#amMsg').textContent = lastTracks.length ? `Ready: ${lastTracks.length} tracks.` : 'No tracks.';
-  }catch(e){
-    console.error('[simulate] failed', e);
-    qs('#amMsg').textContent = 'Failed: ' + (e.message || e);
-  }
-}
-
-/* ---------- MusicKit bootstrapping (robust) ---------- */
-function waitForMusicKitLoaded(timeoutMs = 10000){
-  if (window.MusicKit && typeof window.MusicKit.getInstance === 'function') return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(()=>reject(new Error('MusicKit load timed out')), timeoutMs);
-    window.addEventListener('musickitloaded', () => { clearTimeout(t); resolve(); }, { once:true });
-  });
-}
-let musicInitPromise = null;
-async function getWebMusicInstance(){
-  if (music) return music;
-  if (!musicInitPromise) {
-    musicInitPromise = (async () => {
-      await waitForMusicKitLoaded();
-      const r = await withTimeout(fetch(`${API}/v1/apple/dev-token`));
-      if(!r.ok) throw new Error(`dev-token ${r.status}`);
-      const { token: developerToken, storefront } = await r.json();
-
-      window.MusicKit.configure({ developerToken, app:{ name:'TapeDeck Time Machine', build:'web' } });
-
-      // Some browsers need a tick before getInstance returns an object.
-      let inst = null;
-      for (let i=0;i<40;i++){ // up to ~2s
-        inst = (window.MusicKit.getInstance && window.MusicKit.getInstance()) || null;
-        if (inst && typeof inst.play === 'function') break;
-        await delay(50);
+  async function fetchSimulation(){
+    const body={date:qs('#date').value.trim(),genre:qs('#genre').value,hours:Number(qs('#hours').value||3),
+      repeat_gap_min:Number(qs('#gap').value||90),seed:(qs('#seed').value.trim()||undefined)?String(qs('#seed').value.trim()):undefined,limit:500};
+    
+    if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML=''; qs('#ytOpen').style.display='none';
+    qs('#list').innerHTML=''; lastTracks=[]; resolvedSongIds=[];
+    
+    try{
+      const r=await withTimeout(fetch(`${API}/v1/simulate`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}));
+      if(!r.ok){ const txt=await r.text().catch(()=> ''); throw new Error(`simulate ${r.status}: ${txt}`); }
+      const data=await r.json(); lastTracks=data.tracks||[];
+      if(!lastTracks.length){ 
+        qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned. Try a different date/genre.'; 
+        qs('#amMsg').textContent='No tracks returned. Try a different date/genre.';
+        return false;
       }
-      if (!inst) throw new Error('MusicKit instance not ready');
-
-      inst.storefrontId = storefront || 'us';
-      music = inst;
-      wireNowPlayingHandlers(music);
-      return music;
-    })().catch(e=>{ musicInitPromise = null; throw e; });
-  }
-  return musicInitPromise;
-}
-
-/* ---------- Now playing title (uses /v1/apple/song-meta) ---------- */
-async function fetchSongMeta(id, storefront) {
-  const r = await fetch(`${API}/v1/apple/song-meta?id=${encodeURIComponent(id)}&storefront=${encodeURIComponent(storefront||'us')}`);
-  if (!r.ok) return null;
-  return r.json(); // { id, name, artistName, url }
-}
-function renderNow(title, artist) {
-  const el = qs('#amNow');
-  if (!el) return;
-  const t = [artist, title].filter(Boolean).join(' — ');
-  el.textContent = t || '—';
-}
-function wireNowPlayingHandlers(music) {
-  const update = async () => {
-    const item = music.nowPlayingItem;
-    if (!item) { renderNow('', ''); amCurrentSongURL = null; return; }
-    let title = item.title || item.attributes?.name;
-    let artist = item.artistName || item.attributes?.artistName;
-    amCurrentSongURL = null;
-
-    const songId = item.id || item.playParams?.catalogId;
-    if ((!title || !artist) && songId) {
-      const meta = await fetchSongMeta(songId, music.storefrontId || 'us');
-      if (meta) { title = meta.name; artist = meta.artistName; amCurrentSongURL = meta.url || null; }
+      renderList(lastTracks);
+      return true;
+    }catch(err){ 
+      qs('#ytStatus').textContent=''; qs('#ytErr').textContent=err.message||String(err);
+      qs('#amMsg').textContent='Error: '+(err.message||String(err));
+      return false;
     }
-    renderNow(title, artist);
-  };
-  music.addEventListener('mediaItemDidChange', update);
-  update();
-}
-
-/* ---------- Apple: Create playlist via backend ---------- */
-async function amCreatePlaylist(){
-  try{
-    const m = await getWebMusicInstance();
-    if(!m.isAuthorized) await m.authorize();
-    if(!lastTracks?.length){ qs('#amMsg').textContent='Generate a tracklist first.'; return; }
-
-    qs('#amMsg').textContent='Creating playlist…';
-    const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
-    const body = {
-      userToken: m.musicUserToken,
-      name,
-      tracks: lastTracks.map(t=>({ artist:t.artist, title:t.title }))
-    };
-    const r = await withTimeout(fetch(`${API}/v1/apple/create-playlist`, {
-      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
-    }));
-    const j = await r.json().catch(()=> ({}));
-    if(!r.ok){ throw new Error(j.detail || `Create failed (${r.status})`); }
-
-    qs('#amMsg').textContent = `Playlist created! Added ${j.added_count} of ${j.total_tracks}.`;
-  }catch(e){
-    console.error('[AM Create] failed', e);
-    qs('#amMsg').textContent = 'Create failed: ' + (e.message || e);
   }
-}
+  
+  async function simulate(){
+    const btn = qs('#go');
+    btn.disabled = true; btn.textContent = 'Building…';
+    qs('#ytStatus').textContent='Building…'; qs('#ytErr').textContent='';
+    qs('#amMsg').textContent='Building playlist…';
 
-/* ---------- Apple: Built-in play (search → queue) ---------- */
-async function amPlayBuiltIn(){
-  if(!lastTracks?.length){ qs('#amMsg').textContent='Generate a tracklist first.'; return; }
-  try{
-    const m = await getWebMusicInstance();
-    if(!m.isAuthorized) await m.authorize();
+    const success = await fetchSimulation();
+    btn.disabled = false; btn.textContent = 'Generate';
+    
+    if(success){
+      qs('#amPlayLocal').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
+      qs('#amMsg').textContent='Playlist ready. Sign in and create it, or use the built-in player.';
 
-    qs('#amMsg').textContent = `Searching ${lastTracks.length} tracks…`;
-    const songIds = [];
-    let i=0;
-    for (const t of lastTracks) {
-      i++;
-      if (i%6===0) qs('#amMsg').textContent = `Searching… (${i}/${lastTracks.length})`;
-      try{
-        // Try "artist title", then "artist - title" if needed
-        let res = await m.api.search(`${t.artist} ${t.title}`, { types:['songs'], limit:1, storefront: m.storefrontId || 'us' });
-        if (!res?.songs?.data?.length) {
-          res = await m.api.search(`${t.artist} - ${t.title}`, { types:['songs'], limit:1, storefront: m.storefrontId || 'us' });
+      if(qs('.tab[data-tab="yt"]').classList.contains('active')){
+        buildYtPlayer(lastTracks);
+      }
+    }
+  }
+
+  async function buildYtPlayer(tracks){
+    if(!tracks?.length) return;
+    qs('#ytStatus').textContent='Resolving YouTube videos…'; qs('#ytErr').textContent='';
+    try {
+      const r = await withTimeout(fetch(`${API}/v1/yt/resolve`, {
+        method: 'POST', headers: {'content-type': 'application/json'},
+        body: JSON.stringify({tracks, limit: 50})
+      }));
+      if(!r.ok){ const txt=await r.text().catch(()=>''); throw new Error(`yt/resolve ${r.status}: ${txt}`); }
+      const {ids} = await r.json();
+      if(!ids?.length) throw new Error('No YouTube videos found for this playlist.');
+      
+      qs('#ytStatus').textContent='Loading player…';
+      if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML='';
+
+      let tries=0; while(!YTapiReady && tries<100){ await sleep(100); tries++; }
+      if(!YTapiReady) throw new Error('YouTube API failed to load.');
+
+      player = new YT.Player('ytp', {
+        height: '360', width: '640',
+        playerVars: {
+          playlist: ids.join(','),
+          autoplay: 1,
+          controls: 1,
+          loop: 1
+        },
+        events: {
+          'onReady': () => {
+            qs('#ytStatus').textContent = `Playing ${ids.length} videos.`;
+            const plUrl = `https://www.youtube.com/playlist?list=${ids.join(',')}`;
+            const openBtn = qs('#ytOpen');
+            openBtn.href = plUrl;
+            openBtn.style.display = 'inline-block';
+          },
+          'onError': (e) => {
+             qs('#ytErr').textContent = `Youtubeer Error: ${e.data}`;
+          }
         }
-        if (res?.songs?.data?.length) songIds.push(res.songs.data[0].id);
-      }catch(e){ /* ignore individual failures */ }
-      await delay(90);
+      });
+    } catch(err) {
+      qs('#ytStatus').textContent=''; qs('#ytErr').textContent=err.message||String(err);
     }
-    if (!songIds.length){ qs('#amMsg').textContent='No Apple matches found.'; return; }
-
-    await m.setQueue({ songs: songIds });
-    await guardedPlayPause('play');
-    qs('#amMsg').textContent = `Now playing ${songIds.length} tracks.`;
-  }catch(e){
-    console.error('[AM Play] failed', e);
-    qs('#amMsg').textContent = 'Playback failed: ' + (e.message || e);
   }
-}
 
-/* ---------- Guarded play/pause & transport ---------- */
-async function guardedPlayPause(intent='toggle'){
-  const m = await getWebMusicInstance();
-  if (amPlayLock) return;
-  amPlayLock = true;
-  try{
-    const PS = window.MusicKit.PlaybackState;
-    const st = m.playbackState;
-    if (intent==='play'){
-      if (st!==PS.playing) await m.play();
-    } else if (intent==='pause'){
-      if (st===PS.playing || st===PS.loading || st===PS.buffering) await m.pause();
-    } else {
-      if (st===PS.playing || st===PS.loading || st===PS.buffering) await m.pause();
-      else await m.play();
+  function renderList(rows){
+    if(!rows?.length){ qs('#list').innerHTML='<div class="muted">No tracks.</div>'; return; }
+    const frag=document.createDocumentFragment();
+    rows.slice(0,500).forEach(t=>{
+      const d=document.createElement('div'); d.className='row';
+      d.innerHTML=`<div class="ts">${t.timestamp.replace('T',' ')}</div>
+                <div><strong>${t.artist}</strong> — <em>${t.title}</em>
+                <span class="muted">• ${t.source_rank ?? ''}</span></div>`;
+      frag.appendChild(d);
+    });
+    qs('#list').replaceChildren(frag);
+  }
+
+  /* ===== MusicKit setup ===== */
+  let music=null, musicInitPromise=null;
+  function waitForMusicKitLoaded(timeoutMs=10000){
+    if(window.MusicKit && typeof window.MusicKit.configure==='function') return Promise.resolve();
+    return new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(new Error('MusicKit load timed out')),timeoutMs);
+      window.addEventListener('musickitloaded',()=>{clearTimeout(t); resolve();},{once:true});});
+  }
+  async function fetchDeveloperToken(){
+    if(DEV_TOKEN) return DEV_TOKEN;
+    const r=await withTimeout(fetch(`${API}/v1/apple/dev-token`,{headers:{accept:'application/json'}}));
+    if(!r.ok) throw new Error(`dev-token ${r.status}`);
+    const {token}=await r.json(); if(!token||token.trim().length<20) throw new Error('Invalid developer token');
+    DEV_TOKEN=token.trim(); return DEV_TOKEN;
+  }
+  async function getWebMusicInstance(force=false){
+    if(music && !force) return music;
+    if(!musicInitPromise || force){
+      musicInitPromise=(async()=>{
+        await waitForMusicKitLoaded();
+        const developerToken=await fetchDeveloperToken();
+        window.MusicKit.configure({developerToken,app:{name:'TapeDeck Time Machine',build:'web'}});
+        let inst=null; for(let i=0;i<40;i++){try{inst=window.MusicKit.getInstance();}catch{} if(inst) break; await sleep(50);}
+        if(!inst) throw new Error('MusicKit instance missing');
+        const stored=localStorage.getItem('appleMusicUserToken'); if(stored) inst.musicUserToken=stored;
+
+        if(!inst._tdtmBound){
+          inst._tdtmBound=true;
+          
+          // UPDATED: This listener ONLY handles updating the song title/artist text
+          inst.addEventListener('nowPlayingItemDidChange',()=>{
+            updateNowPlaying(inst,true);
+          });
+          
+          // UPDATED: This listener ONLY handles the play/pause icon and clearing text on stop
+          inst.addEventListener('playbackStateDidChange',(evt)=>{
+            const PS=window.MusicKit?.PlaybackStates||{};
+            const isPlaying=evt?.state===PS.playing;
+            setPlayIcon(isPlaying);
+            
+            // Clear text if playback stops or completes
+            if(evt.state === PS.stopped || evt.state === PS.completed) {
+                mini.title.textContent = '—';
+                mini.artist.textContent = '—';
+                mini.open.href = '#';
+            }
+          });
+        }
+        music=inst; return music;
+      })().catch(e=>{musicInitPromise=null; throw e;});
     }
-  } finally { amPlayLock = false; }
-}
+    return musicInitPromise;
+  }
 
-/* ---------- Wire UI ---------- */
-qs('#go').onclick = simulate;
-qs('#amCreate').onclick = amCreatePlaylist;
-qs('#amPlay').onclick = amPlayBuiltIn;
+  /* ===== REMOVED: Apple embed helpers (toEmbedUrl, showEmbed, etc) ===== */
 
-qs('#btnPrev').onclick = async ()=>{ try{ const m = await getWebMusicInstance(); await m.skipToPreviousItem(); }catch(e){} };
-qs('#btnNext').onclick = async ()=>{ try{ const m = await getWebMusicInstance(); await m.skipToNextItem(); }catch(e){} };
-qs('#btnPlayPause').onclick = ()=> guardedPlayPause('toggle');
-qs('#btnOpen').onclick = ()=>{ if (amCurrentSongURL) window.open(amCurrentSongURL,'_blank','noopener'); else window.open('https://music.apple.com/','_blank','noopener'); };
+  /* ===== Sign-in / Create / Play ===== */
+  function showAmControls(){
+    qs('#amSign').style.display='none';
+    qs('#amCreate').style.display='inline-block';
+    qs('#amPlayLocal').style.display = lastTracks.length ? 'inline-block' : 'none';
+  }
 
-/* ---------- Defaults ---------- */
-setTab('am');
+  async function amSignIn(){
+    try{
+      qs('#amMsg').textContent='Contacting Apple…';
+      let m=await getWebMusicInstance(true);
+      const tok=await m.authorize(); await sleep(100);
+      if(!tok||tok.length<20){qs('#amMsg').textContent='Sign-in cancelled or failed. Apple Music subscription required.';return;}
+      localStorage.setItem('appleMusicUserToken',tok); m.musicUserToken=tok; await getWebMusicInstance(true);
+      qs('#amMsg').textContent='Signed in. Create your playlist or use the built-in player.'; showAmControls();
+    }catch(e){qs('#amMsg').textContent='Sign-in failed: '+(e.message||e);}
+  }
+
+  async function amCreatePlaylist(){
+    const userToken=localStorage.getItem('appleMusicUserToken');
+    if(!userToken){qs('#amMsg').textContent='Please sign in first.'; return;}
+    if(!lastTracks?.length){qs('#amMsg').textContent='Generate a tracklist first.'; return;}
+    qs('#amMsg').textContent='Creating playlist…';
+    try{
+      const name=`TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
+      const r=await withTimeout(fetch(`${API}/v1/apple/create-playlist`,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({userToken,name,tracks:lastTracks.map(t=>({artist:t.artist,title:t.title}))})}));
+      if(!r.ok){ const j=await r.json().catch(()=>({detail:'Unknown error during create'})); throw new Error(j.detail||`Create failed with status ${r.status}`); }
+      const j=await r.json();
+      
+      // REMOVED: All embed logic
+      
+      qs('#amMsg').textContent=`Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks.`;
+      qs('#amPlayLocal').style.display='inline-block';
+
+    }catch(e){qs('#amMsg').textContent='Create failed: '+(e.message||String(e));}
+  }
+
+  /* ===== Catalog helpers (backend-first) ===== */
+  async function backendSongMeta(id,storefront='us'){
+    const url=`${API}/v1/apple/song-meta?id=${encodeURIComponent(id)}&storefront=${encodeURIComponent(storefront)}`;
+    const r=await withTimeout(fetch(url),15000);
+    if(!r.ok) throw new Error('backend meta not available');
+    return r.json();
+  }
+  async function appleSongById(id,storefront='us'){
+    const dev=await fetchDeveloperToken();
+    const url=`https://api.music.apple.com/v1/catalog/${encodeURIComponent(storefront)}/songs/${encodeURIComponent(id)}`;
+    const r=await withTimeout(fetch(url,{headers:{Authorization:`Bearer ${dev}`}}),15000);
+    if(!r.ok) return null; const j=await r.json(); return j?.data?.[0]?.attributes||null;
+  }
+  async function appleCatalogSearch(term,storefront='us',limit=1){
+    const dev=await fetchDeveloperToken();
+    const url=new URL(`https://api.music.apple.com/v1/catalog/${encodeURIComponent(storefront)}/search`);
+    url.searchParams.set('term',term); url.searchParams.set('types','songs'); url.searchParams.set('limit',String(limit));
+    const r=await withTimeout(fetch(url.toString(),{headers:{Authorization:`Bearer ${dev}`}}),15000);
+    if(!r.ok) throw new Error(`Apple search ${r.status}`); return r.json();
+  }
+  async function appleCatalogResolveList(tracks,storefront){
+    const ids=[]; for(let i=0;i<tracks.length;i++){
+      const t=tracks[i];
+      if((i+1)%5===0||i+1===tracks.length) qs('#amMsg').textContent=`Resolving… (${i+1}/${tracks.length})`;
+      try{
+        const term=`${t.artist} ${t.title}`.replace(/\s+\(.*?\)|-+\s*(radio edit|remaster.*|remix.*)/ig,'').trim();
+        const res=await appleCatalogSearch(term,storefront,1);
+        const id=res?.results?.songs?.data?.[0]?.id; if(id) ids.push(id);
+        await sleep(50);
+      }catch{}
+    }
+    return ids;
+  }
+
+  async function buildLocalQueueAndPlay(){
+    let m=await getWebMusicInstance(); if(!m.musicUserToken){qs('#amMsg').textContent='Please sign in to Apple Music first.'; return;}
+    if(!lastTracks?.length){qs('#amMsg').textContent='Generate a tracklist first.'; return;}
+    const storefront=m.storefrontId||'us';
+    if(!resolvedSongIds.length){ qs('#amMsg').textContent=`Resolving ${lastTracks.length} tracks for playback…`;
+      resolvedSongIds=await appleCatalogResolveList(lastTracks,storefront); }
+    if(!resolvedSongIds.length){ qs('#amMsg').textContent='No playable tracks were found in Apple Music.'; return; }
+
+    try{ if(m.player?.playbackState===MusicKit.PlaybackStates.playing) await m.pause(); }catch{}
+    qs('#amMsg').textContent='Preparing player…';
+    await m.setQueue({songs:resolvedSongIds}); await sleep(50);
+    await m.play();
+    qs('#mini').style.display='block';
+    qs('#amMsg').textContent=`Now playing ${resolvedSongIds.length} tracks.`;
+  }
+
+  /* ===== Mini-player UI ===== */
+  const mini={title:qs('#miniTitle'),artist:qs('#miniArtist'),
+        btnPrev:qs('#btnPrev'),btnPlayPause:qs('#btnPlayPause'),btnNext:qs('#btnNext'),open:qs('#miniOpen')};
+
+  function setPlayIcon(isPlaying){ mini.btnPlayPause.textContent=isPlaying?'⏸':'▶'; mini.btnPlayPause.title=isPlaying?'Pause':'Play'; }
+  function readMeta(item){
+    const a=item?.attributes||{};
+    const title=a.name || a.title || item?.title || item?.name || '';
+    const artist=a.artistName || item?.artistName || a.artist || item?.artist || '';
+    const url=a.url || '';
+    const id=a.playParams?.id || item?.id || '';
+    return {title,artist,url,id};
+  }
+  
+  // UPDATED: This function is now simpler and only called when the item changes
+  async function updateNowPlaying(m,tryFetchIfMissing){
+    const it=m?.player?.nowPlayingItem;
+    
+    if(!it){
+      mini.title.textContent = '—';
+      mini.artist.textContent = '—';
+      mini.open.href = '#';
+      return;
+    }
+
+    let {title,artist,url,id}=readMeta(it);
+    
+    if(tryFetchIfMissing && id && (!title || !artist)){
+      try{
+        const meta=await backendSongMeta(id,m.storefrontId||'us');
+        title=title||meta?.name; artist=artist||meta?.artistName; url=url||meta?.url;
+      }catch{
+        const attrs=await appleSongById(id,m.storefrontId||'us');
+        if(attrs){ title=title||attrs.name; artist=artist||attrs.artistName; url=url||attrs.url; }
+      }
+    }
+    mini.title.textContent=title||'—';
+    mini.artist.textContent=artist||'—';
+    if(url) mini.open.href=url;
+  }
+
+  // This click handler is correct: it toggles state, which fires the event listener
+  mini.btnPlayPause.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    const m=await getWebMusicInstance(); if(!m?.player) return;
+    const now=Date.now(); if(now-lastToggleTS<350) return; lastToggleTS=now;
+    const PS=window.MusicKit.PlaybackStates;
+    try{
+      switch(m.player.playbackState){
+        case PS.playing: await m.pause(); break;
+        case PS.paused:
+        case PS.stopped:
+        case PS.completed:
+        default: await m.play(); break;
+      }
+    }catch{}
+  });
+  mini.btnPrev.onclick=async()=>{ const m=await getWebMusicInstance(); try{ await m.skipToPreviousItem(); }catch{} };
+  mini.btnNext.onclick=async()=>{ const m=await getWebMusicInstance(); try{ await m.skipToNextItem(); }catch{} };
+
+  /* ===== Right panel (viz) ===== */
+  document.querySelectorAll('#pane-am-right .tab').forEach(b=>{
+    b.onclick=()=>{ document.querySelectorAll('#pane-am-right .tab').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+      const k=b.dataset.side; qs('#side-viz').style.display=k==='viz'?'':'none';
+      qs('#side-capsule').style.display=k==='capsule'?'':'none';
+      if(k==='viz') startViz(); else stopViz();
+    };
+  });
+  let vizRAF=0;
+  function startViz(){
+    const c=qs('#viz'); if(!c) return; const ctx=c.getContext('2d'); let t=0;
+    cancelAnimationFrame(vizRAF);
+    const loop=()=>{ const w=c.width,h=c.height; ctx.clearRect(0,0,w,h);
+      const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#8b5cf6'); g.addColorStop(1,'#22d3ee'); ctx.fillStyle=g;
+      const bars=48,pad=6; for(let i=0;i<bars;i++){ const p=i/(bars-1); const phase=t*0.05+i*0.35; const amp=(Math.sin(phase)+1)/2;
+        const ease=0.8-Math.abs(p-0.5); const hBar=(amp*ease)*h*0.9+6; const bw=(w-pad*(bars+1))/bars; const x=pad+i*(bw+pad); const y=h-hBar;
+        ctx.fillRect(x,y,bw,hBar); ctx.globalAlpha=0.08; ctx.fillRect(x,y-12,bw,hBar+24); ctx.globalAlpha=1; }
+      t+=1; vizRAF=requestAnimationFrame(loop); };
+    vizRAF=requestAnimationFrame(loop);
+  }
+  function stopViz(){ cancelAnimationFrame(vizRAF); vizRAF=0; }
+
+  /* ===== Init ===== */
+  (function(){
+    const tok=localStorage.getItem('appleMusicUserToken');
+    if(tok){ qs('#amMsg').textContent='Signed in. Create your playlist or use the built-in player.'; showAmControls(); }
+    // REMOVED: embed check
+  })();
+
+  /* ===== Wire buttons ===== */
+  qs('#go').onclick=simulate;
+  qs('#amSign').onclick=amSignIn;
+  qs('#amCreate').onclick=amCreatePlaylist;
+  // REMOVED: amPlayEmbed onclick
+  qs('#amPlayLocal').onclick=buildLocalQueueAndPlay;
+  // REMOVED: copyLink (was part of embed)
+
+  setTab('am'); startViz();
 </script>
+
 </body>
 </html>
