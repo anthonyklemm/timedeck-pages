@@ -91,6 +91,8 @@
 
     @media (max-width:900px){
       .cols{grid-template-columns:1fr}
+      /* Ensure Spotify pane spans full width on single column */
+      #pane-sp { grid-column: span 1 / span 1; }
       .grid{grid-template-columns: 1fr 1fr; gap: 10px;}
       #ytp iframe{min-height:220px}
     }
@@ -182,7 +184,7 @@
         </div>
       </div>
 
-      <!-- NEW: Spotify Pane (spans two columns visually if only one column is shown) -->
+      <!-- NEW: Spotify Pane -->
       <div class="panel box" id="pane-sp" style="display:none; grid-column: span 2 / span 2;">
         <p class="muted" style="margin-bottom:8px">
           Sign in to your Spotify account to create and save playlists.
@@ -212,7 +214,6 @@
 <script>
   /* ===== Helpers & config ===== */
   const qs = s => document.querySelector(s);
-  // Ensure API points to your deployed backend (or localhost for local testing)
   const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
   const NET_TIMEOUT_MS = 180000;
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
@@ -221,20 +222,19 @@
   /* ===== Tabs ===== */
   function setTab(id){
     document.querySelectorAll('.tab[data-tab]').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
-    // UPDATED: Include Spotify pane
+    // UPDATED: Include Spotify pane logic
     const yt=qs('#pane-yt'), aml=qs('#pane-am-left'), amr=qs('#pane-am-right'), sp=qs('#pane-sp');
-    // Hide all main panes initially
     aml.style.display='none'; amr.style.display='none'; yt.style.display='none'; sp.style.display='none';
 
     if(id==='yt'){
-      yt.style.display=''; // Show YouTube pane
-      // If tracks exist and player isn't initialized, build it
+      yt.style.display='';
       if(lastTracks.length > 0 && !player) buildYtPlayer(lastTracks);
     } else if (id === 'sp') {
       sp.style.display=''; // Show Spotify pane
-      // Apple Music right pane (visualizer) is hidden when Spotify is active
+      // Ensure Apple Music right pane (viz) is hidden when Spotify is active
+      amr.style.display='none';
     } else { // Default to Apple Music
-      aml.style.display=''; // Show AM left pane
+      aml.style.display='';
       amr.style.display=''; // Show AM right pane (visualizer)
     }
   }
@@ -303,44 +303,108 @@
     }
   }
 
-  async function buildYtPlayer(tracks){ /* ... No changes needed here ... */ }
+  async function buildYtPlayer(tracks){
+    if(!tracks?.length) return;
+    qs('#ytStatus').textContent='Resolving YouTube videos…'; qs('#ytErr').textContent='';
+    try {
+      const r = await withTimeout(fetch(`${API}/v1/yt/resolve`, {
+        method: 'POST', headers: {'content-type': 'application/json'},
+        body: JSON.stringify({tracks, limit: 50})
+      }));
+      if(!r.ok){ const txt=await r.text().catch(()=>''); throw new Error(`yt/resolve ${r.status}: ${txt}`); }
+      const {ids} = await r.json();
+      if(!ids?.length) throw new Error('No YouTube videos found for this playlist.');
 
-  function renderList(rows){ /* ... No changes needed here ... */ }
+      qs('#ytStatus').textContent='Loading player…';
+      if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML='';
+
+      let tries=0; while(!YTapiReady && tries<100){ await sleep(100); tries++; }
+      if(!YTapiReady) throw new Error('YouTube API failed to load.');
+
+      player = new YT.Player('ytp', {
+        height: '360', width: '640',
+        playerVars: { playlist: ids.join(','), autoplay: 1, controls: 1, loop: 1 },
+        events: {
+          'onReady': () => {
+            qs('#ytStatus').textContent = `Playing ${ids.length} videos.`;
+            const plUrl = `https://www.youtube.com/playlist?list=${ids.join(',')}`;
+            qs('#ytOpen').href = plUrl;
+            qs('#ytOpen').style.display = 'inline-block';
+          },
+          'onError': (e) => { qs('#ytErr').textContent = `Youtubeer Error: ${e.data}`; }
+        }
+      });
+    } catch(err) {
+      qs('#ytStatus').textContent=''; qs('#ytErr').textContent=err.message||String(err);
+    }
+  }
+
+  function renderList(rows){
+    if(!rows?.length){ qs('#list').innerHTML='<div class="muted">No tracks.</div>'; return; }
+    const frag=document.createDocumentFragment();
+    rows.slice(0,500).forEach(t=>{
+      const d=document.createElement('div'); d.className='row';
+      d.innerHTML=`<div class="ts">${t.timestamp.replace('T',' ')}</div>
+                <div><strong>${t.artist}</strong> — <em>${t.title}</em>
+                <span class="muted">• ${t.source_rank ?? ''}</span></div>`;
+      frag.appendChild(d);
+    });
+    qs('#list').replaceChildren(frag);
+  }
 
   /* ===== MusicKit setup ===== */
   let music=null, musicInitPromise=null;
-  function waitForMusicKitLoaded(timeoutMs=10000){ /* ... No changes needed here ... */ }
-  async function fetchDeveloperToken(){ /* ... No changes needed here ... */ }
-  async function getWebMusicInstance(force=false){ /* ... No changes needed here ... */ }
+  function waitForMusicKitLoaded(timeoutMs=10000){ /* ... No changes ... */ }
+  async function fetchDeveloperToken(){ /* ... No changes ... */ }
+  async function getWebMusicInstance(force=false){ /* ... No changes ... */ }
 
   /* ===== Sign-in / Create / Play (Apple Music) ===== */
-  function showAmControls(){ /* ... No changes needed here ... */ }
-  async function amSignIn(){ /* ... No changes needed here ... */ }
-  async function amCreatePlaylist(){ /* ... No changes needed here ... */ }
+  function showAmControls(){ /* ... No changes ... */ }
+  async function amSignIn(){ /* ... No changes ... */ }
+
+  // UPDATED: amCreatePlaylist to use new name format
+  async function amCreatePlaylist(){
+    const userToken=localStorage.getItem('appleMusicUserToken');
+    if(!userToken){qs('#amMsg').textContent='Please sign in first.'; return;}
+    if(!lastTracks?.length){qs('#amMsg').textContent='Generate a tracklist first.'; return;}
+    qs('#amMsg').textContent='Creating playlist…';
+    try{
+      // UPDATED: Playlist name format
+      const name=`TapeDeckTimeMachine - ${qs('#date').value} - ${qs('#genre').value}`;
+      const r=await withTimeout(fetch(`${API}/v1/apple/create-playlist`,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({userToken,name,tracks:lastTracks.map(t=>({artist:t.artist,title:t.title}))})}));
+      if(!r.ok){ const j=await r.json().catch(()=>({detail:'Unknown error during create'})); throw new Error(j.detail||`Create failed with status ${r.status}`); }
+      const j=await r.json();
+
+      qs('#amMsg').textContent=`Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks.`;
+      qs('#amPlayLocal').style.display='inline-block';
+
+    }catch(e){qs('#amMsg').textContent='Create failed: '+(e.message||String(e));}
+  }
 
   /* ===== Catalog helpers (Apple Music) ===== */
-  async function backendSongMeta(id,storefront='us'){ /* ... No changes needed here ... */ }
-  async function appleSongById(id,storefront='us'){ /* ... No changes needed here ... */ }
-  async function appleCatalogSearch(term,storefront='us',limit=1){ /* ... No changes needed here ... */ }
-  async function appleCatalogResolveList(tracks,storefront){ /* ... No changes needed here ... */ }
+  async function backendSongMeta(id,storefront='us'){ /* ... No changes ... */ }
+  async function appleSongById(id,storefront='us'){ /* ... No changes ... */ }
+  async function appleCatalogSearch(term,storefront='us',limit=1){ /* ... No changes ... */ }
+  async function appleCatalogResolveList(tracks,storefront){ /* ... No changes ... */ }
 
-  async function buildLocalQueueAndPlay(){ /* ... No changes needed here ... */ }
+  async function buildLocalQueueAndPlay(){ /* ... No changes ... */ }
 
   /* ===== Mini-player UI (Apple Music) ===== */
   const mini={title:qs('#miniTitle'),artist:qs('#miniArtist'),
         btnPrev:qs('#btnPrev'),btnPlayPause:qs('#btnPlayPause'),btnNext:qs('#btnNext'),open:qs('#miniOpen')};
-  function setPlayIcon(isPlaying){ /* ... No changes needed here ... */ }
-  function readMeta(item){ /* ... No changes needed here ... */ }
-  async function updateNowPlaying(m,tryFetchIfMissing){ /* ... No changes needed here ... */ }
-  mini.btnPlayPause.addEventListener('click', async (e)=>{ /* ... No changes needed here ... */ });
-  mini.btnPrev.onclick=async()=>{ /* ... No changes needed here ... */ };
-  mini.btnNext.onclick=async()=>{ /* ... No changes needed here ... */ };
+  function setPlayIcon(isPlaying){ /* ... No changes ... */ }
+  function readMeta(item){ /* ... No changes ... */ }
+  async function updateNowPlaying(m,tryFetchIfMissing){ /* ... No changes ... */ }
+  mini.btnPlayPause.addEventListener('click', async (e)=>{ /* ... No changes ... */ });
+  mini.btnPrev.onclick=async()=>{ /* ... No changes ... */ };
+  mini.btnNext.onclick=async()=>{ /* ... No changes ... */ };
 
   /* ===== Right panel (viz) ===== */
-  document.querySelectorAll('#pane-am-right .tab').forEach(b=>{ /* ... No changes needed here ... */ });
+  document.querySelectorAll('#pane-am-right .tab').forEach(b=>{ /* ... No changes ... */ });
   let vizRAF=0;
-  function startViz(){ /* ... No changes needed here ... */ }
-  function stopViz(){ /* ... No changes needed here ... */ }
+  function startViz(){ /* ... No changes ... */ }
+  function stopViz(){ /* ... No changes ... */ }
 
   /* ===== Init ===== */
   (function(){
@@ -348,17 +412,17 @@
     const tok=localStorage.getItem('appleMusicUserToken');
     if(tok){ qs('#amMsg').textContent='Signed in. Create your playlist or use the built-in player.'; showAmControls(); }
 
-    // NEW: Spotify Init & Callback Handling
+    // UPDATED: Spotify Init & Callback Handling
     const spTok = localStorage.getItem('spotifyAccessToken');
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
+    const hash = window.location.hash.substring(1); // Get fragment part of URL
+    const params = new URLSearchParams(hash); // Parse fragment like query string
     const spotifyToken = params.get('access_token');
     const spotifyError = params.get('spotify_error');
 
     if (spotifyError) {
         console.error("Spotify Login Error:", spotifyError);
         qs('#spMsg').textContent = `Spotify login failed: ${spotifyError}. Please try again.`;
-        // Clear hash potentially containing error
+        // Clean the hash from the URL
         window.history.pushState("", document.title, window.location.pathname + window.location.search);
     } else if (spotifyToken) {
         console.log("Spotify access token found in URL hash.");
@@ -366,20 +430,23 @@
         // Optionally store refresh token and expiry if needed later
         // localStorage.setItem('spotifyRefreshToken', params.get('refresh_token'));
         // localStorage.setItem('spotifyTokenExpires', Date.now() + (parseInt(params.get('expires_in') || '3600') * 1000));
+
+        // Update UI immediately after getting token from hash
         qs('#spSign').style.display = 'none';
-        qs('#spCreate').style.display = 'inline-block';
+        qs('#spCreate').style.display = 'inline-block'; // Show create button now
         qs('#spMsg').textContent = 'Signed in to Spotify.';
         // Clean the hash from the URL
         window.history.pushState("", document.title, window.location.pathname + window.location.search);
-        setTab('sp'); // Switch to Spotify tab automatically after successful login
-    } else if (spTok) { // Check localStorage if not in hash
+        // Switch to Spotify tab automatically after successful login ONLY if directed from callback
+        setTab('sp');
+    } else if (spTok) { // Check localStorage if not in hash (e.g., page refresh after login)
         console.log("Spotify access token found in localStorage.");
         qs('#spSign').style.display = 'none';
         qs('#spCreate').style.display = 'inline-block';
         qs('#spMsg').textContent = 'Signed in to Spotify.';
     } else {
         console.log("No Spotify access token found.");
-        qs('#spMsg').textContent = 'Sign in to create Spotify playlists.'; // Default message
+        qs('#spMsg').textContent = 'Sign in to create Spotify playlists.'; // Default message if not logged in
     }
   })();
 
@@ -390,7 +457,7 @@
   qs('#amCreate').onclick=amCreatePlaylist;
   qs('#amPlayLocal').onclick=buildLocalQueueAndPlay;
 
-  // NEW: Wire Spotify Buttons
+  // UPDATED: Wire Spotify Buttons
   qs('#spSign').onclick = () => {
     // Redirects to backend which redirects to Spotify
     window.location.href = `${API}/v1/spotify/login`;
@@ -416,7 +483,8 @@
       qs('#spMsg').textContent = 'Creating Spotify playlist... (this may take a moment)';
 
       try {
-          const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
+          // UPDATED: Playlist name format
+          const name = `TapeDeckTimeMachine - ${qs('#date').value} - ${qs('#genre').value}`;
           const body = {
               accessToken: token, // Send the token retrieved from localStorage
               name: name,
@@ -430,38 +498,32 @@
           }), NET_TIMEOUT_MS); // Use timeout
 
           if (!r.ok) {
-              // Try to parse error detail from backend
               let errorDetail = `Request failed with status ${r.status}`;
               try {
                   const j = await r.json();
                   errorDetail = j.detail || errorDetail;
-              } catch (parseError) { /* Ignore if response is not JSON */ }
+              } catch (parseError) { /* Ignore */ }
 
-              // Handle specific 401 Unauthorized error - likely expired token
               if (r.status === 401 || r.status === 403) {
                   errorDetail += ' Your Spotify session may have expired. Please sign in again.';
-                  localStorage.removeItem('spotifyAccessToken'); // Clear expired token
-                  qs('#spSign').style.display = 'inline-block'; // Show sign-in
-                  qs('#spCreate').style.display = 'none'; // Hide create
+                  localStorage.removeItem('spotifyAccessToken');
+                  qs('#spSign').style.display = 'inline-block';
+                  qs('#spCreate').style.display = 'none';
               }
               throw new Error(errorDetail);
           }
 
           const result = await r.json();
           let message = `Spotify playlist created! Added ${result.added_count} of ${result.total_tracks} tracks.`;
-          // Add link if backend provided a URL
           if(result.url) {
-              // Use target="_blank" to open in new tab
               message += ` <a href="${result.url}" target="_blank" rel="noopener" class="btn" style="padding: 6px 10px; font-size: 0.9em;">Open Playlist</a>`;
           }
-          // Use innerHTML to allow the link tag to render
           qs('#spMsg').innerHTML = message;
 
       } catch (e) {
           console.error("Spotify Create Playlist Error:", e);
           qs('#spMsg').textContent = 'Error creating playlist: ' + (e.message || String(e));
-          // Check if it was a token error message from above
-          if (!localStorage.getItem('spotifyAccessToken')) {
+          if (!localStorage.getItem('spotifyAccessToken') && qs('#spSign').style.display === 'none') { // Check if token was removed due to error
               qs('#spSign').style.display = 'inline-block';
               qs('#spCreate').style.display = 'none';
           }
