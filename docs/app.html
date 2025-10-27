@@ -53,7 +53,7 @@
     label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
     input,select,button{width:100%; min-width: 0; padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
       background:#0c1422;color:var(--text);outline:none;font-size:1rem}
-
+    
     input[type="date"] { color-scheme: dark; }
     input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
 
@@ -91,6 +91,7 @@
       margin-bottom: 2px; /* Small space between title and artist */
     }
 
+    /* Right panel tabs */
     #pane-am-right .tab{padding:8px 12px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0c1422}
     #pane-am-right .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
 
@@ -209,7 +210,7 @@
     document.querySelectorAll('.tab[data-tab]').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
     const yt=qs('#pane-yt'), aml=qs('#pane-am-left'), amr=qs('#pane-am-right'), sp=qs('#pane-sp');
     aml.style.display='none'; amr.style.display='none'; yt.style.display='none'; sp.style.display='none';
-
+    
     if(id==='yt'){
       yt.style.display='';
       if(lastTracks.length > 0 && !player) buildYtPlayer(lastTracks);
@@ -232,30 +233,30 @@
   async function fetchSimulation(){
     const body={date:qs('#date').value.trim(),genre:qs('#genre').value,hours:Number(qs('#hours').value||3),
       repeat_gap_min:Number(qs('#gap').value||90),seed:(qs('#seed').value.trim()||undefined)?String(qs('#seed').value.trim()):undefined,limit:500};
-
+    
     if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML=''; qs('#ytOpen').style.display='none';
     qs('#list').innerHTML=''; lastTracks=[]; resolvedSongIds=[];
-
+    
     try{
       const r=await withTimeout(fetch(`${API}/v1/simulate`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}));
       if(!r.ok){ const txt=await r.text().catch(()=> ''); throw new Error(`simulate ${r.status}: ${txt}`); }
       const data=await r.json(); lastTracks=data.tracks||[];
-      if(!lastTracks.length){
-        qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned. Try a different date/genre.';
+      if(!lastTracks.length){ 
+        qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned. Try a different date/genre.'; 
         qs('#amMsg').textContent='No tracks returned. Try a different date/genre.';
         qs('#spMsg').textContent='No tracks returned. Try a different date/genre.';
         return false;
       }
       renderList(lastTracks);
       return true;
-    }catch(err){
+    }catch(err){ 
       qs('#ytStatus').textContent=''; qs('#ytErr').textContent=err.message||String(err);
       qs('#amMsg').textContent='Error: '+(err.message||String(err));
       qs('#spMsg').textContent='Error: '+(err.message||String(err));
       return false;
     }
   }
-
+  
   async function simulate(){
     const btn = qs('#go');
     btn.disabled = true; btn.textContent = 'Building…';
@@ -265,7 +266,7 @@
 
     const success = await fetchSimulation();
     btn.disabled = false; btn.textContent = 'Generate';
-
+    
     if(success){
       qs('#amPlayLocal').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
       qs('#amMsg').textContent='Playlist ready. Sign in and create it, or use the built-in player.';
@@ -290,7 +291,7 @@
       if(!r.ok){ const txt=await r.text().catch(()=>''); throw new Error(`yt/resolve ${r.status}: ${txt}`); }
       const {ids} = await r.json();
       if(!ids?.length) throw new Error('No YouTube videos found for this playlist.');
-
+      
       qs('#ytStatus').textContent='Loading player…';
       if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML='';
 
@@ -314,7 +315,7 @@
             openBtn.style.display = 'inline-block';
           },
           'onError': (e) => {
-             qs('#ytErr').textContent = `Youtubeer Error: ${e.data}`; // Typo: Youtubeer -> YouTube
+             qs('#ytErr').textContent = `Youtubeer Error: ${e.data}`;
           }
         }
       });
@@ -363,28 +364,28 @@
 
         if(!inst._tdtmBound){
           inst._tdtmBound=true;
-
-          // Reverted: This listener calls updateNowPlaying with delay
-          inst.addEventListener('nowPlayingItemDidChange', async ()=>{
-             await sleep(150); // Small delay for metadata
-             updateNowPlaying(inst,true);
+          
+          // UPDATED: This listener calls updateNowPlaying to handle text
+          inst.addEventListener('nowPlayingItemDidChange',()=>{
+            updateNowPlaying(inst,true);
           });
-
-          // Reverted: This listener handles Now Playing visibility based on state
+          
+          // UPDATED: This listener ONLY handles showing/hiding the Now Playing area
           inst.addEventListener('playbackStateDidChange',(evt)=>{
             const PS=window.MusicKit?.PlaybackStates||{};
-            const isPlaying=evt?.state===PS.playing;
+            const isPlaying = evt?.state === PS.playing;
 
-            if(evt.state === PS.stopped || evt.state === PS.completed) {
-              qs('#amNowPlaying').style.display = 'none';
+            if (isPlaying) {
+                 qs('#amMsg').style.display = 'none'; // Hide status message
+                 qs('#amNowPlaying').style.display = 'block'; // Show now playing
+            } else if(evt.state === PS.stopped || evt.state === PS.completed) {
+              qs('#amNowPlaying').style.display = 'none'; // Hide now playing
               qs('#amMsg').textContent = 'Playback finished.';
-              qs('#amMsg').style.display = '';
-            } else if (isPlaying) {
-              qs('#amMsg').style.display = 'none';
-              qs('#amNowPlaying').style.display = 'block';
-            } else { // Paused etc.
-              qs('#amMsg').style.display = 'none';
-              qs('#amNowPlaying').style.display = 'block';
+              qs('#amMsg').style.display = ''; // Show status message
+            } else {
+                 // Paused state - keep Now Playing visible
+                 qs('#amMsg').style.display = 'none';
+                 qs('#amNowPlaying').style.display = 'block';
             }
           });
         }
@@ -423,9 +424,8 @@
         body:JSON.stringify({userToken,name,tracks:lastTracks.map(t=>({artist:t.artist,title:t.title}))})}));
       if(!r.ok){ const j=await r.json().catch(()=>({detail:'Unknown error during create'})); throw new Error(j.detail||`Create failed with status ${r.status}`); }
       const j=await r.json();
-
+      
       qs('#amMsg').textContent=`Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks.`;
-      // Ensure Play button is visible after creating
       qs('#amPlayLocal').style.display='inline-block';
 
     }catch(e){qs('#amMsg').textContent='Create failed: '+(e.message||String(e));}
@@ -433,16 +433,10 @@
 
   /* ===== Catalog helpers (backend-first) ===== */
   async function backendSongMeta(id,storefront='us'){
-    // console.log(`Fetching backend metadata for ID: ${id}`); // Keep console logs temporarily removed for clarity unless needed
     const url=`${API}/v1/apple/song-meta?id=${encodeURIComponent(id)}&storefront=${encodeURIComponent(storefront)}`;
     const r=await withTimeout(fetch(url),15000);
-    if(!r.ok) {
-       // console.error(`Backend metadata fetch failed: ${r.status}`);
-       throw new Error('backend meta not available');
-    }
-    const data = await r.json();
-    // console.log('Backend metadata received:', data);
-    return data;
+    if(!r.ok) throw new Error('backend meta not available');
+    return r.json();
   }
   async function appleSongById(id,storefront='us'){
     const dev=await fetchDeveloperToken();
@@ -455,100 +449,55 @@
     const url=new URL(`https://api.music.apple.com/v1/catalog/${encodeURIComponent(storefront)}/search`);
     url.searchParams.set('term',term); url.searchParams.set('types','songs'); url.searchParams.set('limit',String(limit));
     const r=await withTimeout(fetch(url.toString(),{headers:{Authorization:`Bearer ${dev}`}}),15000);
-    // Add check for rate limiting or other errors
-    if (!r.ok) {
-        console.error(`Apple search failed for "${term}": ${r.status}`);
-        // Consider retrying or throwing a more specific error if needed
-        throw new Error(`Apple search ${r.status}`);
-    }
-    return r.json();
+    if(!r.ok) throw new Error(`Apple search ${r.status}`); return r.json();
   }
   async function appleCatalogResolveList(tracks,storefront){
-      console.log(`Resolving ${tracks.length} tracks via Apple Catalog Search...`);
-      const ids=[]; for(let i=0;i<tracks.length;i++){
-        const t=tracks[i];
-        if((i+1)%5===0||i+1===tracks.length) {
-            const msg = `Resolving… (${i+1}/${tracks.length})`;
-            qs('#amMsg').textContent = msg; // Update UI
-            console.log(msg); // Log progress
-        }
-        try{
-          // Refined term for potentially better matching
-          const term = `${t.artist} ${t.title}`.replace(/\s*\(.*?\)|feat\.|ft\./ig, '').replace(/[-:]/g, ' ').replace(/\s+/g, ' ').trim();
-          const res = await appleCatalogSearch(term, storefront, 1);
-          const id = res?.results?.songs?.data?.[0]?.id;
-          if(id) {
-              ids.push(id);
-              // console.log(`Resolved: ${t.artist} - ${t.title} -> ${id}`); // Reduce console noise
-          } else {
-              console.warn(`Could not resolve: ${t.artist} - ${t.title} (term: "${term}")`);
-          }
-          await sleep(60); // Slightly increased delay for API politeness
-        }catch(e){
-           console.error(`Error resolving ${t.artist} - ${t.title}:`, e);
-           // Optional: Implement retry logic here if needed
-           await sleep(200); // Longer delay after error
-        }
-      }
-      console.log(`Finished resolving. Found ${ids.length} Apple Music IDs.`);
-      return ids;
+    const ids=[]; for(let i=0;i<tracks.length;i++){
+      const t=tracks[i];
+      if((i+1)%5===0||i+1===tracks.length) qs('#amMsg').textContent=`Resolving… (${i+1}/${tracks.length})`;
+      try{
+        const term=`${t.artist} ${t.title}`.replace(/\s+\(.*?\)|-+\s*(radio edit|remaster.*|remix.*)/ig,'').trim();
+        const res=await appleCatalogSearch(term,storefront,1);
+        const id=res?.results?.songs?.data?.[0]?.id; if(id) ids.push(id);
+        await sleep(50);
+      }catch{}
+    }
+    return ids;
   }
-
 
   async function buildLocalQueueAndPlay(){
     let m=await getWebMusicInstance(); if(!m.musicUserToken){qs('#amMsg').textContent='Please sign in to Apple Music first.'; return;}
     if(!lastTracks?.length){qs('#amMsg').textContent='Generate a tracklist first.'; return;}
     const storefront=m.storefrontId||'us';
+    if(!resolvedSongIds.length){ qs('#amMsg').textContent=`Resolving ${lastTracks.length} tracks for playback…`;
+      resolvedSongIds=await appleCatalogResolveList(lastTracks,storefront); }
+    if(!resolvedSongIds.length){ qs('#amMsg').textContent='No playable tracks were found in Apple Music.'; return; }
 
-    // Reset resolved IDs for a fresh attempt
-    resolvedSongIds = [];
-    qs('#amMsg').style.display = 'none';
-    qs('#amNowPlaying').style.display = 'block';
-    qs('#amNowPlaying').innerHTML = `<span class="muted">Resolving tracks...</span>`;
-
-    try {
-        qs('#amMsg').textContent = `Resolving ${lastTracks.length} tracks for playback…`;
-        qs('#amMsg').style.display = ''; // Show resolving message
-        qs('#amNowPlaying').style.display = 'none';
-
-        resolvedSongIds = await appleCatalogResolveList(lastTracks, storefront);
-
-        qs('#amMsg').style.display = 'none';
-        qs('#amNowPlaying').style.display = 'block';
-    } catch (e) {
-        console.error("Error during track resolution:", e);
-        qs('#amMsg').textContent = 'Error resolving tracks: ' + (e.message || 'Unknown error');
-        qs('#amMsg').style.display = '';
-        qs('#amNowPlaying').style.display = 'none';
-        return;
-    }
-
-    if(!resolvedSongIds.length){
-         // Display error in the main message area, not NowPlaying
-         qs('#amMsg').textContent = 'No playable tracks found after resolving.';
-         qs('#amMsg').style.display = '';
-         qs('#amNowPlaying').style.display = 'none';
-         return;
-    }
-
-    try{ if(m.player?.playbackState===MusicKit.PlaybackStates.playing) await m.pause(); }catch(e){console.warn("Couldn't pause before play:", e)}
-
+    try{ if(m.player?.playbackState===MusicKit.PlaybackStates.playing) await m.pause(); }catch{}
+    
+    // Set initial state before playing
+    qs('#amMsg').style.display = 'none'; // Hide status message
+    qs('#amNowPlaying').style.display = 'block'; // Show now playing area
     qs('#amNowPlaying').innerHTML = `<span class="muted">Preparing player...</span>`;
-
-    try {
-        await m.setQueue({songs:resolvedSongIds});
-        await sleep(200);
-        await m.play();
-        // The event listeners should now handle the rest of the UI updates
-    } catch (e) {
-        console.error("Error setting queue or playing:", e);
-        qs('#amNowPlaying').style.display = 'none';
-        qs('#amMsg').textContent = 'Error starting playback: ' + (e.message || 'Unknown error');
-        qs('#amMsg').style.display = '';
-    }
+    
+    await m.setQueue({songs:resolvedSongIds});
+    // Small delay might help ensure queue is set before play
+    await sleep(200);
+    await m.play();
   }
 
   /* ===== Now Playing UI ===== */
+  // REMOVED: setPlayIcon function
+
+  function readMeta(item){
+    const a=item?.attributes||{};
+    const title=a.name || a.title || item?.title || item?.name || 'Loading...'; // Default to Loading
+    const artist=a.artistName || item?.artistName || a.artist || ''; // Default to empty if unknown
+    const url=a.url || '';
+    const id=a.playParams?.id || item?.id || '';
+    return {title,artist,url,id};
+  }
+  
   async function updateNowPlaying(m, tryFetchIfMissing) {
     const it = m?.player?.nowPlayingItem;
     const npDiv = qs('#amNowPlaying');
@@ -558,28 +507,24 @@
       return;
     }
 
-    const a = it.attributes || {};
-    let title = a.name || a.title || it.title || 'Loading...';
-    let artist = a.artistName || it.artistName || a.artist || 'Loading...';
-    const id = a.playParams?.id || it.id;
+    let {title,artist,id}=readMeta(it);
 
-    if (tryFetchIfMissing && id && (title === 'Loading...' || artist === 'Loading...')) {
-      npDiv.innerHTML = `<span class="muted">Loading metadata...</span>`;
+    // Only fetch if title looks like default placeholder
+    if (tryFetchIfMissing && id && title === 'Loading...') {
+      npDiv.innerHTML = `<span class="muted">Loading metadata...</span>`; // Keep loading state
       try {
         const meta = await backendSongMeta(id, m.storefrontId || 'us');
-        title = meta?.name || 'Unknown Title';
+        title = meta?.name || 'Unknown Title'; // Update with fetched data or fallback
         artist = meta?.artistName || 'Unknown Artist';
       } catch (e) {
-        console.warn('Failed to fetch sparse meta in updateNowPlaying:', e);
-        if (title === 'Loading...') title = 'Unknown Title';
-        if (artist === 'Loading...') artist = 'Unknown Artist';
-      }
-    } else if (title === 'Loading...') {
-        title = 'Unknown Title';
+        console.warn('Failed to fetch sparse meta', e);
+        title = 'Unknown Title'; // Fallback on error
         artist = 'Unknown Artist';
+      }
     }
-
-    npDiv.innerHTML = `<strong>${title}</strong><span class="muted">${artist || ''}</span>`;
+    
+    // Update display (always happens, uses fetched or initial data)
+    npDiv.innerHTML = `<strong>${title}</strong><span class="muted">${artist || ''}</span>`; // Use artist or empty string
   }
 
 
@@ -595,41 +540,23 @@
   function startViz(){
     const c=qs('#viz'); if(!c) return; const ctx=c.getContext('2d'); let t=0;
     cancelAnimationFrame(vizRAF);
-    const loop=()=>{
-      // Check if still active before drawing
-      if(!vizRAF) return;
-      const w=c.width,h=c.height; ctx.clearRect(0,0,w,h);
+    const loop=()=>{ const w=c.width,h=c.height; ctx.clearRect(0,0,w,h);
       const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#8b5cf6'); g.addColorStop(1,'#22d3ee'); ctx.fillStyle=g;
       const bars=48,pad=6; for(let i=0;i<bars;i++){ const p=i/(bars-1); const phase=t*0.05+i*0.35; const amp=(Math.sin(phase)+1)/2;
         const ease=0.8-Math.abs(p-0.5); const hBar=(amp*ease)*h*0.9+6; const bw=(w-pad*(bars+1))/bars; const x=pad+i*(bw+pad); const y=h-hBar;
         ctx.fillRect(x,y,bw,hBar); ctx.globalAlpha=0.08; ctx.fillRect(x,y-12,bw,hBar+24); ctx.globalAlpha=1; }
-      t+=1;
-      vizRAF=requestAnimationFrame(loop);
-     };
-    vizRAF=requestAnimationFrame(loop); // Assign ID immediately
+      t+=1; vizRAF=requestAnimationFrame(loop); };
+    vizRAF=requestAnimationFrame(loop);
   }
-  function stopViz(){
-     cancelAnimationFrame(vizRAF);
-     vizRAF = 0; // Ensure loop stops checking
-  }
+  function stopViz(){ cancelAnimationFrame(vizRAF); vizRAF=0; }
 
   /* ===== Init ===== */
   (function(){
     const tok=localStorage.getItem('appleMusicUserToken');
     if(tok){ qs('#amMsg').textContent='Signed in. Create your playlist or use the built-in player.'; showAmControls(); }
-
+    
     const spTok = localStorage.getItem('spotifyAccessToken');
-    const hash = window.location.hash.substring(1);
-    const params = new URLSearchParams(hash);
-    const spotifyToken = params.get('access_token');
-
-    if (spotifyToken) {
-        localStorage.setItem('spotifyAccessToken', spotifyToken);
-        qs('#spSign').style.display = 'none';
-        qs('#spCreate').style.display = 'inline-block';
-        qs('#spMsg').textContent = 'Signed in to Spotify.';
-        window.history.pushState("", document.title, window.location.pathname + window.location.search);
-    } else if (spTok) {
+    if (spTok) {
         qs('#spSign').style.display = 'none';
         qs('#spCreate').style.display = 'inline-block';
         qs('#spMsg').textContent = 'Signed in to Spotify.';
@@ -641,15 +568,54 @@
   qs('#amSign').onclick=amSignIn;
   qs('#amCreate').onclick=amCreatePlaylist;
   qs('#amPlayLocal').onclick=buildLocalQueueAndPlay;
-
+  
   qs('#spSign').onclick = () => {
     window.location.href = `${API}/v1/spotify/login`;
   };
-  qs('#spCreate').onclick = async () => { /* ... no changes ... */ };
+  qs('#spCreate').onclick = async () => {
+      // Placeholder for Spotify Create Playlist logic
+      const token = localStorage.getItem('spotifyAccessToken');
+      if (!token) {
+          qs('#spMsg').textContent = 'Not signed in to Spotify.';
+          return;
+      }
+      if (!lastTracks?.length) {
+          qs('#spMsg').textContent = 'Generate a tracklist first.';
+          return;
+      }
+
+      qs('#spMsg').textContent = 'Creating Spotify playlist...';
+      try {
+          // Prepare data for the backend
+          const name = `TimeDeck — ${qs('#date').value} — ${qs('#genre').value.toLowerCase()}`;
+          const body = {
+              accessToken: token, // Send the token
+              name: name,
+              tracks: lastTracks.map(t => ({ artist: t.artist, title: t.title }))
+          };
+
+          // Call the (future) backend endpoint
+          const r = await withTimeout(fetch(`${API}/v1/spotify/create-playlist`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+          }));
+
+          if (!r.ok) {
+              const j = await r.json().catch(() => ({ detail: 'Unknown error' }));
+              throw new Error(j.detail || `Create failed with status ${r.status}`);
+          }
+
+          const result = await r.json();
+          qs('#spMsg').textContent = `Spotify playlist created! Added ${result.added_count} of ${result.total_tracks} tracks. URL: ${result.url || 'N/A'}`;
+
+      } catch (e) {
+          qs('#spMsg').textContent = 'Spotify Create failed: ' + (e.message || String(e));
+      }
+  };
 
   setTab('am'); startViz();
 </script>
 
 </body>
 </html>
-
