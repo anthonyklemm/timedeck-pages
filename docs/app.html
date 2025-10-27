@@ -48,8 +48,11 @@
       border-radius:18px;padding:16px;box-shadow:var(--shadow)}
     .grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr auto;gap:12px;align-items:end}
     label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
-    input,select,button{width:100%;padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
+    
+    /* UPDATED: Added min-width: 0; to fix date field overflow on mobile */
+    input,select,button{width:100%; min-width: 0; padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
       background:#0c1422;color:var(--text);outline:none;font-size:1rem}
+    
     /* Style for date picker text color */
     input[type="date"] { color-scheme: dark; }
     input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
@@ -86,10 +89,8 @@
 
     @media (max-width:900px){
       .cols{grid-template-columns:1fr}
-      /* NEW: Make top grid 2-column on tablet */
       .grid{grid-template-columns: 1fr 1fr; gap: 10px;}
     }
-    /* NEW: Make top grid 1-column on phone */
     @media (max-width:500px){
       .grid{grid-template-columns: 1fr;}
     }
@@ -210,7 +211,6 @@
   const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
   const NET_TIMEOUT_MS = 180000;
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
-  // REMOVED: toISO function is no longer needed as input is type="date"
   function withTimeout(p,ms=NET_TIMEOUT_MS){ let t; const timer=new Promise((_,rej)=>{t=setTimeout(()=>rej(new Error(`Network timeout after ${Math.round(ms/1000)}s`)),ms)}); return Promise.race([p.finally(()=>clearTimeout(t)),timer]); }
 
   /* ===== Tabs ===== */
@@ -232,7 +232,6 @@
   window.onYouTubeIframeAPIReady=()=>{YTapiReady=true;};
 
   async function simulate(){
-    // UPDATED: Use date value directly, no toISO needed
     const body={date:qs('#date').value.trim(),genre:qs('#genre').value,hours:Number(qs('#hours').value||3),
       repeat_gap_min:Number(qs('#gap').value||90),seed:(qs('#seed').value.trim()||undefined)?String(qs('#seed').value.trim()):undefined,limit:500};
     qs('#ytStatus').textContent='Building…'; qs('#ytErr').textContent='';
@@ -291,14 +290,15 @@
           inst.addEventListener('nowPlayingItemDidChange',()=>{updateNowPlaying(inst,true);});
           inst.addEventListener('playbackTimeDidChange',()=>{updateNowPlaying(inst,false);});
           
-          // UPDATED: This listener is the fix for Play/Pause and Title
+          // UPDATED: This logic is now fixed and robust.
+          // It calls updateNowPlaying, passing 'isPlaying' as the 'tryFetchIfMissing' flag.
+          // This ensures we fetch metadata when 'playing' (item is sparse)
+          // but don't fetch when 'pausing' (item is already populated).
           inst.addEventListener('playbackStateDidChange',(evt)=>{
             const PS=window.MusicKit?.PlaybackStates||{};
             const isPlaying=evt?.state===PS.playing;
             setPlayIcon(isPlaying);
-            // Always update metadata on state change, not just when starting to play.
-            // This ensures title/artist are shown even when paused.
-            updateNowPlaying(inst, false);
+            updateNowPlaying(inst, isPlaying);
           });
         }
         music=inst; return music;
@@ -436,11 +436,25 @@
     const id=a.playParams?.id || item?.id || '';
     return {title,artist,url,id};
   }
+  
+  // UPDATED: This function is now more robust.
+  // It handles the case where playback stops (it == null) by resetting the UI.
   async function updateNowPlaying(m,tryFetchIfMissing){
-    const it=m?.player?.nowPlayingItem; if(!it) return;
+    const it=m?.player?.nowPlayingItem;
+    
+    // NEW: Handle null item (playback stopped/completed)
+    if(!it){
+      mini.title.textContent = '—';
+      mini.artist.textContent = '—';
+      mini.open.href = '#';
+      syncEmbedToNowPlaying(m); // m has no item, so this will sync to nothing
+      return;
+    }
+
     let {title,artist,url,id}=readMeta(it);
+    
+    // This fetch block is now correctly triggered by the updated playbackStateDidChange
     if(tryFetchIfMissing && id && (!title || !artist)){
-      // backend-first for stability; fall back to direct Apple call
       try{
         const meta=await backendSongMeta(id,m.storefrontId||'us');
         title=title||meta?.name; artist=artist||meta?.artistName; url=url||meta?.url;
