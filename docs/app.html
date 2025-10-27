@@ -23,7 +23,7 @@
   <meta property="twitter:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
   <meta property="twitter:image" content="https://tapedecktimemachine.com/tapedeck-preview.png">
 
-  <script async src="https://www.googletagmanager.com/gtag/js/id=G-HPZT6BMJVD"></script>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HPZT6BMJVD"></script>
   <script>
     window.dataLayer=window.dataLayer||[];
     function gtag(){dataLayer.push(arguments)}
@@ -62,6 +62,7 @@
 
     .cols{display:grid;grid-template-columns:1.05fr .95fr; gap:16px}
     .box{min-height:380px}
+    /* Removed iframe styles, added #ytp iframe styles */
     #ytp iframe{width:100%;height:auto;min-height:300px; aspect-ratio: 16/9; border-radius:12px;box-shadow:var(--shadow)}
     .btn{display:inline-block;margin-top:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);
       background:#0c1422;color:#e5e7eb;text-decoration:none;font-weight:700;cursor:pointer}
@@ -71,24 +72,15 @@
     .ts{font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
     .err{color:#fda4af;margin-top:6px}
 
-    /* ===== REMOVED: Mini-player styles ===== */
-
-    /* NEW: Styles for the "Now Playing" text display */
-    #amNowPlaying {
-      background: rgba(12,20,34,.8);
-      border: 1px solid rgba(148,163,184,.12);
-      border-radius: 14px;
-      padding: 14px 16px;
-      margin-top: 12px;
-      font-size: 14px;
-      line-height: 1.4;
-    }
-    #amNowPlaying strong {
-      display: block;
-      font-weight: 700;
-      color: var(--text);
-      font-size: 16px;
-    }
+    /* ===== Mini-player (flat row) ===== */
+    .mini{display:none;margin-top:12px;background:rgba(12,20,34,.8);border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:10px 12px}
+    .mini .np{display:flex;align-items:center;gap:16px}
+    .mini .np-text{min-width:0;flex:1; overflow: hidden;}
+    .mini .title{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mini .artist{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mini .controls{display:flex;align-items:center;gap:8px}
+    .mini .icon{width:44px;min-width:44px;height:40px;border-radius:10px;border:1px solid rgba(148,163,184,.22);background:#0c1422;color:#e5e7eb;cursor:pointer}
+    .mini .open{padding:9px 12px;border-radius:10px;border:1px solid rgba(148,163,184,.22);background:#0c1422;color:#e5e7eb;text-decoration:none}
 
     /* Right panel tabs */
     #pane-am-right .tab{padding:8px 12px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0c1422}
@@ -130,8 +122,10 @@
     <div class="tabs">
       <button class="tab" data-tab="yt">YouTube</button>
       <button class="tab active" data-tab="am">Apple Music</button>
-      <button class="tab" data-tab="sp">Spotify</button>
+      <button class="tab" data-tab="sp" disabled title="Coming soon">Spotify</button>
     </div>
+    <div class="muted" style="margin:-6px 0 8px 2px">Spotify sign-in is under construction. Coming soon!</div>
+
     <div class="cols">
       <div class="panel box" id="pane-am-left">
         <p class="muted" style="margin-bottom:8px">
@@ -144,8 +138,21 @@
           <button class="btn" id="amPlayLocal" style="display:none">Play with Built-In Player</button>
         </div>
         <div id="amMsg" class="muted" style="margin-top:8px"></div>
-        
-        <div id="amNowPlaying" style="display:none;"></div>
+
+        <div id="mini" class="mini">
+          <div class="np">
+            <div class="np-text">
+              <div class="title" id="miniTitle">—</div>
+              <div class="artist" id="miniArtist">—</div>
+            </div>
+            <div class="controls">
+              <button id="btnPrev" class="icon" title="Previous">⟨⟨</button>
+              <button id="btnPlayPause" class="icon" title="Play">▶</button>
+              <button id="btnNext" class="icon" title="Next">⟩⟩</button>
+              <a id="miniOpen" class="open" href="#" target="_blank" rel="noopener">Open ↗</a>
+            </div>
+          </div>
+        </div>
 
         </div>
 
@@ -170,18 +177,6 @@
           <div id="ytErr" class="err"></div>
         </div>
       </div>
-
-      <div class="panel box" id="pane-sp" style="display:none">
-        <p class="muted" style="margin-bottom:8px">
-          Sign in to your Spotify account to create and save playlists.
-        </p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn" id="spSign">Sign in to Spotify</button>
-          <button class="btn" id="spCreate" style="display:none">Create Playlist</button>
-        </div>
-        <div id="spMsg" class="muted" style="margin-top:8px"></div>
-      </div>
-
     </div>
   </div>
 
@@ -208,25 +203,18 @@
   /* ===== Tabs ===== */
   function setTab(id){
     document.querySelectorAll('.tab[data-tab]').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
-    // UPDATED: Added 'sp' pane
-    const yt=qs('#pane-yt'), aml=qs('#pane-am-left'), amr=qs('#pane-am-right'), sp=qs('#pane-sp');
-    // Hide all panes
-    aml.style.display='none'; amr.style.display='none'; yt.style.display='none'; sp.style.display='none';
-    
+    const yt=qs('#pane-yt'), aml=qs('#pane-am-left'), amr=qs('#pane-am-right');
     if(id==='yt'){
-      yt.style.display='';
+      yt.style.display=''; aml.style.display='none'; amr.style.display='none';
       if(lastTracks.length > 0 && !player) buildYtPlayer(lastTracks);
-    } else if (id==='sp') {
-      sp.style.display=''; // Show Spotify pane
-    } else {
-      aml.style.display=''; amr.style.display=''; // Default to Apple Music
     }
+    else { yt.style.display='none'; aml.style.display=''; amr.style.display=''; }
   }
   document.querySelectorAll('.tab[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 
   /* ===== State ===== */
   let lastTracks=[]; let resolvedSongIds=[]; let DEV_TOKEN=null;
-  // REMOVED: lastToggleTS
+  let lastToggleTS=0;
 
   /* ===== YouTube minimal ===== */
   let player=null, YTapiReady=false;
@@ -247,7 +235,6 @@
       if(!lastTracks.length){ 
         qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned. Try a different date/genre.'; 
         qs('#amMsg').textContent='No tracks returned. Try a different date/genre.';
-        qs('#spMsg').textContent='No tracks returned. Try a different date/genre.';
         return false;
       }
       renderList(lastTracks);
@@ -255,7 +242,6 @@
     }catch(err){ 
       qs('#ytStatus').textContent=''; qs('#ytErr').textContent=err.message||String(err);
       qs('#amMsg').textContent='Error: '+(err.message||String(err));
-      qs('#spMsg').textContent='Error: '+(err.message||String(err));
       return false;
     }
   }
@@ -265,19 +251,13 @@
     btn.disabled = true; btn.textContent = 'Building…';
     qs('#ytStatus').textContent='Building…'; qs('#ytErr').textContent='';
     qs('#amMsg').textContent='Building playlist…';
-    qs('#spMsg').textContent='Building playlist…';
 
     const success = await fetchSimulation();
     btn.disabled = false; btn.textContent = 'Generate';
     
     if(success){
-      // Update Apple Music pane
       qs('#amPlayLocal').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
       qs('#amMsg').textContent='Playlist ready. Sign in and create it, or use the built-in player.';
-
-      // Update Spotify pane
-      qs('#spCreate').style.display = localStorage.getItem('spotifyAccessToken') ? 'inline-block' : 'none';
-      qs('#spMsg').textContent = 'Playlist ready. Sign in to create it on Spotify.';
 
       if(qs('.tab[data-tab="yt"]').classList.contains('active')){
         buildYtPlayer(lastTracks);
@@ -370,17 +350,22 @@
         if(!inst._tdtmBound){
           inst._tdtmBound=true;
           
+          // UPDATED: This listener ONLY handles updating the song title/artist text
           inst.addEventListener('nowPlayingItemDidChange',()=>{
             updateNowPlaying(inst,true);
           });
           
+          // UPDATED: This listener ONLY handles the play/pause icon and clearing text on stop
           inst.addEventListener('playbackStateDidChange',(evt)=>{
             const PS=window.MusicKit?.PlaybackStates||{};
-            // NEW: Reset UI when playback stops or is finished
+            const isPlaying=evt?.state===PS.playing;
+            setPlayIcon(isPlaying);
+            
+            // Clear text if playback stops or completes
             if(evt.state === PS.stopped || evt.state === PS.completed) {
-              qs('#amNowPlaying').style.display = 'none';
-              qs('#amMsg').textContent = 'Playback finished. Generate a new list or play again.';
-              qs('#amMsg').style.display = '';
+                mini.title.textContent = '—';
+                mini.artist.textContent = '—';
+                mini.open.href = '#';
             }
           });
         }
@@ -389,6 +374,8 @@
     }
     return musicInitPromise;
   }
+
+  /* ===== REMOVED: Apple embed helpers (toEmbedUrl, showEmbed, etc) ===== */
 
   /* ===== Sign-in / Create / Play ===== */
   function showAmControls(){
@@ -419,6 +406,8 @@
         body:JSON.stringify({userToken,name,tracks:lastTracks.map(t=>({artist:t.artist,title:t.title}))})}));
       if(!r.ok){ const j=await r.json().catch(()=>({detail:'Unknown error during create'})); throw new Error(j.detail||`Create failed with status ${r.status}`); }
       const j=await r.json();
+      
+      // REMOVED: All embed logic
       
       qs('#amMsg').textContent=`Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks.`;
       qs('#amPlayLocal').style.display='inline-block';
@@ -469,52 +458,72 @@
     if(!resolvedSongIds.length){ qs('#amMsg').textContent='No playable tracks were found in Apple Music.'; return; }
 
     try{ if(m.player?.playbackState===MusicKit.PlaybackStates.playing) await m.pause(); }catch{}
-    
-    // UPDATED: Show the new "Now Playing" display
-    qs('#amMsg').style.display = 'none';
-    qs('#amNowPlaying').style.display = 'block';
-    qs('#amNowPlaying').innerHTML = `<span class="muted">Preparing player...</span>`;
-    
+    qs('#amMsg').textContent='Preparing player…';
     await m.setQueue({songs:resolvedSongIds}); await sleep(50);
     await m.play();
-    
-    // REMOVED: mini player display logic
+    qs('#mini').style.display='block';
+    qs('#amMsg').textContent=`Now playing ${resolvedSongIds.length} tracks.`;
   }
 
   /* ===== Mini-player UI ===== */
-  // REMOVED: All mini-player UI functions (mini object, setPlayIcon, click handlers)
+  const mini={title:qs('#miniTitle'),artist:qs('#miniArtist'),
+        btnPrev:qs('#btnPrev'),btnPlayPause:qs('#btnPlayPause'),btnNext:qs('#btnNext'),open:qs('#miniOpen')};
 
-  // UPDATED: This function now targets the #amNowPlaying div
-  async function updateNowPlaying(m, tryFetchIfMissing) {
-    const it = m?.player?.nowPlayingItem;
-    const npDiv = qs('#amNowPlaying');
-
-    if (!it) {
-      npDiv.innerHTML = '<span class="muted">Playback stopped.</span>';
+  function setPlayIcon(isPlaying){ mini.btnPlayPause.textContent=isPlaying?'⏸':'▶'; mini.btnPlayPause.title=isPlaying?'Pause':'Play'; }
+  function readMeta(item){
+    const a=item?.attributes||{};
+    const title=a.name || a.title || item?.title || item?.name || '';
+    const artist=a.artistName || item?.artistName || a.artist || item?.artist || '';
+    const url=a.url || '';
+    const id=a.playParams?.id || item?.id || '';
+    return {title,artist,url,id};
+  }
+  
+  // UPDATED: This function is now simpler and only called when the item changes
+  async function updateNowPlaying(m,tryFetchIfMissing){
+    const it=m?.player?.nowPlayingItem;
+    
+    if(!it){
+      mini.title.textContent = '—';
+      mini.artist.textContent = '—';
+      mini.open.href = '#';
       return;
     }
 
-    // Read metadata from the item
-    const a = it.attributes || {};
-    let title = a.name || a.title || it.title || 'Unknown Title';
-    let artist = a.artistName || it.artistName || a.artist || 'Unknown Artist';
-    const id = a.playParams?.id || it.id;
-
-    // Fetch if metadata is sparse (e.g., on first play)
-    if (tryFetchIfMissing && id && (title === 'Unknown Title' || artist === 'Unknown Artist')) {
-      npDiv.innerHTML = `<span class="muted">Loading metadata...</span>`;
-      try {
-        const meta = await backendSongMeta(id, m.storefrontId || 'us');
-        title = meta?.name || title;
-        artist = meta?.artistName || artist;
-      } catch (e) {
-        console.warn('Failed to fetch sparse meta', e);
+    let {title,artist,url,id}=readMeta(it);
+    
+    if(tryFetchIfMissing && id && (!title || !artist)){
+      try{
+        const meta=await backendSongMeta(id,m.storefrontId||'us');
+        title=title||meta?.name; artist=artist||meta?.artistName; url=url||meta?.url;
+      }catch{
+        const attrs=await appleSongById(id,m.storefrontId||'us');
+        if(attrs){ title=title||attrs.name; artist=artist||attrs.artistName; url=url||attrs.url; }
       }
     }
-    
-    // Update the new div's HTML
-    npDiv.innerHTML = `<strong>${title}</strong><span class="muted">${artist}</span>`;
+    mini.title.textContent=title||'—';
+    mini.artist.textContent=artist||'—';
+    if(url) mini.open.href=url;
   }
+
+  // This click handler is correct: it toggles state, which fires the event listener
+  mini.btnPlayPause.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    const m=await getWebMusicInstance(); if(!m?.player) return;
+    const now=Date.now(); if(now-lastToggleTS<350) return; lastToggleTS=now;
+    const PS=window.MusicKit.PlaybackStates;
+    try{
+      switch(m.player.playbackState){
+        case PS.playing: await m.pause(); break;
+        case PS.paused:
+        case PS.stopped:
+        case PS.completed:
+        default: await m.play(); break;
+      }
+    }catch{}
+  });
+  mini.btnPrev.onclick=async()=>{ const m=await getWebMusicInstance(); try{ await m.skipToPreviousItem(); }catch{} };
+  mini.btnNext.onclick=async()=>{ const m=await getWebMusicInstance(); try{ await m.skipToNextItem(); }catch{} };
 
   /* ===== Right panel (viz) ===== */
   document.querySelectorAll('#pane-am-right .tab').forEach(b=>{
@@ -542,31 +551,16 @@
   (function(){
     const tok=localStorage.getItem('appleMusicUserToken');
     if(tok){ qs('#amMsg').textContent='Signed in. Create your playlist or use the built-in player.'; showAmControls(); }
-    
-    // NEW: Check for Spotify token on load
-    const spTok = localStorage.getItem('spotifyAccessToken');
-    if (spTok) {
-        qs('#spSign').style.display = 'none';
-        qs('#spCreate').style.display = 'inline-block';
-        qs('#spMsg').textContent = 'Signed in to Spotify.';
-    }
+    // REMOVED: embed check
   })();
 
   /* ===== Wire buttons ===== */
   qs('#go').onclick=simulate;
   qs('#amSign').onclick=amSignIn;
   qs('#amCreate').onclick=amCreatePlaylist;
+  // REMOVED: amPlayEmbed onclick
   qs('#amPlayLocal').onclick=buildLocalQueueAndPlay;
-  
-  // NEW: Wire Spotify buttons (they will call backend endpoints)
-  qs('#spSign').onclick = () => {
-    // This will redirect to your backend login endpoint
-    window.location.href = `${API}/v1/spotify/login`;
-  };
-  qs('#spCreate').onclick = () => {
-    // We'll build this function next
-    alert('Spotify "Create Playlist" logic goes here!');
-  };
+  // REMOVED: copyLink (was part of embed)
 
   setTab('am'); startViz();
 </script>
