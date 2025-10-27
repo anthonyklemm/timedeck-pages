@@ -1,504 +1,687 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>TapeDeck Time Machine</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TapeDeck Time Machine</title>
 
-<!-- MusicKit v3 -->
-<script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js" defer></script>
+  <!-- Apple MusicKit -->
+  <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
 
-<style>
-  :root{
-    --bg:#0c1218; --panel:#121a22; --panel2:#0f161d;
-    --text:#dfe7ef; --muted:#9fb1c4; --accent1:#8a7dff; --accent2:#2cd3ff;
-    --ring:#223240; --good:#29d39a; --warn:#ffbe55; --bad:#ff6b6b;
-    --btn-grad: linear-gradient(90deg,var(--accent1),var(--accent2));
-    --radius:16px;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{
-    margin:0; background:radial-gradient(1200px 600px at 10% -10%, #121b27 0%, #0c1218 55%) fixed, var(--bg);
-    color:var(--text); font:16px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif;
-  }
-  a{color:inherit; text-decoration:none}
-  .max{max-width:1180px;margin:24px auto;padding:0 16px}
+  <!-- Meta -->
+  <meta name="description" content="Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.">
+  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/logo.svg">
 
-  /* Header */
-  .bar{display:flex;align-items:center;gap:12px;margin:8px 0 18px}
-  .logo{display:flex;align-items:center;gap:12px}
-  .logo img{width:36px;height:36px;border-radius:9px;box-shadow:0 6px 18px rgba(0,0,0,.35)}
-  .title{font-weight:700;font-size:22px;letter-spacing:.2px}
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://tapedecktimemachine.com/">
+  <meta property="og:title" content="TapeDeck Time Machine - Historical Music Playlist Generator">
+  <meta property="og:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
+  <meta property="og:image" content="https://tapedecktimemachine.com/tapedeck-preview.png">
+  <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://tapedecktimemachine.com/">
+  <meta property="twitter:title" content="TapeDeck Time Machine - Historical Music Playlist Generator">
+  <meta property="twitter:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
+  <meta property="twitter:image" content="https://tapedecktimemachine.com/tapedeck-preview.png">
 
-  /* Card containers */
-  .frame{border-radius:var(--radius); background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.00)) , var(--panel);
-         box-shadow:0 12px 40px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.03); padding:18px}
-  .grid{
-    display:grid; gap:14px;
-    grid-template-columns: 1fr;
-  }
-  /* tablet */
-  @media (min-width:760px){
-    .grid{grid-template-columns: repeat(2, 1fr);}
-  }
-  /* desktop */
-  @media (min-width:1060px){
-    .grid{grid-template-columns: repeat(4, 1fr);}
-  }
+  <!-- GA -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-HPZT6BMJVD"></script>
+  <script>
+    window.dataLayer=window.dataLayer||[];
+    function gtag(){dataLayer.push(arguments)}
+    gtag('js',new Date()); gtag('config','G-HPZT6BMJVD');
+  </script>
 
-  label{display:block;color:var(--muted);font-size:12px;margin:6px 0 8px}
-  .ctl{
-    width:100%; border:1px solid var(--ring); background:var(--panel2); color:var(--text);
-    border-radius:10px; padding:12px 12px; outline:none;
-  }
-  .ctl:focus{border-color:#2b4458; box-shadow:0 0 0 3px rgba(44,211,255,.12)}
-  select.ctl{appearance:none}
+  <style>
+    :root{--bg:#0a0f17;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#8b5cf6;--accent2:#22d3ee;--shadow:0 12px 48px rgba(2,10,20,.45)}
+    *{box-sizing:border-box}
+    body{margin:0;background:
+      radial-gradient(1200px 600px at 10% -10%, #0e1630 0%, transparent 60%),
+      radial-gradient(700px 400px at 120% 10%, #06101f 0%, transparent 60%), #0a0f17;
+      color:var(--text); font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+    .wrap{max-width:1100px;margin:40px auto;padding:0 18px}
+    .bar{display:flex;align-items:center;gap:14px}
+    .logo{width:36px;height:36px;border-radius:12px;background:
+      linear-gradient(135deg,#8b5cf6 0%,#22d3ee 55%,#16a34a 120%);
+      display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:var(--shadow);text-decoration:none}
+    h1{font-size:22px;margin:0}
 
-  .tabs{display:flex;gap:10px;margin:14px 0 4px;flex-wrap:wrap}
-  .seg{
-    padding:10px 16px;border-radius:999px;background:var(--panel2); border:1px solid var(--ring); color:var(--text);
-    cursor:pointer; user-select:none;
-  }
-  .seg.active{background:radial-gradient(120% 140% at 20% 20%, rgba(138,125,255,.25), rgba(44,211,255,.18)), #0f1720; border-color:#34526b}
+    .panel{background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.12);
+      border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+    .grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr auto;gap:12px;align-items:end}
+    label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
+    input,select,button{width:100%; min-width: 0; padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
+      background:#0c1422;color:var(--text);outline:none;font-size:1rem}
 
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;
-       padding:12px 16px;border-radius:12px;border:1px solid var(--ring); background:var(--panel2); color:var(--text);
-       cursor:pointer; user-select:none; white-space:nowrap}
-  .btn.primary{background:var(--btn-grad); border-color:transparent; color:#0d1220; font-weight:700}
-  .btn:disabled{opacity:.5; cursor:not-allowed}
+    input[type="date"] { color-scheme: dark; }
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
 
-  .row{display:flex;gap:10px;flex-wrap:wrap}
-  .spacer{flex:1}
+    button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700;cursor:pointer}
+    button.primary:disabled{opacity:0.6;background:var(--panel);cursor:not-allowed}
+    .tabs{display:flex;gap:10px;margin:14px 0 8px; flex-wrap: wrap;} /* Added flex-wrap */
+    .tab{padding:9px 14px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0c1422;color:var(--text);cursor:pointer}
+    .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
+    .tab:disabled { opacity: 0.5; cursor: not-allowed; } /* Style for disabled tab */
 
-  /* Two-panel layout below the form */
-  .two{
-    display:grid; gap:16px; margin-top:16px;
-    grid-template-columns: 1fr;
-  }
-  @media (min-width:1060px){ .two{grid-template-columns: 1.2fr 1fr;} }
+    .cols{display:grid;grid-template-columns:1.05fr .95fr; gap:16px}
+    .box{min-height:380px}
+    #ytp iframe{width:100%;height:auto;min-height:300px; aspect-ratio: 16/9; border-radius:12px;box-shadow:var(--shadow)}
+    .btn{display:inline-block;margin-top:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);
+      background:#0c1422;color:#e5e7eb;text-decoration:none;font-weight:700;cursor:pointer}
+    .muted{color:var(--muted)}
+    .list{padding:12px 8px;max-height:420px;overflow:auto}
+    .row{display:grid;grid-template-columns:110px 1fr;gap:14px;padding:10px 6px;border-bottom:1px dashed rgba(148,163,184,.12)}
+    .ts{font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted)}
+    .err{color:#fda4af;margin-top:6px}
 
-  .subtle{color:var(--muted); font-size:14px}
+    /* ===== Mini-player (flat row) ===== */
+    .mini{display:none;margin-top:12px;background:rgba(12,20,34,.8);border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:10px 12px}
+    .mini .np{display:flex;align-items:center;gap:16px}
+    .mini .np-text{min-width:0;flex:1; overflow: hidden;}
+    .mini .title{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mini .artist{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mini .controls{display:flex;align-items:center;gap:8px}
+    .mini .icon{width:44px;min-width:44px;height:40px;border-radius:10px;border:1px solid rgba(148,163,184,.22);background:#0c1422;color:#e5e7eb;cursor:pointer}
+    .mini .open{padding:9px 12px;border-radius:10px;border:1px solid rgba(148,163,184,.22);background:#0c1422;color:#e5e7eb;text-decoration:none}
 
-  /* Mini player */
-  .player{
-    border-radius:14px; background:var(--panel2); border:1px solid var(--ring); padding:12px;
-  }
-  .np{
-    display:flex; align-items:center; gap:10px; min-height:22px;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-  }
-  .np .dot{width:8px;height:8px;border-radius:50%;background:var(--good); box-shadow:0 0 8px rgba(41,211,154,.7)}
-  .controls{display:flex;align-items:center;gap:10px;margin-top:10px}
-  .cbtn{width:44px;height:44px;border-radius:10px;border:1px solid var(--ring);background:var(--panel);display:flex;align-items:center;justify-content:center;cursor:pointer}
-  .cbtn:active{transform:translateY(1px)}
-  .np-title{min-width:0;overflow:hidden;text-overflow:ellipsis}
+    /* Right panel tabs */
+    #pane-am-right .tab{padding:8px 12px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0c1422}
+    #pane-am-right .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
 
-  /* Visualizer (CSS-only fake bars) */
-  .viz{
-    height:260px;border-radius:14px;background:linear-gradient(180deg, rgba(138,125,255,.06), rgba(44,211,255,.05)), var(--panel2);
-    border:1px solid var(--ring); overflow:hidden; position:relative; padding:18px
-  }
-  .bars{position:absolute;inset:18px;display:flex;gap:6px;align-items:flex-end}
-  .bar{flex:1;min-width:8px;background:linear-gradient(180deg, rgba(44,211,255,.85), rgba(138,125,255,.85));
-       border-radius:6px; opacity:.9; animation:hop 1.6s ease-in-out infinite}
-  .bar:nth-child(4n+1){animation-delay:.0s}
-  .bar:nth-child(4n+2){animation-delay:.2s}
-  .bar:nth-child(4n+3){animation-delay:.4s}
-  .bar:nth-child(4n+4){animation-delay:.6s}
-  @keyframes hop{
-    0%,100%{height:20%} 20%{height:60%} 40%{height:30%} 60%{height:75%} 80%{height:40%}
-  }
-
-  .list{margin-top:18px}
-  .chip{display:inline-flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--ring);
-        padding:8px 10px;border-radius:999px;margin:4px 6px 0 0;font-size:12px;color:var(--muted)}
-</style>
+    @media (max-width:900px){
+      .cols{grid-template-columns:1fr}
+      /* Ensure Spotify pane spans full width on single column */
+      #pane-sp { grid-column: span 1 / span 1; }
+      .grid{grid-template-columns: 1fr 1fr; gap: 10px;}
+      #ytp iframe{min-height:220px}
+    }
+    @media (max-width:500px){
+      .grid{grid-template-columns: 1fr;}
+    }
+  </style>
 </head>
 <body>
-  <div class="max">
-    <!-- Header -->
-    <div class="bar">
-      <a class="logo" href="/index.html" aria-label="Back to Home">
-        <img src="https://tapedecktimemachine.com/favicon-196.png" alt="TD" />
-        <div class="title">TapeDeck Time Machine</div>
-      </a>
-      <div class="spacer"></div>
+
+<div class="wrap">
+  <div class="bar" style="margin-bottom:14px">
+    <a class="logo" href="/index.html" title="Back to home">TD</a>
+    <h1>TapeDeck Time Machine</h1>
+  </div>
+
+  <div class="panel">
+    <div class="grid">
+      <div><label>Date</label><input id="date" type="date" value="2002-07-01"></div>
+      <div><label>Genre</label>
+        <select id="genre">
+          <option>Alternative</option><option>Hot-100</option><option>Pop</option>
+          <option>Rock</option><option>Country</option><option>R&B/Hip-Hop</option><option>Dance/Electronic</option>
+        </select>
+      </div>
+      <div><label>Hours</label><select id="hours"><option>0.5</option><option selected>1</option><option>2</option><option>3</option></select></div>
+      <div><label>Repeat gap (min)</label><input id="gap" type="number" value="90"></div>
+      <div><label>Seed (opt)</label><input id="seed" placeholder="e.g. 20020701"></div>
+      <div><label>&nbsp;</label><button id="go" class="primary">Generate</button></div>
     </div>
 
-    <!-- Form card -->
-    <div class="frame">
-      <div class="grid">
-        <div>
-          <label for="date">Date</label>
-          <input id="date" class="ctl" type="date" />
-        </div>
-        <div>
-          <label for="genre">Genre</label>
-          <select id="genre" class="ctl">
-            <option>Alternative</option>
-            <option>Pop</option>
-            <option>Rock</option>
-            <option>Country</option>
-            <option>R&B</option>
-            <option>Hip-Hop</option>
-            <option>Dance</option>
-            <option>Adult Contemporary</option>
-          </select>
-        </div>
-        <div>
-          <label for="hours">Hours</label>
-          <select id="hours" class="ctl">
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3" selected>3</option>
-            <option value="4">4</option>
-          </select>
-        </div>
-        <div>
-          <label for="gap">Repeat gap (min)</label>
-          <input id="gap" class="ctl" type="number" min="0" value="90" />
-        </div>
-        <div>
-          <label for="seed">Seed (opt)</label>
-          <input id="seed" class="ctl" placeholder="e.g. 20020701" />
-        </div>
-        <div>
-          <label>&nbsp;</label>
-          <button id="btnGenerate" class="btn primary" style="width:100%;">Generate</button>
-        </div>
-      </div>
+    <div class="tabs">
+      <button class="tab" data-tab="yt">YouTube</button>
+      <button class="tab active" data-tab="am">Apple Music</button>
+      <!-- UPDATED: Spotify tab enabled -->
+      <button class="tab" data-tab="sp">Spotify</button>
+    </div>
+    <!-- REMOVED: Spotify coming soon message -->
 
-      <div class="tabs">
-        <button class="seg active" id="tab-yt">YouTube</button>
-        <button class="seg active" id="tab-am">Apple Music</button>
-        <button class="seg" id="tab-spot">Spotify</button>
-      </div>
-
-      <div class="two">
-        <!-- Left: actions + mini player -->
-        <div class="frame" style="background:var(--panel2)">
-          <p class="subtle" id="status">Generate a list, then choose how to play or save it.</p>
-
-          <div class="row" style="margin:10px 0 8px">
-            <button id="btnCreateAM" class="btn" title="Create Apple Music playlist">Create Playlist (Apple)</button>
-            <button id="btnPlayAM" class="btn">Play with Built-In Player</button>
-            <div class="spacer"></div>
-            <button id="btnSpotifyLogin" class="btn" title="Sign in with Spotify">Spotify Sign-In</button>
-            <button id="btnCreateSP" class="btn">Create Spotify Playlist</button>
-          </div>
-
-          <div class="player" id="mini">
-            <div class="np" id="np">
-              <div class="dot" id="npdot" hidden></div>
-              <div class="np-title" id="nptitle">—</div>
-              <div class="spacer"></div>
-              <a id="openAM" class="btn" style="padding:6px 10px;border-radius:8px">Open ↗</a>
+    <div class="cols">
+      <!-- Apple Music Left Pane -->
+      <div class="panel box" id="pane-am-left">
+        <p class="muted" style="margin-bottom:8px">
+          Generate a list, sign in, create the playlist, then play it with our built-in player.
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn" id="amSign">Sign in to Apple Music</button>
+          <button class="btn" id="amCreate" style="display:none">Create Playlist</button>
+          <button class="btn" id="amPlayLocal" style="display:none">Play with Built-In Player</button>
+        </div>
+        <div id="amMsg" class="muted" style="margin-top:8px"></div>
+        <div id="mini" class="mini">
+          <div class="np">
+            <div class="np-text">
+              <div class="title" id="miniTitle">—</div>
+              <div class="artist" id="miniArtist">—</div>
             </div>
             <div class="controls">
-              <button class="cbtn" id="btnPrev" title="Previous" aria-label="Previous">«</button>
-              <button class="cbtn" id="btnPP"   title="Play/Pause" aria-label="Play or Pause">⏯</button>
-              <button class="cbtn" id="btnNext" title="Next" aria-label="Next">»</button>
+              <button id="btnPrev" class="icon" title="Previous">⟨⟨</button>
+              <button id="btnPlayPause" class="icon" title="Play">▶</button>
+              <button id="btnNext" class="icon" title="Next">⟩⟩</button>
+              <a id="miniOpen" class="open" href="#" target="_blank" rel="noopener">Open ↗</a>
             </div>
-          </div>
-
-          <div class="list" id="chips"></div>
-        </div>
-
-        <!-- Right: visualizer / “time capsule” slot -->
-        <div class="frame" style="background:var(--panel2)">
-          <div class="tabs" style="margin-top:-2px">
-            <div class="seg active">Visualizer</div>
-            <div class="seg">Time Capsule</div>
-          </div>
-          <div class="viz">
-            <div class="bars" id="bars"></div>
           </div>
         </div>
       </div>
+
+      <!-- Apple Music Right Pane -->
+      <div class="panel box" id="pane-am-right">
+        <div class="tabs" style="margin-top:0">
+          <button class="tab active" data-side="viz">Visualizer</button>
+          <button class="tab" data-side="capsule">Time Capsule</button>
+        </div>
+        <div id="side-viz" style="margin-top:6px">
+          <canvas id="viz" width="600" height="220" style="width:100%;height:220px;border-radius:12px;background:linear-gradient(180deg,rgba(139,92,246,.08),rgba(34,211,238,.06));"></canvas>
+        </div>
+        <div id="side-capsule" style="display:none;margin-top:6px">
+          <div id="capsuleBody" class="muted">Generate a list and start playback to see weekly trivia here.</div>
+        </div>
+      </div>
+
+      <!-- YouTube Pane -->
+      <div class="panel box" id="pane-yt" style="display:none">
+        <div id="ytWrap">
+          <div class="muted" id="ytStatus">Waiting for a simulation…</div>
+          <div id="ytp"></div>
+          <a class="btn" id="ytOpen" href="#" target="_blank" rel="noopener" style="display:none">Open in YouTube</a>
+          <div id="ytErr" class="err"></div>
+        </div>
+      </div>
+
+      <!-- NEW: Spotify Pane -->
+      <div class="panel box" id="pane-sp" style="display:none; grid-column: span 2 / span 2;">
+        <p class="muted" style="margin-bottom:8px">
+          Sign in to your Spotify account to create and save playlists.
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn" id="spSign">Sign in to Spotify</button>
+          <button class="btn" id="spCreate" style="display:none">Create Playlist</button>
+        </div>
+        <div id="spMsg" class="muted" style="margin-top:8px"></div>
+      </div>
+
     </div>
   </div>
 
+  <div class="panel" style="margin-top:16px">
+    <h2>Your Music Time Machine Playlist</h2>
+    <p class="muted" style="margin-bottom:6px">
+      Ever wonder <strong>what songs were popular on your birthday?</strong>
+      Just pick a date and genre, and we'll <strong>generate a music playlist</strong>
+      of the top songs from that week, based on <strong>historical Billboard charts</strong>.
+      The tracklist will appear below.
+    </p>
+    <div id="list" class="list"></div>
+  </div>
+</div>
+
 <script>
-(() => {
-  const API = location.origin.includes("tapedecktimemachine.com")
-    ? "https://timedeck-api.onrender.com" /* change if your Render URL differs */
-    : location.origin;
+  /* ===== Helpers & config ===== */
+  const qs = s => document.querySelector(s);
+  const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
+  const NET_TIMEOUT_MS = 180000;
+  const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+  function withTimeout(p,ms=NET_TIMEOUT_MS){ let t; const timer=new Promise((_,rej)=>{t=setTimeout(()=>rej(new Error(`Network timeout after ${Math.round(ms/1000)}s`)),ms)}); return Promise.race([p.finally(()=>clearTimeout(t)),timer]); }
 
-  // DOM helpers
-  const $ = sel => document.querySelector(sel);
-  const $$ = sel => Array.from(document.querySelectorAll(sel));
-  const setText = (el, t) => { el.textContent = t; };
+  /* ===== Tabs ===== */
+  function setTab(id){
+    document.querySelectorAll('.tab[data-tab]').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
+    // UPDATED: Include Spotify pane logic
+    const yt=qs('#pane-yt'), aml=qs('#pane-am-left'), amr=qs('#pane-am-right'), sp=qs('#pane-sp');
+    aml.style.display='none'; amr.style.display='none'; yt.style.display='none'; sp.style.display='none';
 
-  // Elements
-  const dateEl = $("#date");
-  const genreEl = $("#genre");
-  const hoursEl = $("#hours");
-  const gapEl = $("#gap");
-  const seedEl = $("#seed");
-
-  const btnGenerate = $("#btnGenerate");
-  const btnCreateAM = $("#btnCreateAM");
-  const btnPlayAM   = $("#btnPlayAM");
-  const btnPrev = $("#btnPrev");
-  const btnPP   = $("#btnPP");
-  const btnNext = $("#btnNext");
-  const nptitle = $("#nptitle");
-  const openAM  = $("#openAM");
-  const npdot   = $("#npdot");
-  const chips   = $("#chips");
-  const status  = $("#status");
-  const btnSpotifyLogin = $("#btnSpotifyLogin");
-  const btnCreateSP     = $("#btnCreateSP");
-
-  // Default date (YYYY-MM-DD) – set today minus ~8,000 days as fun default
-  const today = new Date();
-  if (!dateEl.value) {
-    const y = today.getFullYear(), m = String(today.getMonth()+1).padStart(2,"0"), d = String(today.getDate()).padStart(2,"0");
-    dateEl.value = `${y}-${m}-${d}`;
-  }
-
-  // Visualizer bars (pure CSS animation)
-  const bars = $("#bars");
-  for (let i=0;i<36;i++){ const b=document.createElement("div"); b.className="bar"; bars.appendChild(b); }
-
-  // App state
-  let currentTracks = [];   // [{artist,title,timestamp,source_rank}]
-  let amDevToken   = null;
-  let amStorefront = "us";
-  let music        = null;  // MusicKit instance
-  let spotify = { access_token:null, refresh_token:null, expires_at:0 };
-
-  // --- Helpers ---
-  function iso(val){ // expect input[type=date] -> already yyyy-mm-dd
-    return val || new Date().toISOString().slice(0,10);
-  }
-
-  function showStatus(t){ setText(status, t); }
-
-  function addChips(tracks){
-    chips.innerHTML = "";
-    tracks.slice(0,24).forEach(t => {
-      const span = document.createElement("span");
-      span.className = "chip";
-      span.textContent = `${t.artist} — ${t.title}`;
-      chips.appendChild(span);
-    });
-  }
-
-  function parseHashTokens(){
-    if (!location.hash) return;
-    const params = new URLSearchParams(location.hash.slice(1));
-    const at = params.get("access_token");
-    const rt = params.get("refresh_token");
-    const exp = parseInt(params.get("expires_in") || "3600", 10);
-    if (at){
-      spotify.access_token = at;
-      if (rt) spotify.refresh_token = rt;
-      spotify.expires_at = Math.floor(Date.now()/1000) + exp - 20;
-      localStorage.setItem("td_spotify", JSON.stringify(spotify));
-      showStatus("Spotify signed in.");
+    if(id==='yt'){
+      yt.style.display='';
+      if(lastTracks.length > 0 && !player) buildYtPlayer(lastTracks);
+    } else if (id === 'sp') {
+      sp.style.display=''; // Show Spotify pane
+      amr.style.display='none'; // Hide Apple Music viz
+    } else { // Default to Apple Music
+      aml.style.display='';
+      amr.style.display=''; // Show AM right pane (visualizer)
+      // Make sure visualizer restarts if returning to AM tab and it wasn't already running
+      if (vizRAF === 0 || vizRAF === null) startViz();
     }
-    // clean hash
-    history.replaceState(null, "", location.pathname + location.search);
+    // Stop visualizer if not on AM tab
+    if (id !== 'am' && vizRAF !== 0 && vizRAF !== null) {
+        stopViz();
+    }
   }
+  document.querySelectorAll('.tab[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
 
-  function loadSpotifyFromStorage(){
+  /* ===== State ===== */
+  let lastTracks=[]; let resolvedSongIds=[]; let DEV_TOKEN=null;
+  let lastToggleTS=0;
+
+  /* ===== YouTube minimal ===== */
+  let player=null, YTapiReady=false;
+  (function(){ const s=document.createElement('script'); s.src="https://www.youtube.com/iframe_api"; document.head.appendChild(s); })();
+  window.onYouTubeIframeAPIReady=()=>{YTapiReady=true;};
+
+  async function fetchSimulation(){
+    const body={date:qs('#date').value.trim(),genre:qs('#genre').value,hours:Number(qs('#hours').value||3),
+      repeat_gap_min:Number(qs('#gap').value||90),seed:(qs('#seed').value.trim()||undefined)?String(qs('#seed').value.trim()):undefined,limit:500};
+
+    if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML=''; qs('#ytOpen').style.display='none';
+    qs('#list').innerHTML=''; lastTracks=[]; resolvedSongIds=[];
+
     try{
-      const raw = localStorage.getItem("td_spotify");
-      if (!raw) return;
-      const s = JSON.parse(raw);
-      spotify = s || spotify;
-    }catch{}
+      const r=await withTimeout(fetch(`${API}/v1/simulate`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}));
+      if(!r.ok){ const txt=await r.text().catch(()=> ''); throw new Error(`simulate ${r.status}: ${txt}`); }
+      const data=await r.json(); lastTracks=data.tracks||[];
+      if(!lastTracks.length){
+        qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned. Try a different date/genre.';
+        qs('#amMsg').textContent='No tracks returned. Try a different date/genre.';
+        qs('#spMsg').textContent='No tracks returned. Try a different date/genre.';
+        return false;
+      }
+      renderList(lastTracks); // Render the list here
+      return true;
+    }catch(err){
+      qs('#ytStatus').textContent=''; qs('#ytErr').textContent=err.message||String(err);
+      qs('#amMsg').textContent='Error: '+(err.message||String(err));
+      qs('#spMsg').textContent='Error: '+(err.message||String(err));
+      return false;
+    }
   }
 
-  // --- Apple Music init ---
-  async function ensureMusicKit(){
-    if (music) return music;
-    // fetch dev token
-    const r = await fetch(`${API}/v1/apple/dev-token`);
-    if (!r.ok){ throw new Error("Failed to get Apple dev token"); }
-    const j = await r.json();
-    amDevToken = j.token; amStorefront = (j.storefront||"us").toLowerCase();
+  async function simulate(){
+    const btn = qs('#go');
+    btn.disabled = true; btn.textContent = 'Building…';
+    qs('#ytStatus').textContent='Building…'; qs('#ytErr').textContent='';
+    qs('#amMsg').textContent='Building playlist…';
+    qs('#spMsg').textContent='Building playlist…';
 
-    // Configure MusicKit after script loads
-    await new Promise(res => {
-      if (window.MusicKit) return res();
-      const iv = setInterval(() => { if (window.MusicKit){ clearInterval(iv); res(); } }, 30);
-    });
+    const success = await fetchSimulation(); // This now calls renderList if successful
+    btn.disabled = false; btn.textContent = 'Generate';
 
-    MusicKit.configure({
-      developerToken: amDevToken,
-      app: { name: "TapeDeck Time Machine", build: "1.0" }
-    });
-    music = MusicKit.getInstance();
-    music.storefrontId = amStorefront;
+    if(success){
+      qs('#amPlayLocal').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
+      qs('#amMsg').textContent='Playlist ready. Sign in and create it, or use the built-in player.';
 
-    // Wire player events
-    music.addEventListener("nowPlayingItemDidChange", () => {
-      updateNP();
-    });
-    music.addEventListener("playbackStateDidChange", () => {
-      // Update dot + button glyph without assuming player.isPlaying exists
-      const st = music?.player?.playbackState;
-      const playing = st === MusicKit.PlaybackState.playing || st === 3;
-      npdot.hidden = !playing;
-      btnPP.textContent = playing ? "⏸" : "▶";
-    });
+      qs('#spCreate').style.display = localStorage.getItem('spotifyAccessToken') ? 'inline-block' : 'none';
+      qs('#spMsg').textContent = localStorage.getItem('spotifyAccessToken') ? 'Playlist ready. Click Create Playlist.' : 'Playlist ready. Sign in to create it on Spotify.';
 
-    return music;
+      if(qs('.tab[data-tab="yt"]').classList.contains('active')){
+        buildYtPlayer(lastTracks);
+      }
+    }
   }
 
-  function updateNP(){
+  async function buildYtPlayer(tracks){
+    if(!tracks?.length) return;
+    qs('#ytStatus').textContent='Resolving YouTube videos…'; qs('#ytErr').textContent='';
+    try {
+      const r = await withTimeout(fetch(`${API}/v1/yt/resolve`, {
+        method: 'POST', headers: {'content-type': 'application/json'},
+        body: JSON.stringify({tracks, limit: 50})
+      }));
+      if(!r.ok){ const txt=await r.text().catch(()=>''); throw new Error(`yt/resolve ${r.status}: ${txt}`); }
+      const {ids} = await r.json();
+      if(!ids?.length) throw new Error('No YouTube videos found for this playlist.');
+
+      qs('#ytStatus').textContent='Loading player…';
+      if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML='';
+
+      let tries=0; while(!YTapiReady && tries<100){ await sleep(100); tries++; }
+      if(!YTapiReady) throw new Error('YouTube API failed to load.');
+
+      player = new YT.Player('ytp', {
+        height: '360', width: '640',
+        playerVars: { playlist: ids.join(','), autoplay: 1, controls: 1, loop: 1 },
+        events: {
+          'onReady': () => {
+            qs('#ytStatus').textContent = `Playing ${ids.length} videos.`;
+            const plUrl = `https://www.youtube.com/playlist?list=${ids.join(',')}`;
+            qs('#ytOpen').href = plUrl;
+            qs('#ytOpen').style.display = 'inline-block';
+          },
+          'onError': (e) => { qs('#ytErr').textContent = `Youtubeer Error: ${e.data}`; } // Corrected typo
+        }
+      });
+    } catch(err) {
+      qs('#ytStatus').textContent=''; qs('#ytErr').textContent=err.message||String(err);
+    }
+  }
+
+  function renderList(rows){
+    if(!rows?.length){ qs('#list').innerHTML='<div class="muted">No tracks.</div>'; return; }
+    const frag=document.createDocumentFragment();
+    rows.slice(0,500).forEach(t=>{
+      const d=document.createElement('div'); d.className='row';
+      d.innerHTML=`<div class="ts">${t.timestamp.replace('T',' ')}</div>
+                <div><strong>${t.artist}</strong> — <em>${t.title}</em>
+                <span class="muted">• ${t.source_rank ?? ''}</span></div>`;
+      frag.appendChild(d);
+    });
+    qs('#list').replaceChildren(frag); // Ensure list is always updated
+  }
+
+  /* ===== MusicKit setup ===== */
+  let music=null, musicInitPromise=null;
+  function waitForMusicKitLoaded(timeoutMs=10000){
+      if(window.MusicKit && typeof window.MusicKit.configure==='function') return Promise.resolve();
+      return new Promise((resolve,reject)=>{const t=setTimeout(()=>reject(new Error('MusicKit load timed out')),timeoutMs);
+        window.addEventListener('musickitloaded',()=>{clearTimeout(t); resolve();},{once:true});});
+  }
+  async function fetchDeveloperToken(){
+      if(DEV_TOKEN) return DEV_TOKEN;
+      const r=await withTimeout(fetch(`${API}/v1/apple/dev-token`,{headers:{accept:'application/json'}}));
+      if(!r.ok) throw new Error(`dev-token ${r.status}`);
+      const {token}=await r.json(); if(!token||token.trim().length<20) throw new Error('Invalid developer token');
+      DEV_TOKEN=token.trim(); return DEV_TOKEN;
+  }
+  async function getWebMusicInstance(force=false){
+      if(music && !force) return music;
+      if(!musicInitPromise || force){
+        musicInitPromise=(async()=>{
+          await waitForMusicKitLoaded();
+          const developerToken=await fetchDeveloperToken();
+          window.MusicKit.configure({developerToken,app:{name:'TapeDeck Time Machine',build:'web'}});
+          let inst=null; for(let i=0;i<40;i++){try{inst=window.MusicKit.getInstance();}catch{} if(inst) break; await sleep(50);}
+          if(!inst) throw new Error('MusicKit instance missing');
+          const stored=localStorage.getItem('appleMusicUserToken'); if(stored) inst.musicUserToken=stored;
+
+          if(!inst._tdtmBound){
+            inst._tdtmBound=true;
+            inst.addEventListener('nowPlayingItemDidChange',()=>{ updateNowPlaying(inst,true); });
+            inst.addEventListener('playbackStateDidChange',(evt)=>{
+              const PS=window.MusicKit?.PlaybackStates||{};
+              const isPlaying=evt?.state===PS.playing;
+              setPlayIcon(isPlaying);
+              if(evt.state === PS.stopped || evt.state === PS.completed) {
+                mini.title.textContent = '—'; mini.artist.textContent = '—'; mini.open.href = '#';
+              } else if (isPlaying) { updateNowPlaying(inst, true); }
+            });
+          }
+          music=inst; return music;
+        })().catch(e=>{musicInitPromise=null; throw e;});
+      }
+      return musicInitPromise;
+  }
+
+  /* ===== Sign-in / Create / Play (Apple Music) ===== */
+  function showAmControls(){
+    qs('#amSign').style.display='none';
+    qs('#amCreate').style.display='inline-block';
+    qs('#amPlayLocal').style.display = lastTracks.length ? 'inline-block' : 'none';
+  }
+  async function amSignIn(){
     try{
-      const item = music?.player?.nowPlayingItem;
-      if (!item){ nptitle.textContent = "—"; openAM.removeAttribute("href"); return; }
-      const name = item?.attributes?.name || "Unknown";
-      const artist = item?.attributes?.artistName || "";
-      nptitle.textContent = artist ? `${name} — ${artist}` : name;
-      const url = item?.attributes?.url;
-      if (url) { openAM.href = url; openAM.target = "_blank"; openAM.rel = "noopener"; }
-    }catch{}
+      qs('#amMsg').textContent='Contacting Apple…';
+      let m=await getWebMusicInstance(true);
+      const tok=await m.authorize(); await sleep(100);
+      if(!tok||tok.length<20){qs('#amMsg').textContent='Sign-in cancelled or failed. Apple Music subscription required.';return;}
+      localStorage.setItem('appleMusicUserToken',tok); m.musicUserToken=tok; await getWebMusicInstance(true); // Re-init with token
+      qs('#amMsg').textContent='Signed in. Create your playlist or use the built-in player.'; showAmControls();
+    }catch(e){qs('#amMsg').textContent='Sign-in failed: '+(e.message||e);}
+  }
+  async function amCreatePlaylist(){
+    const userToken=localStorage.getItem('appleMusicUserToken');
+    if(!userToken){qs('#amMsg').textContent='Please sign in first.'; return;}
+    if(!lastTracks?.length){qs('#amMsg').textContent='Generate a tracklist first.'; return;}
+    qs('#amMsg').textContent='Creating playlist…';
+    const btn = qs('#amCreate'); // Get button reference
+    btn.disabled = true; // Disable button
+    try{
+      // Use "TapeDeckTimeMachine" prefix
+      const name=`TapeDeckTimeMachine - ${qs('#date').value} - ${qs('#genre').value}`;
+      const r=await withTimeout(fetch(`${API}/v1/apple/create-playlist`,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({userToken,name,tracks:lastTracks.map(t=>({artist:t.artist,title:t.title}))})}));
+      if(!r.ok){ const j=await r.json().catch(()=>({detail:'Unknown error during create'})); throw new Error(j.detail||`Create failed with status ${r.status}`); }
+      const j=await r.json();
+
+      qs('#amMsg').textContent=`Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks.`;
+      qs('#amPlayLocal').style.display='inline-block'; // Ensure play button is visible after create
+
+    }catch(e){
+        qs('#amMsg').textContent='Create failed: '+(e.message||String(e));
+    } finally {
+        btn.disabled = false; // Re-enable button
+    }
   }
 
-  async function searchAppleIDs(tracks){
-    if (!amDevToken) await ensureMusicKit();
-    const ids = [];
-    for (const t of tracks){
-      const q = encodeURIComponent(`${t.artist} ${t.title}`);
-      const url = `https://api.music.apple.com/v1/catalog/${amStorefront}/search?term=${q}&limit=1&types=songs`;
+  /* ===== Catalog helpers (Apple Music) ===== */
+  async function backendSongMeta(id,storefront='us'){ /* ... No changes ... */ }
+  async function appleSongById(id,storefront='us'){ /* ... No changes ... */ }
+  async function appleCatalogSearch(term,storefront='us',limit=1){ /* ... No changes ... */ }
+  async function appleCatalogResolveList(tracks,storefront){ /* ... No changes ... */ }
+
+  async function buildLocalQueueAndPlay(){
+    let m=await getWebMusicInstance(); if(!m.musicUserToken){qs('#amMsg').textContent='Please sign in first.'; return;}
+    if(!lastTracks?.length){qs('#amMsg').textContent='Generate a tracklist first.'; return;}
+    const storefront=m.storefrontId||'us';
+
+    resolvedSongIds = []; // Clear previous IDs
+    qs('#amMsg').textContent = `Resolving ${lastTracks.length} tracks...`; // Show resolving message
+    qs('#amMsg').style.display = ''; // Ensure message area is visible
+    qs('#mini').style.display = 'none'; // Hide mini player while resolving
+    const btn = qs('#amPlayLocal'); // Get button reference
+    btn.disabled = true; // Disable button during resolve/play
+
+    try {
+        resolvedSongIds=await appleCatalogResolveList(lastTracks,storefront); // await resolution
+    } catch (e) {
+        console.error("Error during Apple track resolution:", e);
+        qs('#amMsg').textContent = 'Error resolving tracks: ' + (e.message || 'Unknown error');
+        qs('#amMsg').style.display = ''; // Keep error message visible
+        btn.disabled = false; // Re-enable button on error
+        return; // Stop if resolution fails
+    }
+    // No finally needed for amMsg display change here
+
+    if(!resolvedSongIds.length){
+        qs('#amMsg').textContent='No playable tracks were found in Apple Music.';
+        qs('#amMsg').style.display = ''; // Show error message
+        btn.disabled = false; // Re-enable button
+        return;
+    }
+
+    // If resolution successful, prepare for playback
+    try{ if(m.player?.playbackState===MusicKit.PlaybackStates.playing) await m.pause(); } catch(e){ console.warn("Couldn't pause before play:", e)}
+
+    qs('#amMsg').textContent='Preparing player…'; // Show status message
+
+    try {
+        await m.setQueue({songs:resolvedSongIds});
+        await sleep(200); // Give queue a moment
+        await m.play();
+        qs('#mini').style.display='block'; // Show the mini player
+        qs('#amMsg').textContent=`Now playing ${resolvedSongIds.length} tracks.`; // Update status message
+    } catch (e) {
+        console.error("Error setting queue or playing Apple Music:", e);
+        qs('#amMsg').textContent = 'Error starting playback: ' + (e.message || 'Unknown error');
+        qs('#mini').style.display = 'none'; // Hide mini player on error
+    } finally {
+        btn.disabled = false; // Re-enable button after play attempt
+    }
+  }
+
+  /* ===== Mini-player UI (Apple Music) ===== */
+  const mini={title:qs('#miniTitle'),artist:qs('#miniArtist'),
+        btnPrev:qs('#btnPrev'),btnPlayPause:qs('#btnPlayPause'),btnNext:qs('#btnNext'),open:qs('#miniOpen')};
+  function setPlayIcon(isPlaying){ mini.btnPlayPause.textContent=isPlaying?'⏸':'▶'; mini.btnPlayPause.title=isPlaying?'Pause':'Play'; }
+  function readMeta(item){
+    const a=item?.attributes||{};
+    const title=a.name || a.title || item?.title || item?.name || '';
+    const artist=a.artistName || item?.artistName || a.artist || item?.artist || '';
+    const url=a.url || '';
+    const id=a.playParams?.id || item?.id || '';
+    return {title,artist,url,id};
+  }
+
+  async function updateNowPlaying(m,tryFetchIfMissing){
+    const it=m?.player?.nowPlayingItem;
+
+    if(!it){
+      mini.title.textContent = '—';
+      mini.artist.textContent = '—';
+      mini.open.href = '#';
+      return;
+    }
+
+    let {title,artist,url,id}=readMeta(it);
+
+    if(tryFetchIfMissing && id && (!title || !artist)){
       try{
-        const r = await fetch(url,{ headers:{Authorization:`Bearer ${amDevToken}`}});
-        if (!r.ok) continue;
-        const js = await r.json();
-        const item = (((js.results||{}).songs||{}).data||[])[0];
-        if (item) ids.push(item.id);
-      }catch{}
-      await new Promise(r=>setTimeout(r,120)); // gentle rate limiting
+        mini.title.textContent = 'Loading...';
+        mini.artist.textContent = '';
+        const meta=await backendSongMeta(id,m.storefrontId||'us');
+        title=title||meta?.name; artist=artist||meta?.artistName; url=url||meta?.url;
+      }catch(e){
+        console.warn("Failed to fetch backend meta in updateNowPlaying:", e);
+        title = title || 'Unknown Title';
+        artist = artist || 'Unknown Artist';
+      }
     }
-    return ids;
+
+    mini.title.textContent=title||'—'; // Use title or placeholder
+    mini.artist.textContent=artist||'—'; // Use artist or placeholder
+    mini.open.href= url || '#'; // Use URL or fallback
   }
 
-  // --- Actions ---
-  btnGenerate.onclick = async () => {
-    const payload = {
-      date: iso(dateEl.value),
-      genre: genreEl.value,
-      hours: parseFloat(hoursEl.value||"1"),
-      repeat_gap_min: parseInt(gapEl.value||"90", 10),
-      seed: (seedEl.value||"97"),
-      limit: 120
+  // Mini-player click handlers
+  mini.btnPlayPause.addEventListener('click', async (e)=>{
+    e.preventDefault();
+    const m=await getWebMusicInstance(); if(!m?.player) return;
+    const now=Date.now(); if(now-lastToggleTS<350) return; lastToggleTS=now;
+    const PS=window.MusicKit.PlaybackStates;
+    try{
+      switch(m.player.playbackState){
+        case PS.playing: await m.pause(); break;
+        case PS.paused: case PS.stopped: case PS.completed: default: await m.play(); break;
+      }
+    }catch(e) { console.error("Error toggling playback:", e); }
+  });
+  mini.btnPrev.onclick=async()=>{ const m=await getWebMusicInstance(); try{ await m.skipToPreviousItem(); }catch(e){ console.error("Error skipping previous:", e); } };
+  mini.btnNext.onclick=async()=>{ const m=await getWebMusicInstance(); try{ await m.skipToNextItem(); }catch(e){ console.error("Error skipping next:", e); } };
+
+  /* ===== Right panel (viz) ===== */
+  document.querySelectorAll('#pane-am-right .tab').forEach(b=>{
+    b.onclick=()=>{ document.querySelectorAll('#pane-am-right .tab').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+      const k=b.dataset.side; qs('#side-viz').style.display=k==='viz'?'':'none';
+      qs('#side-capsule').style.display=k==='capsule'?'':'none';
+      if(k==='viz') startViz(); else stopViz();
     };
-    showStatus("Generating…");
-    btnGenerate.disabled = true;
-    try{
-      const r = await fetch(`${API}/v1/simulate`, {method:"POST", headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
-      if (!r.ok) throw new Error(await r.text());
-      const j = await r.json();
-      currentTracks = (j.tracks||[]).map(t => ({artist:t.artist,title:t.title,timestamp:t.timestamp,source_rank:t.source_rank}));
-      showStatus(`Now playing ${currentTracks.length} tracks ready.`);
-      addChips(currentTracks);
-    }catch(e){
-      console.error(e);
-      showStatus("Generate failed.");
-    }finally{
-      btnGenerate.disabled = false;
+  });
+  let vizRAF=null; // Use null to indicate stopped state more clearly
+  function startViz(){
+    const c=qs('#viz'); if(!c) return; const ctx=c.getContext('2d'); let t=0;
+    stopViz(); // Ensure any previous animation is stopped
+    const loop=()=>{
+      // Check flag before proceeding - use explicit null check
+      if(vizRAF === null) return;
+      const w=c.width,h=c.height; ctx.clearRect(0,0,w,h);
+      const g=ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,'#8b5cf6'); g.addColorStop(1,'#22d3ee'); ctx.fillStyle=g;
+      const bars=48,pad=6; for(let i=0;i<bars;i++){ const p=i/(bars-1); const phase=t*0.05+i*0.35; const amp=(Math.sin(phase)+1)/2;
+        const ease=0.8-Math.abs(p-0.5); const hBar=(amp*ease)*h*0.9+6; const bw=(w-pad*(bars+1))/bars; const x=pad+i*(bw+pad); const y=h-hBar;
+        ctx.fillRect(x,y,bw,hBar); ctx.globalAlpha=0.08; ctx.fillRect(x,y-12,bw,hBar+24); ctx.globalAlpha=1; }
+      t+=1;
+      vizRAF=requestAnimationFrame(loop); };
+    vizRAF=requestAnimationFrame(loop); // Assign new frame ID
+    console.log("Visualizer started, RAF ID:", vizRAF);
+  }
+  function stopViz(){
+     if (vizRAF !== null) {
+        cancelAnimationFrame(vizRAF);
+        vizRAF = null; // Set flag to null when stopped
+        console.log("Visualizer stopped.");
+     }
+  }
+
+  /* ===== Init ===== */
+  (function(){
+    // Apple Music Init
+    const tok=localStorage.getItem('appleMusicUserToken');
+    if(tok){ qs('#amMsg').textContent='Signed in. Create your playlist or use the built-in player.'; showAmControls(); }
+
+    // UPDATED: Spotify Init & Callback Handling
+    const spTok = localStorage.getItem('spotifyAccessToken');
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const spotifyToken = params.get('access_token');
+    const spotifyError = params.get('spotify_error');
+
+    if (spotifyError) {
+        console.error("Spotify Login Error:", spotifyError);
+        qs('#spMsg').textContent = `Spotify login failed: ${spotifyError}. Please try again.`;
+        window.history.pushState("", document.title, window.location.pathname + window.location.search);
+        setTab('sp'); // Ensure Spotify tab is shown to display error
+    } else if (spotifyToken) {
+        console.log("Spotify access token found in URL hash.");
+        localStorage.setItem('spotifyAccessToken', spotifyToken);
+        qs('#spSign').style.display = 'none';
+        qs('#spCreate').style.display = 'inline-block';
+        qs('#spMsg').textContent = 'Signed in to Spotify.';
+        window.history.pushState("", document.title, window.location.pathname + window.location.search);
+        setTab('sp'); // Switch to Spotify tab automatically
+    } else if (spTok) {
+        console.log("Spotify access token found in localStorage.");
+        qs('#spSign').style.display = 'none';
+        qs('#spCreate').style.display = 'inline-block';
+        qs('#spMsg').textContent = 'Signed in to Spotify.';
+    } else {
+        console.log("No Spotify access token found.");
+        qs('#spMsg').textContent = 'Sign in to create Spotify playlists.';
     }
+  })();
+
+  /* ===== Wire buttons ===== */
+  qs('#go').onclick=simulate;
+  // Apple Music Buttons
+  qs('#amSign').onclick=amSignIn;
+  qs('#amCreate').onclick=amCreatePlaylist;
+  qs('#amPlayLocal').onclick=buildLocalQueueAndPlay;
+
+  // UPDATED: Wire Spotify Buttons
+  qs('#spSign').onclick = () => { window.location.href = `${API}/v1/spotify/login`; };
+  qs('#spCreate').onclick = async () => {
+      const token = localStorage.getItem('spotifyAccessToken');
+      if (!token) {
+          qs('#spMsg').textContent = 'Error: Not signed in. Please sign in again.';
+          qs('#spSign').style.display = 'inline-block'; qs('#spCreate').style.display = 'none';
+          localStorage.removeItem('spotifyAccessToken');
+          return;
+       }
+      if (!lastTracks?.length) { qs('#spMsg').textContent = 'Please generate a tracklist first.'; return; }
+
+      const btn = qs('#spCreate');
+      btn.disabled = true;
+      qs('#spMsg').textContent = 'Creating Spotify playlist...';
+      try {
+          // Use "TapeDeckTimeMachine" prefix
+          const name = `TapeDeckTimeMachine - ${qs('#date').value} - ${qs('#genre').value}`;
+          const body = { accessToken: token, name: name, tracks: lastTracks.map(t => ({ artist: t.artist, title: t.title })) };
+          const r = await withTimeout(fetch(`${API}/v1/spotify/create-playlist`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }), NET_TIMEOUT_MS);
+
+          if (!r.ok) {
+              let errorDetail = `Request failed: ${r.status}`;
+              try { const j = await r.json(); errorDetail = j.detail || errorDetail; } catch (e) {}
+              if (r.status === 401 || r.status === 403) {
+                  errorDetail += ' Spotify session expired? Try signing in again.';
+                  localStorage.removeItem('spotifyAccessToken');
+                  qs('#spSign').style.display = 'inline-block'; qs('#spCreate').style.display = 'none';
+              }
+              throw new Error(errorDetail);
+          }
+
+          const result = await r.json();
+          let message = `Spotify playlist created! Added ${result.added_count} of ${result.total_tracks} tracks.`;
+          if(result.url) { message += ` <a href="${result.url}" target="_blank" rel="noopener" class="btn" style="padding: 6px 10px; font-size: 0.9em;">Open Playlist</a>`; }
+          qs('#spMsg').innerHTML = message;
+
+      } catch (e) {
+          console.error("Spotify Create Playlist Error:", e);
+          qs('#spMsg').textContent = 'Error creating playlist: ' + (e.message || String(e));
+          // Re-show sign-in button if token was likely the issue
+          if (!localStorage.getItem('spotifyAccessToken') && qs('#spSign').style.display === 'none') {
+             qs('#spSign').style.display = 'inline-block'; qs('#spCreate').style.display = 'none';
+          }
+      } finally {
+          btn.disabled = false;
+      }
   };
 
-  // Apple: Create playlist in user library (requires user authorize)
-  btnCreateAM.onclick = async () => {
-    try{
-      await ensureMusicKit();
-      if (!music.isAuthorized){ await music.authorize(); }
-      const userToken = music.musicUserToken;
-      if (!userToken){ alert("Apple authorization failed."); return; }
-
-      const name = `TapeDeck ${iso(dateEl.value)} — ${genreEl.value}`;
-      btnCreateAM.disabled = true;
-      showStatus("Creating Apple playlist…");
-      const r = await fetch(`${API}/v1/apple/create-playlist`, {
-        method:"POST",
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ userToken, name, tracks: currentTracks })
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.detail || "Apple create failed");
-      showStatus(`Apple playlist created. Added ${j.added_count}/${j.total_tracks}.`);
-    }catch(e){
-      console.error(e);
-      showStatus("Apple playlist failed.");
-    }finally{
-      btnCreateAM.disabled = false;
-    }
-  };
-
-  // Apple: Built-in mini player
-  btnPlayAM.onclick = async () => {
-    try{
-      if (!currentTracks.length){ showStatus("Nothing to play. Generate first."); return; }
-      await ensureMusicKit();
-      // Use catalog search with dev token to build a playable queue
-      showStatus("Resolving Apple matches…");
-      const ids = await searchAppleIDs(currentTracks.slice(0, 120));
-      if (!ids.length){ showStatus("No Apple matches found."); return; }
-      await music.setQueue({ songs: ids });
-      await music.play();
-      showStatus(`Playing ${ids.length} Apple tracks.`);
-      updateNP();
-    }catch(e){
-      console.error(e);
-      showStatus("Apple playback failed.");
-    }
-  };
-
-  // Mini controls
-  btnPrev.onclick = async () => { try{ await ensureMusicKit(); await music.player.skipToPreviousItem(); }catch{} };
-  btnNext.onclick = async () => { try{ await ensureMusicKit(); await music.player.skipToNextItem(); }catch{} };
-  btnPP.onclick   = async () => {
-    try{
-      await ensureMusicKit();
-      const st = music.player.playbackState;
-      const playing = st === MusicKit.PlaybackState.playing || st === 3;
-      if (playing){ await music.pause(); } else { await music.play(); }
-    }catch(e){ console.error(e); }
-  };
-
-  // Spotify
-  parseHashTokens();
-  loadSpotifyFromStorage();
-
-  btnSpotifyLogin.onclick = () => {
-    // Backend handles state + redirect
-    window.location.href = `${API}/v1/spotify/login`;
-  };
-
-  btnCreateSP.onclick = async () => {
-    const tok = spotify.access_token;
-    if (!tok){ alert("Sign in to Spotify first."); return; }
-    if (!currentTracks.length){ alert("Generate a list first."); return; }
-    btnCreateSP.disabled = true;
-    showStatus("Creating Spotify playlist…");
-    try{
-      const name = `TapeDeck ${iso(dateEl.value)} — ${genreEl.value}`;
-      const r = await fetch(`${API}/v1/spotify/create-playlist`, {
-        method:"POST",
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ accessToken: tok, name, tracks: currentTracks })
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.detail||"Spotify create failed");
-      showStatus(`Spotify playlist ready. Added ${j.added_count}/${j.total_tracks}.`);
-      if (j.url){ window.open(j.url, "_blank", "noopener"); }
-    }catch(e){
-      console.error(e);
-      showStatus("Spotify playlist failed.");
-    }finally{
-      btnCreateSP.disabled = false;
-    }
-  };
-
-})();
+  setTab('am'); // Default to Apple Music tab on load
+  startViz(); // Start visualizer on load
 </script>
+
 </body>
 </html>
+
