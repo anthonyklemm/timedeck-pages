@@ -77,7 +77,6 @@
     .mini{display:none;margin-top:12px;background:rgba(12,20,34,.8);border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:10px 12px}
     .mini .np{display:flex;align-items:center;gap:16px}
     
-    /* UPDATED: Added overflow: hidden to fix text disappearing */
     .mini .np-text{min-width:0;flex:1; overflow: hidden;}
 
     .mini .title{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -223,7 +222,6 @@
     const yt=qs('#pane-yt'), aml=qs('#pane-am-left'), amr=qs('#pane-am-right');
     if(id==='yt'){
       yt.style.display=''; aml.style.display='none'; amr.style.display='none';
-      // NEW: If tracks exist but player doesn't, build it
       if(lastTracks.length > 0 && !player) buildYtPlayer(lastTracks);
     }
     else { yt.style.display='none'; aml.style.display=''; amr.style.display=''; }
@@ -239,7 +237,6 @@
   (function(){ const s=document.createElement('script'); s.src="https://www.youtube.com/iframe_api"; document.head.appendChild(s); })();
   window.onYouTubeIframeAPIReady=()=>{YTapiReady=true;};
 
-  // NEW: This is the core data fetch
   async function fetchSimulation(){
     const body={date:qs('#date').value.trim(),genre:qs('#genre').value,hours:Number(qs('#hours').value||3),
       repeat_gap_min:Number(qs('#gap').value||90),seed:(qs('#seed').value.trim()||undefined)?String(qs('#seed').value.trim()):undefined,limit:500};
@@ -265,7 +262,6 @@
     }
   }
   
-  // NEW: This is the main "Generate" button handler
   async function simulate(){
     const btn = qs('#go');
     btn.disabled = true; btn.textContent = 'Building…';
@@ -276,17 +272,19 @@
     btn.disabled = false; btn.textContent = 'Generate';
     
     if(success){
-      // Check which tab is active and build the corresponding player
+      // UPDATED LOGIC:
+      // ALWAYS update the Apple Music UI state, so the button is available
+      // even if user generated on the YT tab.
+      qs('#amPlayLocal').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
+      qs('#amMsg').textContent='Playlist ready. Sign in and create it, or use the built-in player.';
+
+      // ALSO build the YT player if that tab is currently active
       if(qs('.tab[data-tab="yt"]').classList.contains('active')){
         buildYtPlayer(lastTracks);
-      } else {
-        qs('#amPlayLocal').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
-        qs('#amMsg').textContent='Playlist ready. Sign in and create it, or use the built-in player.';
       }
     }
   }
 
-  // NEW: All the logic to build the YouTube player
   async function buildYtPlayer(tracks){
     if(!tracks?.length) return;
     qs('#ytStatus').textContent='Resolving YouTube videos…'; qs('#ytErr').textContent='';
@@ -302,7 +300,6 @@
       qs('#ytStatus').textContent='Loading player…';
       if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML='';
 
-      // Wait for YouTube API to be ready
       let tries=0; while(!YTapiReady && tries<100){ await sleep(100); tries++; }
       if(!YTapiReady) throw new Error('YouTube API failed to load.');
 
@@ -596,7 +593,6 @@
   })();
 
   /* ===== Wire buttons ===== */
-  // UPDATED: 'go' button now points to the new simulate function
   qs('#go').onclick=simulate;
   qs('#amSign').onclick=amSignIn;
   qs('#amCreate').onclick=amCreatePlaylist;
