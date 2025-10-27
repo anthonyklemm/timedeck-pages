@@ -48,8 +48,6 @@
       border-radius:18px;padding:16px;box-shadow:var(--shadow)}
     .grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr auto;gap:12px;align-items:end}
     label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
-    
-    /* UPDATED: Added min-width: 0; to fix date field overflow on mobile */
     input,select,button{width:100%; min-width: 0; padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
       background:#0c1422;color:var(--text);outline:none;font-size:1rem}
     
@@ -58,6 +56,7 @@
     input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
 
     button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700;cursor:pointer}
+    button.primary:disabled{opacity:0.6;background:var(--panel);cursor:not-allowed}
     .tabs{display:flex;gap:10px;margin:14px 0 8px}
     .tab{padding:9px 14px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0c1422;color:var(--text);cursor:pointer}
     .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
@@ -65,6 +64,7 @@
     .cols{display:grid;grid-template-columns:1.05fr .95fr; gap:16px}
     .box{min-height:380px}
     iframe{width:100%;height:360px;border:0;border-radius:12px;box-shadow:var(--shadow)}
+    #ytp iframe{width:100%;height:auto;min-height:300px; aspect-ratio: 16/9; border-radius:12px;box-shadow:var(--shadow)}
     .btn{display:inline-block;margin-top:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);
       background:#0c1422;color:#e5e7eb;text-decoration:none;font-weight:700;cursor:pointer}
     .muted{color:var(--muted)}
@@ -76,7 +76,10 @@
     /* ===== Mini-player (flat row) ===== */
     .mini{display:none;margin-top:12px;background:rgba(12,20,34,.8);border:1px solid rgba(148,163,184,.12);border-radius:14px;padding:10px 12px}
     .mini .np{display:flex;align-items:center;gap:16px}
-    .mini .np-text{min-width:0;flex:1}
+    
+    /* UPDATED: Added overflow: hidden to fix text disappearing */
+    .mini .np-text{min-width:0;flex:1; overflow: hidden;}
+
     .mini .title{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .mini .artist{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .mini .controls{display:flex;align-items:center;gap:8px}
@@ -90,6 +93,7 @@
     @media (max-width:900px){
       .cols{grid-template-columns:1fr}
       .grid{grid-template-columns: 1fr 1fr; gap: 10px;}
+      #ytp iframe{min-height:220px}
     }
     @media (max-width:500px){
       .grid{grid-template-columns: 1fr;}
@@ -217,7 +221,11 @@
   function setTab(id){
     document.querySelectorAll('.tab[data-tab]').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
     const yt=qs('#pane-yt'), aml=qs('#pane-am-left'), amr=qs('#pane-am-right');
-    if(id==='yt'){ yt.style.display=''; aml.style.display='none'; amr.style.display='none'; }
+    if(id==='yt'){
+      yt.style.display=''; aml.style.display='none'; amr.style.display='none';
+      // NEW: If tracks exist but player doesn't, build it
+      if(lastTracks.length > 0 && !player) buildYtPlayer(lastTracks);
+    }
     else { yt.style.display='none'; aml.style.display=''; amr.style.display=''; }
   }
   document.querySelectorAll('.tab[data-tab]').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
@@ -231,22 +239,99 @@
   (function(){ const s=document.createElement('script'); s.src="https://www.youtube.com/iframe_api"; document.head.appendChild(s); })();
   window.onYouTubeIframeAPIReady=()=>{YTapiReady=true;};
 
-  async function simulate(){
+  // NEW: This is the core data fetch
+  async function fetchSimulation(){
     const body={date:qs('#date').value.trim(),genre:qs('#genre').value,hours:Number(qs('#hours').value||3),
       repeat_gap_min:Number(qs('#gap').value||90),seed:(qs('#seed').value.trim()||undefined)?String(qs('#seed').value.trim()):undefined,limit:500};
-    qs('#ytStatus').textContent='Building…'; qs('#ytErr').textContent='';
+    
     if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML=''; qs('#ytOpen').style.display='none';
     qs('#list').innerHTML=''; lastTracks=[]; resolvedSongIds=[];
+    
     try{
       const r=await withTimeout(fetch(`${API}/v1/simulate`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}));
       if(!r.ok){ const txt=await r.text().catch(()=> ''); throw new Error(`simulate ${r.status}: ${txt}`); }
       const data=await r.json(); lastTracks=data.tracks||[];
-      if(!lastTracks.length){ qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned. Try a different date/genre.'; return; }
+      if(!lastTracks.length){ 
+        qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned. Try a different date/genre.'; 
+        qs('#amMsg').textContent='No tracks returned. Try a different date/genre.';
+        return false;
+      }
       renderList(lastTracks);
-      qs('#amPlayLocal').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
-      qs('#amMsg').textContent='Playlist ready. Sign in and create it, or use the built-in player.';
-    }catch(err){ qs('#ytStatus').textContent=''; qs('#ytErr').textContent=err.message||String(err); }
+      return true;
+    }catch(err){ 
+      qs('#ytStatus').textContent=''; qs('#ytErr').textContent=err.message||String(err);
+      qs('#amMsg').textContent='Error: '+(err.message||String(err));
+      return false;
+    }
   }
+  
+  // NEW: This is the main "Generate" button handler
+  async function simulate(){
+    const btn = qs('#go');
+    btn.disabled = true; btn.textContent = 'Building…';
+    qs('#ytStatus').textContent='Building…'; qs('#ytErr').textContent='';
+    qs('#amMsg').textContent='Building playlist…';
+
+    const success = await fetchSimulation();
+    btn.disabled = false; btn.textContent = 'Generate';
+    
+    if(success){
+      // Check which tab is active and build the corresponding player
+      if(qs('.tab[data-tab="yt"]').classList.contains('active')){
+        buildYtPlayer(lastTracks);
+      } else {
+        qs('#amPlayLocal').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
+        qs('#amMsg').textContent='Playlist ready. Sign in and create it, or use the built-in player.';
+      }
+    }
+  }
+
+  // NEW: All the logic to build the YouTube player
+  async function buildYtPlayer(tracks){
+    if(!tracks?.length) return;
+    qs('#ytStatus').textContent='Resolving YouTube videos…'; qs('#ytErr').textContent='';
+    try {
+      const r = await withTimeout(fetch(`${API}/v1/yt/resolve`, {
+        method: 'POST', headers: {'content-type': 'application/json'},
+        body: JSON.stringify({tracks, limit: 50})
+      }));
+      if(!r.ok){ const txt=await r.text().catch(()=>''); throw new Error(`yt/resolve ${r.status}: ${txt}`); }
+      const {ids} = await r.json();
+      if(!ids?.length) throw new Error('No YouTube videos found for this playlist.');
+      
+      qs('#ytStatus').textContent='Loading player…';
+      if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML='';
+
+      // Wait for YouTube API to be ready
+      let tries=0; while(!YTapiReady && tries<100){ await sleep(100); tries++; }
+      if(!YTapiReady) throw new Error('YouTube API failed to load.');
+
+      player = new YT.Player('ytp', {
+        height: '360', width: '640',
+        playerVars: {
+          playlist: ids.join(','),
+          autoplay: 1,
+          controls: 1,
+          loop: 1
+        },
+        events: {
+          'onReady': () => {
+            qs('#ytStatus').textContent = `Playing ${ids.length} videos.`;
+            const plUrl = `https://www.youtube.com/playlist?list=${ids.join(',')}`;
+            const openBtn = qs('#ytOpen');
+            openBtn.href = plUrl;
+            openBtn.style.display = 'inline-block';
+          },
+          'onError': (e) => {
+             qs('#ytErr').textContent = `Youtubeer Error: ${e.data}`;
+          }
+        }
+      });
+    } catch(err) {
+      qs('#ytStatus').textContent=''; qs('#ytErr').textContent=err.message||String(err);
+    }
+  }
+
   function renderList(rows){
     if(!rows?.length){ qs('#list').innerHTML='<div class="muted">No tracks.</div>'; return; }
     const frag=document.createDocumentFragment();
@@ -290,10 +375,6 @@
           inst.addEventListener('nowPlayingItemDidChange',()=>{updateNowPlaying(inst,true);});
           inst.addEventListener('playbackTimeDidChange',()=>{updateNowPlaying(inst,false);});
           
-          // UPDATED: This logic is now fixed and robust.
-          // It calls updateNowPlaying, passing 'isPlaying' as the 'tryFetchIfMissing' flag.
-          // This ensures we fetch metadata when 'playing' (item is sparse)
-          // but don't fetch when 'pausing' (item is already populated).
           inst.addEventListener('playbackStateDidChange',(evt)=>{
             const PS=window.MusicKit?.PlaybackStates||{};
             const isPlaying=evt?.state===PS.playing;
@@ -437,23 +518,19 @@
     return {title,artist,url,id};
   }
   
-  // UPDATED: This function is now more robust.
-  // It handles the case where playback stops (it == null) by resetting the UI.
   async function updateNowPlaying(m,tryFetchIfMissing){
     const it=m?.player?.nowPlayingItem;
     
-    // NEW: Handle null item (playback stopped/completed)
     if(!it){
       mini.title.textContent = '—';
       mini.artist.textContent = '—';
       mini.open.href = '#';
-      syncEmbedToNowPlaying(m); // m has no item, so this will sync to nothing
+      syncEmbedToNowPlaying(m);
       return;
     }
 
     let {title,artist,url,id}=readMeta(it);
     
-    // This fetch block is now correctly triggered by the updated playbackStateDidChange
     if(tryFetchIfMissing && id && (!title || !artist)){
       try{
         const meta=await backendSongMeta(id,m.storefrontId||'us');
@@ -519,6 +596,7 @@
   })();
 
   /* ===== Wire buttons ===== */
+  // UPDATED: 'go' button now points to the new simulate function
   qs('#go').onclick=simulate;
   qs('#amSign').onclick=amSignIn;
   qs('#amCreate').onclick=amCreatePlaylist;
