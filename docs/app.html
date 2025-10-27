@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>TapeDeck Time Machine</title>
 
-  <!-- Apple MusicKit -->
   <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
 
-  <!-- Meta -->
   <meta name="description" content="Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.">
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/logo.svg">
@@ -25,7 +23,6 @@
   <meta property="twitter:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
   <meta property="twitter:image" content="https://tapedecktimemachine.com/tapedeck-preview.png">
 
-  <!-- GA -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HPZT6BMJVD"></script>
   <script>
     window.dataLayer=window.dataLayer||[];
@@ -53,6 +50,10 @@
     label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
     input,select,button{width:100%;padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
       background:#0c1422;color:var(--text);outline:none;font-size:1rem}
+    /* Style for date picker text color */
+    input[type="date"] { color-scheme: dark; }
+    input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
+
     button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700;cursor:pointer}
     .tabs{display:flex;gap:10px;margin:14px 0 8px}
     .tab{padding:9px 14px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0c1422;color:var(--text);cursor:pointer}
@@ -83,7 +84,15 @@
     #pane-am-right .tab{padding:8px 12px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0c1422}
     #pane-am-right .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
 
-    @media (max-width:900px){ .cols{grid-template-columns:1fr} }
+    @media (max-width:900px){
+      .cols{grid-template-columns:1fr}
+      /* NEW: Make top grid 2-column on tablet */
+      .grid{grid-template-columns: 1fr 1fr; gap: 10px;}
+    }
+    /* NEW: Make top grid 1-column on phone */
+    @media (max-width:500px){
+      .grid{grid-template-columns: 1fr;}
+    }
   </style>
 </head>
 <body>
@@ -95,9 +104,8 @@
   </div>
 
   <div class="panel">
-    <!-- Controls -->
     <div class="grid">
-      <div><label>Date</label><input id="date" placeholder="mm/dd/yyyy" value="07/01/2002"></div>
+      <div><label>Date</label><input id="date" type="date" value="2002-07-01"></div>
       <div><label>Genre</label>
         <select id="genre">
           <option>Alternative</option><option>Hot-100</option><option>Pop</option>
@@ -110,7 +118,6 @@
       <div><label>&nbsp;</label><button id="go" class="primary">Generate</button></div>
     </div>
 
-    <!-- Top tabs -->
     <div class="tabs">
       <button class="tab" data-tab="yt">YouTube</button>
       <button class="tab active" data-tab="am">Apple Music</button>
@@ -118,9 +125,7 @@
     </div>
     <div class="muted" style="margin:-6px 0 8px 2px">Spotify sign-in is under construction. Coming soon!</div>
 
-    <!-- Two-column area -->
     <div class="cols">
-      <!-- Apple LEFT -->
       <div class="panel box" id="pane-am-left">
         <p class="muted" style="margin-bottom:8px">
           Generate a list, sign in, create the playlist, then play it below with the official Apple embed.
@@ -135,7 +140,6 @@
         </div>
         <div id="amMsg" class="muted" style="margin-top:8px"></div>
 
-        <!-- Mini player -->
         <div id="mini" class="mini">
           <div class="np">
             <div class="np-text">
@@ -151,7 +155,6 @@
           </div>
         </div>
 
-        <!-- Apple embed (hidden until we have a URL) -->
         <div id="embedWrap" style="display:none;margin-top:8px">
           <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:8px">
             <div class="muted">Apple Music Player</div>
@@ -165,7 +168,6 @@
         </div>
       </div>
 
-      <!-- Apple RIGHT (Visualizer / Time Capsule) -->
       <div class="panel box" id="pane-am-right">
         <div class="tabs" style="margin-top:0">
           <button class="tab active" data-side="viz">Visualizer</button>
@@ -179,7 +181,6 @@
         </div>
       </div>
 
-      <!-- YouTube (hidden while Apple tab is active) -->
       <div class="panel box" id="pane-yt" style="display:none">
         <div id="ytWrap">
           <div class="muted" id="ytStatus">Waiting for a simulation…</div>
@@ -191,7 +192,6 @@
     </div>
   </div>
 
-  <!-- Tracklist -->
   <div class="panel" style="margin-top:16px">
     <h2>Your Music Time Machine Playlist</h2>
     <p class="muted" style="margin-bottom:6px">
@@ -210,7 +210,7 @@
   const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
   const NET_TIMEOUT_MS = 180000;
   const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
-  function toISO(mmddyyyy){ const [mm,dd,yyyy]=mmddyyyy.split('/'); return `${yyyy}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
+  // REMOVED: toISO function is no longer needed as input is type="date"
   function withTimeout(p,ms=NET_TIMEOUT_MS){ let t; const timer=new Promise((_,rej)=>{t=setTimeout(()=>rej(new Error(`Network timeout after ${Math.round(ms/1000)}s`)),ms)}); return Promise.race([p.finally(()=>clearTimeout(t)),timer]); }
 
   /* ===== Tabs ===== */
@@ -232,7 +232,8 @@
   window.onYouTubeIframeAPIReady=()=>{YTapiReady=true;};
 
   async function simulate(){
-    const body={date:toISO(qs('#date').value.trim()),genre:qs('#genre').value,hours:Number(qs('#hours').value||3),
+    // UPDATED: Use date value directly, no toISO needed
+    const body={date:qs('#date').value.trim(),genre:qs('#genre').value,hours:Number(qs('#hours').value||3),
       repeat_gap_min:Number(qs('#gap').value||90),seed:(qs('#seed').value.trim()||undefined)?String(qs('#seed').value.trim()):undefined,limit:500};
     qs('#ytStatus').textContent='Building…'; qs('#ytErr').textContent='';
     if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML=''; qs('#ytOpen').style.display='none';
@@ -253,8 +254,8 @@
     rows.slice(0,500).forEach(t=>{
       const d=document.createElement('div'); d.className='row';
       d.innerHTML=`<div class="ts">${t.timestamp.replace('T',' ')}</div>
-                   <div><strong>${t.artist}</strong> — <em>${t.title}</em>
-                   <span class="muted">• ${t.source_rank ?? ''}</span></div>`;
+                <div><strong>${t.artist}</strong> — <em>${t.title}</em>
+                <span class="muted">• ${t.source_rank ?? ''}</span></div>`;
       frag.appendChild(d);
     });
     qs('#list').replaceChildren(frag);
@@ -289,8 +290,16 @@
           inst._tdtmBound=true;
           inst.addEventListener('nowPlayingItemDidChange',()=>{updateNowPlaying(inst,true);});
           inst.addEventListener('playbackTimeDidChange',()=>{updateNowPlaying(inst,false);});
-          inst.addEventListener('playbackStateDidChange',(evt)=>{const PS=window.MusicKit?.PlaybackStates||{};
-            const isPlaying=evt?.state===PS.playing; setPlayIcon(isPlaying); if(isPlaying) updateNowPlaying(inst,false);});
+          
+          // UPDATED: This listener is the fix for Play/Pause and Title
+          inst.addEventListener('playbackStateDidChange',(evt)=>{
+            const PS=window.MusicKit?.PlaybackStates||{};
+            const isPlaying=evt?.state===PS.playing;
+            setPlayIcon(isPlaying);
+            // Always update metadata on state change, not just when starting to play.
+            // This ensures title/artist are shown even when paused.
+            updateNowPlaying(inst, false);
+          });
         }
         music=inst; return music;
       })().catch(e=>{musicInitPromise=null; throw e;});
@@ -416,7 +425,7 @@
 
   /* ===== Mini-player UI ===== */
   const mini={title:qs('#miniTitle'),artist:qs('#miniArtist'),
-              btnPrev:qs('#btnPrev'),btnPlayPause:qs('#btnPlayPause'),btnNext:qs('#btnNext'),open:qs('#miniOpen')};
+        btnPrev:qs('#btnPrev'),btnPlayPause:qs('#btnPlayPause'),btnNext:qs('#btnNext'),open:qs('#miniOpen')};
 
   function setPlayIcon(isPlaying){ mini.btnPlayPause.textContent=isPlaying?'⏸':'▶'; mini.btnPlayPause.title=isPlaying?'Pause':'Play'; }
   function readMeta(item){
