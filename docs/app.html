@@ -48,13 +48,13 @@
     h1{font-size:22px;margin:0}
 
     .panel{background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.12);
-      border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+      border-radius:18px;padding:16px;box-shadow:var(--shadow);overflow:hidden}
     .grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr auto;gap:12px;align-items:end}
     label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
     input,select,button{width:100%; min-width: 0; padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
-      background:#0c1422;color:var(--text);outline:none;font-size:1rem}
+      background:#0c1422;color:var(--text);outline:none;font-size:1rem;max-width:100%}
 
-    input[type="date"] { color-scheme: dark; }
+    input[type="date"] { color-scheme: dark; width:100%; max-width:100%; }
     input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
 
     button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700;cursor:pointer}
@@ -67,11 +67,11 @@
     /* Default to single column layout */
     .cols{display:grid;grid-template-columns:1fr; gap:16px}
     .box{min-height:auto}
+    .grid > div { min-width: 0; } /* prevent field overflow in grid cells */
 
     /* Make cols 2-column only on larger screens */
     @media (min-width: 901px) {
        .cols{grid-template-columns:1.05fr .95fr;}
-       /* Ensure Spotify pane only takes one column on large screens */
        #pane-sp { grid-column: span 1 / span 1; }
     }
 
@@ -99,10 +99,8 @@
     #viz { width:100%; height:220px; border-radius:12px; background:linear-gradient(180deg,rgba(139,92,246,.08),rgba(34,211,238,.06)); }
 
     @media (max-width:900px){
-      /* Keep 2-column grid for inputs */
       .grid{grid-template-columns: 1fr 1fr; gap: 10px;}
       #ytp iframe{min-height:220px}
-      /* Ensure cols are always 1 column below 901px */
       .cols{grid-template-columns:1fr;}
       #pane-sp { grid-column: span 1 / span 1; }
       #pane-am-right { display: none; }
@@ -146,12 +144,12 @@
       <!-- Apple Music Left Pane -->
       <div class="panel box" id="pane-am-left" style="display: block;">
         <p class="muted" style="margin-bottom:8px">
-          Generate a list, sign in, create the playlist, then play it with our built-in player.
+          Generate a list, sign in, and create the playlist.
         </p>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn" id="amSign">Sign in to Apple Music</button>
           <button class="btn" id="amCreate" style="display:none">Create Playlist</button>
-          <!-- Removed built-in player button -->
+          <!-- Built-in player button removed -->
         </div>
         <div id="amMsg" class="muted" style="margin-top:8px"></div>
         <div id="mini" class="mini">
@@ -307,7 +305,7 @@
 
     if(success){
       qs('#amCreate').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
-      qs('#amMsg').textContent = localStorage.getItem('appleMusicUserToken') ? 'Playlist ready.' : 'Playlist ready. Sign in to create or play.';
+      qs('#amMsg').textContent = localStorage.getItem('appleMusicUserToken') ? 'Playlist ready.' : 'Playlist ready. Sign in to create.';
 
       qs('#spCreate').style.display = localStorage.getItem('spotifyAccessToken') ? 'inline-block' : 'none';
       qs('#spMsg').textContent = localStorage.getItem('spotifyAccessToken') ? 'Playlist ready. Click Create Playlist.' : 'Playlist ready. Sign in to create it on Spotify.';
@@ -326,7 +324,7 @@
         method: 'POST', headers: {'content-type': 'application/json'},
         body: JSON.stringify({tracks, limit: 50})
       }));
-      if(!r.ok){ const txt=await r.text().catch(()=>'​'); throw new Error(`yt/resolve ${r.status}: ${txt}`); }
+      if(!r.ok){ const txt=await r.text().catch(()=>"" ); throw new Error(`yt/resolve ${r.status}: ${txt}`); }
       const {ids} = await r.json();
       if(!ids?.length) throw new Error('No YouTube videos found for this playlist.');
 
@@ -482,6 +480,26 @@
         qs('#spMsg').textContent = 'Sign in to create Spotify playlists.';
     }
 
+    // Restore generated list and form values if we came back from Spotify auth
+    try {
+      const savedList = localStorage.getItem('td_lastTracks');
+      if (savedList && !lastTracks.length) {
+        lastTracks = JSON.parse(savedList) || [];
+        if (lastTracks.length) renderList(lastTracks);
+      }
+      const savedForm = localStorage.getItem('td_form');
+      if (savedForm) {
+        const f = JSON.parse(savedForm);
+        if (f?.date) qs('#date').value = f.date;
+        if (f?.genre) qs('#genre').value = f.genre;
+        if (f?.hours) qs('#hours').value = String(f.hours);
+        if (f?.gap) qs('#gap').value = String(f.gap);
+        if (typeof f.seed !== 'undefined') qs('#seed').value = f.seed ?? '';
+      }
+    } catch (e) { console.warn('Restore failed', e); }
+    localStorage.removeItem('td_lastTracks');
+    localStorage.removeItem('td_form');
+
     // Set initial tab
     setTab(switchToSpotifyTab ? 'sp' : 'am');
     if (qs('.tab[data-tab="am"]').classList.contains('active') || qs('.tab[data-tab="sp"]').classList.contains('active')) {
@@ -497,7 +515,22 @@
   qs('#amCreate').onclick=amCreatePlaylist;
 
   // Spotify Buttons
-  qs('#spSign').onclick = () => { window.location.href = `${API}/v1/spotify/login`; };
+  qs('#spSign').onclick = () => {
+      // Persist current state so we don't lose the generated list on return
+      try {
+        if (lastTracks?.length) {
+          localStorage.setItem('td_lastTracks', JSON.stringify(lastTracks));
+        }
+        localStorage.setItem('td_form', JSON.stringify({
+          date: qs('#date').value,
+          genre: qs('#genre').value,
+          hours: qs('#hours').value,
+          gap: qs('#gap').value,
+          seed: qs('#seed').value
+        }));
+      } catch (e) { console.warn('Failed to save state before Spotify login', e); }
+      window.location.href = `${API}/v1/spotify/login`;
+  };
   qs('#spCreate').onclick = async () => {
       const token = localStorage.getItem('spotifyAccessToken');
       if (!token) {
@@ -518,7 +551,7 @@
               let errorDetail = `Request failed: ${r.status}`;
               try { const j = await r.json(); errorDetail = j.detail || errorDetail; } catch (e) {}
               if (r.status === 401 || r.status === 403) {
-                  errorDetail += ' Spotify session expired? Try signing in again.';
+                  errorDetail += ' Spotify session expired or insufficient permissions? Try signing in again.';
                   localStorage.removeItem('spotifyAccessToken');
                   qs('#spSign').style.display = 'inline-block'; qs('#spCreate').style.display = 'none';
               }
@@ -532,7 +565,11 @@
 
       } catch (e) {
           console.error("Spotify Create Playlist Error:", e);
-          qs('#spMsg').textContent = 'Error creating playlist: ' + (e.message || String(e));
+          let msg = 'Error creating playlist: ' + (e.message || String(e));
+          if ((e.message||'').includes('403')) {
+            msg += ' This often means Spotify denied the profile scope (/me). Re-sign in and allow permissions (user-read-email or user-read-private) along with playlist modify scopes. If your browser blocks cookies or cross-site tracking, temporarily allow them for login.';
+          }
+          qs('#spMsg').textContent = msg;
           if (!localStorage.getItem('spotifyAccessToken') && qs('#spSign').style.display === 'none') {
              qs('#spSign').style.display = 'inline-block'; qs('#spCreate').style.display = 'none';
           }
