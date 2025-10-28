@@ -59,14 +59,14 @@
 
     button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700;cursor:pointer}
     button.primary:disabled{opacity:0.6;background:var(--panel);cursor:not-allowed}
-    .tabs{display:flex;gap:10px;margin:14px 0 8px; flex-wrap: wrap;} /* Added flex-wrap */
+    .tabs{display:flex;gap:10px;margin:14px 0 8px; flex-wrap: wrap;}
     .tab{padding:9px 14px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:#0c1422;color:var(--text);cursor:pointer}
     .tab.active{background:linear-gradient(135deg,rgba(139,92,246,.25),rgba(34,211,238,.18));border-color:transparent}
-    .tab:disabled { opacity: 0.5; cursor: not-allowed; } /* Style for disabled tab */
+    .tab:disabled { opacity: 0.5; cursor: not-allowed; }
 
     /* Default to single column layout */
     .cols{display:grid;grid-template-columns:1fr; gap:16px}
-    .box{min-height:auto} /* Allow boxes to shrink */
+    .box{min-height:auto}
 
     /* Make cols 2-column only on larger screens */
     @media (min-width: 901px) {
@@ -104,11 +104,11 @@
       #ytp iframe{min-height:220px}
       /* Ensure cols are always 1 column below 901px */
       .cols{grid-template-columns:1fr;}
-      #pane-sp { grid-column: span 1 / span 1; } /* Ensure Spotify takes full width */
-      #pane-am-right { display: none; } /* Hide AM right pane on smaller screens */
+      #pane-sp { grid-column: span 1 / span 1; }
+      #pane-am-right { display: none; }
     }
     @media (max-width:500px){
-      .grid{grid-template-columns: 1fr;} /* Stack inputs on small screens */
+      .grid{grid-template-columns: 1fr;}
     }
   </style>
 </head>
@@ -144,14 +144,14 @@
     <!-- Main Content Panes Container -->
     <div class="cols">
       <!-- Apple Music Left Pane -->
-      <div class="panel box" id="pane-am-left" style="display: block;"> <!-- Display block by default -->
+      <div class="panel box" id="pane-am-left" style="display: block;">
         <p class="muted" style="margin-bottom:8px">
           Generate a list, sign in, create the playlist, then play it with our built-in player.
         </p>
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn" id="amSign">Sign in to Apple Music</button>
           <button class="btn" id="amCreate" style="display:none">Create Playlist</button>
-          <button class="btn" id="amPlayLocal" style="display:none">Play with Built-In Player</button>
+          <!-- Removed built-in player button -->
         </div>
         <div id="amMsg" class="muted" style="margin-top:8px"></div>
         <div id="mini" class="mini">
@@ -170,14 +170,12 @@
         </div>
       </div>
 
-      <!-- Apple Music Right Pane (Visualizer Holder - initially shown) -->
+      <!-- Right Pane (shared visualizer holder for AM & Spotify) -->
       <div class="panel box" id="pane-am-right" style="display: block;">
-         <!-- Removed tabs inside this pane -->
-         <div id="side-viz"> <!-- Keep viz div -->
+         <div id="side-viz">
             <div class="muted" style="margin-bottom: 4px;">Visualizer</div>
             <canvas id="viz" width="600" height="220"></canvas>
          </div>
-         <!-- Removed capsule div -->
       </div>
 
       <!-- YouTube Pane -->
@@ -190,7 +188,7 @@
         </div>
       </div>
 
-      <!-- Spotify Pane -->
+      <!-- Spotify Pane (left) -->
       <div class="panel box" id="pane-sp" style="display:none;">
         <p class="muted" style="margin-bottom:8px">
           Sign in to your Spotify account to create and save playlists.
@@ -200,7 +198,7 @@
           <button class="btn" id="spCreate" style="display:none">Create Playlist</button>
         </div>
         <div id="spMsg" class="muted" style="margin-top:8px"></div>
-        <!-- Visualizer will be dynamically moved here by JS -->
+        <!-- Visualizer appears in the right pane, like Apple Music -->
       </div>
 
     </div> <!-- End .cols -->
@@ -230,25 +228,25 @@
   function setTab(id){
     document.querySelectorAll('.tab[data-tab]').forEach(b=>b.classList.toggle('active', b.dataset.tab===id));
     const yt=qs('#pane-yt'), aml=qs('#pane-am-left'), amr=qs('#pane-am-right'), sp=qs('#pane-sp');
-    const vizContainer = qs('#side-viz'); // Get the visualizer container
+    const vizContainer = qs('#side-viz');
 
-    // Hide all main content panes
+    // Hide all main content panes by default
     aml.style.display='none'; yt.style.display='none'; sp.style.display='none';
-    amr.style.display = 'none'; // Also hide the AM right pane by default
+    amr.style.display = 'none';
 
     if(id==='yt'){
-      yt.style.display=''; // Show YouTube pane
-      stopViz(); // Stop viz if running
+      yt.style.display='';
+      stopViz();
       if(lastTracks.length > 0 && !player) buildYtPlayer(lastTracks);
     } else if (id === 'sp') {
-      sp.style.display=''; // Show Spotify pane
-      // Move visualizer into Spotify pane and start it
-      sp.appendChild(vizContainer);
+      // Spotify left pane + show shared right pane for visualizer
+      sp.style.display='';
+      amr.style.display='';
+      amr.appendChild(vizContainer);
       startViz();
     } else { // Default to Apple Music
-      aml.style.display=''; // Show AM left pane
-      amr.style.display=''; // Show AM right pane
-      // Move visualizer into AM right pane and start it
+      aml.style.display='';
+      amr.style.display='';
       amr.appendChild(vizContainer);
       startViz();
     }
@@ -270,9 +268,9 @@
 
     // Reset relevant UI areas before fetching
     if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML=''; qs('#ytOpen').style.display='none';
-    qs('#list').innerHTML='<div class="muted">Generating...</div>'; // Show loading in list
+    qs('#list').innerHTML='<div class="muted">Generating...</div>';
     lastTracks=[]; resolvedSongIds=[];
-    qs('#amMsg').textContent = ''; qs('#spMsg').textContent = ''; // Clear previous messages
+    qs('#amMsg').textContent = ''; qs('#spMsg').textContent = '';
     qs('#ytStatus').textContent = ''; qs('#ytErr').textContent = '';
 
 
@@ -281,16 +279,16 @@
       if(!r.ok){ const txt=await r.text().catch(()=> ''); throw new Error(`simulate ${r.status}: ${txt}`); }
       const data=await r.json(); lastTracks=data.tracks||[];
       if(!lastTracks.length){
-        qs('#list').innerHTML = '<div class="muted">No tracks returned. Try a different date/genre.</div>'; // Update list directly
+        qs('#list').innerHTML = '<div class="muted">No tracks returned. Try a different date/genre.</div>';
         qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned.';
         qs('#amMsg').textContent='No tracks returned.';
         qs('#spMsg').textContent='No tracks returned.';
         return false;
       }
-      renderList(lastTracks); // Render the list on success
+      renderList(lastTracks);
       return true;
     }catch(err){
-      qs('#list').innerHTML = `<div class="err">Error generating list: ${err.message || String(err)}</div>`; // Show error in list
+      qs('#list').innerHTML = `<div class="err">Error generating list: ${err.message || String(err)}</div>`;
       qs('#ytStatus').textContent=''; qs('#ytErr').textContent=err.message||String(err);
       qs('#amMsg').textContent='Error generating list: '+(err.message||String(err));
       qs('#spMsg').textContent='Error generating list: '+(err.message||String(err));
@@ -301,32 +299,26 @@
   async function simulate(){
     const btn = qs('#go');
     btn.disabled = true; btn.textContent = 'Building…';
-    // Clear previous status messages more reliably
     qs('#ytStatus').textContent='Building…'; qs('#ytErr').textContent='';
     qs('#amMsg').textContent='Building playlist…'; qs('#spMsg').textContent='Building playlist…';
 
-    const success = await fetchSimulation(); // This now calls renderList if successful
+    const success = await fetchSimulation();
     btn.disabled = false; btn.textContent = 'Generate';
 
     if(success){
-      qs('#amPlayLocal').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
-      qs('#amCreate').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none'; // Show create if logged in
+      qs('#amCreate').style.display = localStorage.getItem('appleMusicUserToken') ? 'inline-block' : 'none';
       qs('#amMsg').textContent = localStorage.getItem('appleMusicUserToken') ? 'Playlist ready.' : 'Playlist ready. Sign in to create or play.';
-
 
       qs('#spCreate').style.display = localStorage.getItem('spotifyAccessToken') ? 'inline-block' : 'none';
       qs('#spMsg').textContent = localStorage.getItem('spotifyAccessToken') ? 'Playlist ready. Click Create Playlist.' : 'Playlist ready. Sign in to create it on Spotify.';
-
 
       if(qs('.tab[data-tab="yt"]').classList.contains('active')){
         buildYtPlayer(lastTracks);
       }
     }
-    // No else needed, fetchSimulation handles error messages and list display
   }
 
   async function buildYtPlayer(tracks){
-     // ... (No changes needed) ...
      if(!tracks?.length) return;
     qs('#ytStatus').textContent='Resolving YouTube videos…'; qs('#ytErr').textContent='';
     try {
@@ -334,7 +326,7 @@
         method: 'POST', headers: {'content-type': 'application/json'},
         body: JSON.stringify({tracks, limit: 50})
       }));
-      if(!r.ok){ const txt=await r.text().catch(()=>''); throw new Error(`yt/resolve ${r.status}: ${txt}`); }
+      if(!r.ok){ const txt=await r.text().catch(()=>'​'); throw new Error(`yt/resolve ${r.status}: ${txt}`); }
       const {ids} = await r.json();
       if(!ids?.length) throw new Error('No YouTube videos found for this playlist.');
 
@@ -381,11 +373,10 @@
   async function fetchDeveloperToken(){ /* ... No changes ... */ }
   async function getWebMusicInstance(force=false){ /* ... No changes ... */ }
 
-  /* ===== Sign-in / Create / Play (Apple Music) ===== */
+  /* ===== Sign-in / Create (Apple Music) ===== */
   function showAmControls(){
     qs('#amSign').style.display='none';
     qs('#amCreate').style.display='inline-block';
-    qs('#amPlayLocal').style.display = lastTracks.length ? 'inline-block' : 'none';
   }
   async function amSignIn(){ /* ... No changes ... */ }
   async function amCreatePlaylist(){
@@ -401,7 +392,6 @@
       if(!r.ok){ const j=await r.json().catch(()=>({detail:'Unknown error during create'})); throw new Error(j.detail||`Create failed with status ${r.status}`); }
       const j=await r.json();
       qs('#amMsg').textContent=`Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks.`;
-      qs('#amPlayLocal').style.display='inline-block';
     }catch(e){ qs('#amMsg').textContent='Create failed: '+(e.message||String(e)); }
     finally { btn.disabled = false; }
   }
@@ -425,16 +415,14 @@
   mini.btnNext.onclick=async()=>{ /* ... No changes ... */ };
 
   /* ===== Right panel (viz) ===== */
-  // Removed internal tab switching for viz/capsule
   let vizRAF=null;
   function startViz(){
-    // Check if the canvas is visible in the DOM before starting
     const vizCanvas = qs('#viz');
     if (!vizCanvas || !vizCanvas.isConnected) {
         console.log("Visualizer canvas not visible, not starting.");
-        return; // Don't start if canvas isn't actually in the DOM
+        return;
     }
-    if (vizRAF !== null) return; // Already running
+    if (vizRAF !== null) return;
 
     const c=qs('#viz'); const ctx=c.getContext('2d'); let t=0;
     console.log("Starting Visualizer...");
@@ -469,13 +457,13 @@
     const params = new URLSearchParams(hash);
     const spotifyToken = params.get('access_token');
     const spotifyError = params.get('spotify_error');
-    let switchToSpotifyTab = false; // Flag to switch tab only if token came from hash
+    let switchToSpotifyTab = false;
 
     if (spotifyError) {
         console.error("Spotify Login Error:", spotifyError);
         qs('#spMsg').textContent = `Spotify login failed: ${spotifyError}. Please try again.`;
         window.history.pushState("", document.title, window.location.pathname + window.location.search);
-        switchToSpotifyTab = true; // Switch to show the error
+        switchToSpotifyTab = true;
     } else if (spotifyToken) {
         console.log("Spotify access token found in URL hash.");
         localStorage.setItem('spotifyAccessToken', spotifyToken);
@@ -483,7 +471,7 @@
         qs('#spCreate').style.display = 'inline-block';
         qs('#spMsg').textContent = 'Signed in to Spotify.';
         window.history.pushState("", document.title, window.location.pathname + window.location.search);
-        switchToSpotifyTab = true; // Switch after successful login from callback
+        switchToSpotifyTab = true;
     } else if (spTok) {
         console.log("Spotify access token found in localStorage.");
         qs('#spSign').style.display = 'none';
@@ -494,9 +482,8 @@
         qs('#spMsg').textContent = 'Sign in to create Spotify playlists.';
     }
 
-    // Set initial tab based on flag or default
+    // Set initial tab
     setTab(switchToSpotifyTab ? 'sp' : 'am');
-    // Start viz manually after setting initial tab (if applicable)
     if (qs('.tab[data-tab="am"]').classList.contains('active') || qs('.tab[data-tab="sp"]').classList.contains('active')) {
         startViz();
     }
@@ -508,7 +495,6 @@
   // Apple Music Buttons
   qs('#amSign').onclick=amSignIn;
   qs('#amCreate').onclick=amCreatePlaylist;
-  qs('#amPlayLocal').onclick=buildLocalQueueAndPlay;
 
   // Spotify Buttons
   qs('#spSign').onclick = () => { window.location.href = `${API}/v1/spotify/login`; };
@@ -554,11 +540,7 @@
           btn.disabled = false;
       }
   };
-
-  // setTab('am'); // Initial tab is now set in Init IIFE
-  // startViz(); // Initial viz start is now handled in Init IIFE
 </script>
 
 </body>
 </html>
-
