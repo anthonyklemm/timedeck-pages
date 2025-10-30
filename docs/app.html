@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>TapeDeck Time Machine</title>
 
-  <!-- Apple MusicKit -->
   <script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js"></script>
 
-  <!-- Meta -->
   <meta name="description" content="Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.">
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/logo.svg">
@@ -27,7 +25,6 @@
   <meta property="twitter:description" content="Rewind the radio you grew up with. Generate playlists from any date and genre.">
   <meta property="twitter:image" content="https://tapedecktimemachine.com/tapedeck-preview.png">
 
-  <!-- GA -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-HPZT6BMJVD"></script>
   <script>
     window.dataLayer=window.dataLayer||[];
@@ -132,7 +129,7 @@
       <div><label>Hours</label><select id="hours"><option>0.5</option><option selected>1</option><option>2</option><option>3</option></select></div>
       <div><label>Repeat gap (min)</label><input id="gap" type="number" value="90"></div>
       <div><label>Seed (opt)</label><input id="seed" placeholder="e.g. 20020701"></div>
-      <div><label>&nbsp;</label><button id="go" class="primary">Generate</button></div>
+      <div><label> </label><button id="go" class="primary">Generate</button></div>
     </div>
 
     <div class="tabs">
@@ -141,9 +138,7 @@
       <button class="tab" data-tab="sp">Spotify</button>
     </div>
 
-    <!-- Main Content Panes Container -->
     <div class="cols">
-      <!-- Apple Music Left Pane -->
       <div class="panel box" id="pane-am-left" style="display: block;">
         <p class="muted" style="margin-bottom:8px">
           Generate a list, sign in, and create the playlist.
@@ -151,8 +146,7 @@
         <div style="display:flex;gap:10px;flex-wrap:wrap">
           <button class="btn" id="amSign">Sign in to Apple Music</button>
           <button class="btn" id="amCreate" style="display:none">Create Playlist</button>
-          <!-- Built-in player button removed -->
-        </div>
+          </div>
         <div id="amMsg" class="muted" style="margin-top:8px"></div>
         <div id="mini" class="mini">
           <div class="np">
@@ -170,7 +164,6 @@
         </div>
       </div>
 
-      <!-- Right Pane (shared visualizer holder for AM & Spotify) -->
       <div class="panel box" id="pane-am-right" style="display: block;">
          <div id="side-viz">
             <div class="muted" style="margin-bottom: 4px;">Visualizer</div>
@@ -178,7 +171,6 @@
          </div>
       </div>
 
-      <!-- YouTube Pane -->
       <div class="panel box" id="pane-yt" style="display:none">
         <div id="ytWrap">
           <div class="muted" id="ytStatus">Waiting for a simulation…</div>
@@ -188,7 +180,6 @@
         </div>
       </div>
 
-      <!-- Spotify Pane (left) -->
       <div class="panel box" id="pane-sp" style="display:none;">
         <p class="muted" style="margin-bottom:8px">
           Sign in to your Spotify account to create and save playlists.
@@ -198,13 +189,9 @@
           <button class="btn" id="spCreate" style="display:none">Create Playlist</button>
         </div>
         <div id="spMsg" class="muted" style="margin-top:8px"></div>
-        <!-- Visualizer appears in the right pane, like Apple Music -->
-      </div>
+        </div>
 
-    </div> <!-- End .cols -->
-  </div> <!-- End main controls panel -->
-
-  <div class="panel" style="margin-top:16px">
+    </div> </div> <div class="panel" style="margin-top:16px">
     <h2>Your Music Time Machine Playlist</h2>
     <p class="muted" style="margin-bottom:6px">
       Ever wonder <strong>what songs were popular on your birthday?</strong>
@@ -256,6 +243,7 @@
   /* ===== State ===== */
   let lastTracks=[]; let resolvedSongIds=[]; let DEV_TOKEN=null;
   let lastToggleTS=0;
+  let amPlayLock = false; // For Apple Music play/pause guard
 
   /* ===== YouTube minimal ===== */
   let player=null, YTapiReady=false;
@@ -369,16 +357,83 @@
 
   /* ===== MusicKit setup ===== */
   let music=null, musicInitPromise=null;
-  function waitForMusicKitLoaded(timeoutMs=10000){ /* ... No changes ... */ }
-  async function fetchDeveloperToken(){ /* ... No changes ... */ }
-  async function getWebMusicInstance(force=false){ /* ... No changes ... */ }
+  
+  // (Filled from old file)
+  function waitForMusicKitLoaded(timeoutMs = 10000){
+    if (window.MusicKit && typeof window.MusicKit.getInstance === 'function') return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      const t = setTimeout(()=>reject(new Error('MusicKit load timed out')), timeoutMs);
+      window.addEventListener('musickitloaded', () => { clearTimeout(t); resolve(); }, { once:true });
+    });
+  }
+  
+  // (Created from old file logic)
+  async function fetchDeveloperToken(){
+      const r = await withTimeout(fetch(`${API}/v1/apple/dev-token`));
+      if(!r.ok) throw new Error(`dev-token ${r.status}`);
+      const { token: developerToken, storefront } = await r.json();
+      return { developerToken, storefront };
+  }
+  
+  // (Filled and adapted from old file)
+  async function getWebMusicInstance(force=false){
+    if (music && !force) return music;
+    if (musicInitPromise && !force) return musicInitPromise;
+
+    musicInitPromise = (async () => {
+      await waitForMusicKitLoaded();
+      
+      const { developerToken, storefront } = await fetchDeveloperToken();
+
+      window.MusicKit.configure({ developerToken, app:{ name:'TapeDeck Time Machine', build:'web' } });
+
+      let inst = null;
+      for (let i=0;i<40;i++){
+        inst = (window.MusicKit.getInstance && window.MusicKit.getInstance()) || null;
+        if (inst && typeof inst.play === 'function') break;
+        await sleep(50);
+      }
+      if (!inst) throw new Error('MusicKit instance not ready');
+
+      inst.storefrontId = storefront || 'us';
+      music = inst;
+
+      // Wire up event listeners for the mini-player
+      music.addEventListener('mediaItemDidChange', () => updateNowPlaying(music, true));
+      music.addEventListener('playbackStateDidChange', () => {
+        updateNowPlaying(music, false);
+        setPlayIcon(music.isPlaying);
+      });
+
+      return music;
+    })().catch(e=>{ musicInitPromise = null; throw e; });
+    
+    return musicInitPromise;
+  }
 
   /* ===== Sign-in / Create (Apple Music) ===== */
   function showAmControls(){
     qs('#amSign').style.display='none';
     qs('#amCreate').style.display='inline-block';
   }
-  async function amSignIn(){ /* ... No changes ... */ }
+  
+  // (Filled and adapted from old file)
+  async function amSignIn(){
+    qs('#amMsg').textContent = 'Signing in to Apple Music...';
+    try {
+      const m = await getWebMusicInstance();
+      const userToken = await m.authorize(); // This triggers the popup
+      
+      localStorage.setItem('appleMusicUserToken', userToken);
+      
+      qs('#amMsg').textContent = 'Signed in! You can now create playlists.';
+      showAmControls();
+    } catch(e) {
+      console.error('[AM SignIn] failed', e);
+      qs('#amMsg').textContent = 'Sign in failed: ' + (e.message || String(e));
+    }
+  }
+  
   async function amCreatePlaylist(){
     const userToken=localStorage.getItem('appleMusicUserToken');
     if(!userToken){qs('#amMsg').textContent='Please sign in first.'; return;}
@@ -391,28 +446,102 @@
         body:JSON.stringify({userToken,name,tracks:lastTracks.map(t=>({artist:t.artist,title:t.title}))})}));
       if(!r.ok){ const j=await r.json().catch(()=>({detail:'Unknown error during create'})); throw new Error(j.detail||`Create failed with status ${r.status}`); }
       const j=await r.json();
-      qs('#amMsg').textContent=`Playlist created! Added ${j.added_count} of ${j.total_tracks} tracks.`;
+      qs('#amMsg').textContent=`Playlist created! Added ${j.added_count} of ${j.total_tracks}.`;
     }catch(e){ qs('#amMsg').textContent='Create failed: '+(e.message||String(e)); }
     finally { btn.disabled = false; }
   }
 
   /* ===== Catalog helpers (Apple Music) ===== */
-  async function backendSongMeta(id,storefront='us'){ /* ... No changes ... */ }
+  
+  // (Filled from old file's 'fetchSongMeta')
+  async function backendSongMeta(id,storefront='us'){
+    try{
+      const r = await fetch(`${API}/v1/apple/song-meta?id=${encodeURIComponent(id)}&storefront=${encodeURIComponent(storefront||'us')}`);
+      if (!r.ok) return null;
+      return await r.json(); // { id, name, artistName, url }
+    }catch{ return null; }
+  }
+  
   async function appleSongById(id,storefront='us'){ /* ... No changes ... */ }
   async function appleCatalogSearch(term,storefront='us',limit=1){ /* ... No changes ... */ }
   async function appleCatalogResolveList(tracks,storefront){ /* ... No changes ... */ }
-
   async function buildLocalQueueAndPlay(){ /* ... No changes ... */ }
+  
+  // (Helper function from old file, needed for play/pause)
+  async function guardedPlayPause(intent='toggle'){
+    const m = await getWebMusicInstance();
+    if (amPlayLock) return;
+    amPlayLock = true;
+    try{
+      const PS = window.MusicKit.PlaybackState;
+      const st = m.playbackState;
+      if (intent==='play'){
+        if (st!==PS.playing) await m.play();
+      } else if (intent==='pause'){
+        if (st===PS.playing || st===PS.loading || st===PS.buffering) await m.pause();
+      } else {
+        if (st===PS.playing || st===PS.loading || st===PS.buffering) await m.pause();
+        else await m.play();
+      }
+    } finally { amPlayLock = false; }
+  }
+
 
   /* ===== Mini-player UI (Apple Music) ===== */
   const mini={title:qs('#miniTitle'),artist:qs('#miniArtist'),
         btnPrev:qs('#btnPrev'),btnPlayPause:qs('#btnPlayPause'),btnNext:qs('#btnNext'),open:qs('#miniOpen')};
   function setPlayIcon(isPlaying){ mini.btnPlayPause.textContent=isPlaying?'⏸':'▶'; mini.btnPlayPause.title=isPlaying?'Pause':'Play'; }
-  function readMeta(item){ /* ... No changes ... */ }
-  async function updateNowPlaying(m,tryFetchIfMissing){ /* ... No changes ... */ }
-  mini.btnPlayPause.addEventListener('click', async (e)=>{ /* ... No changes ... */ });
-  mini.btnPrev.onclick=async()=>{ /* ... No changes ... */ };
-  mini.btnNext.onclick=async()=>{ /* ... No changes ... */ };
+  
+  // (Filled from old file's 'wireNowPlayingHandlers')
+  function readMeta(item){
+    if (!item) return { title: '—', artist: '—', url: null, songId: null };
+    let title = item.title || item.attributes?.name;
+    let artist = item.artistName || item.attributes?.artistName;
+    let url = item.attributes?.url || null;
+    let songId = item.id || item.playParams?.catalogId;
+    return { title, artist, url, songId };
+  }
+  
+  // (Filled from old file's 'wireNowPlayingHandlers')
+  async function updateNowPlaying(m,tryFetchIfMissing){
+    if (!m) m = music;
+    if (!m) return;
+    
+    const item = m.nowPlayingItem;
+    let { title, artist, url, songId } = readMeta(item);
+
+    if ((!title || !artist) && songId && tryFetchIfMissing) {
+      const meta = await backendSongMeta(songId, m.storefrontId || 'us');
+      if (meta) {
+        title = meta.name;
+        artist = meta.artistName;
+        url = meta.url || null;
+      }
+    }
+    
+    mini.title.textContent = title || '—';
+    mini.artist.textContent = artist || '—';
+    if(url) { mini.open.href = url; mini.open.style.display = ''; }
+    else { mini.open.style.display = 'none'; }
+  }
+  
+  // (Filled from old file's 'guardedPlayPause' logic)
+  mini.btnPlayPause.addEventListener('click', async (e)=>{
+    try {
+      await guardedPlayPause('toggle');
+    } catch(e) { console.error("Play/pause failed", e); }
+  });
+  
+  // (Filled from old file)
+  mini.btnPrev.onclick=async()=>{
+    try{ const m = await getWebMusicInstance(); await m.skipToPreviousItem(); }catch(e){}
+  };
+  
+  // (Filled from old file)
+  mini.btnNext.onclick=async()=>{
+    try{ const m = await getWebMusicInstance(); await m.skipToNextItem(); }catch(e){}
+  };
+
 
   /* ===== Right panel (viz) ===== */
   let vizRAF=null;
