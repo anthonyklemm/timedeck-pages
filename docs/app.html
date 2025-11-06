@@ -150,8 +150,8 @@
     </div>
 
     <div class="tabs">
-      <button class="tab" data-tab="yt">YouTube</button>
-      <button class="tab active" data-tab="am">Apple Music</button>
+      <button class="tab active" data-tab="yt">YouTube</button>
+      <button class="tab" data-tab="am">Apple Music</button>
       <button class="tab" data-tab="sp">Spotify</button>
     </div>
 
@@ -654,7 +654,7 @@
     localStorage.removeItem('td_form');
 
     // Set initial tab
-    setTab(switchToSpotifyTab ? 'sp' : 'am');
+    setTab(switchToSpotifyTab ? 'sp' : 'yt');
     if (qs('.tab[data-tab="am"]').classList.contains('active') || qs('.tab[data-tab="sp"]').classList.contains('active')) {
         startViz();
     }
