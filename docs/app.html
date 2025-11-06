@@ -347,7 +347,24 @@
         events: {
           'onReady': () => {
             qs('#ytStatus').textContent = `Playing ${ids.length} videos.`;
-            const plUrl = `https://www.youtube.com/playlist?list=${ids.join(',')}`;
+
+            // Try to extract the TLGG playlist ID from the player's video URL
+            let plUrl = `https://www.youtube.com/playlist?list=${ids.join(',')}`;
+            try {
+              const videoUrl = player.getVideoUrl();
+              if (videoUrl) {
+                const urlObj = new URL(videoUrl);
+                const listParam = urlObj.searchParams.get('list');
+                if (listParam && listParam.startsWith('TLGG')) {
+                  // Found a temporary YouTube playlist ID - use it for shareable link
+                  plUrl = `https://www.youtube.com/playlist?list=${listParam}`;
+                  qs('#ytStatus').textContent = `Playing ${ids.length} videos. Shareable link ready!`;
+                }
+              }
+            } catch (e) {
+              console.warn('Could not extract TLGG playlist ID:', e);
+            }
+
             qs('#ytOpen').href = plUrl;
             qs('#ytOpen').style.display = 'inline-block';
           },
