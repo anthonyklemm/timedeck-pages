@@ -33,11 +33,18 @@
   @media (max-width:900px){.hero{grid-template-columns:1fr}.cols{grid-template-columns:1fr}}
   ul{margin:8px 0 0 18px}
   a{color:var(--a2)}
+  .social{display:flex;gap:12px;margin:10px 0;font-size:14px}
+  .social a{text-decoration:none;opacity:0.8;transition:opacity 0.2s}
+  .social a:hover{opacity:1}
 </style>
 <div class="wrap">
   <div class="hero">
     <div class="card">
       <h1>TapeDeck Time Machine</h1>
+      <div class="social">
+        <a href="https://medium.com/@anthony.klemm" target="_blank" rel="noopener">📝 Medium Blog</a>
+        <a href="https://www.linkedin.com/in/anthony-klemm-57886512" target="_blank" rel="noopener">💼 LinkedIn</a>
+      </div>
       <p class="muted">Rewind the radio you grew up with. Pick any date & genre, get a chart-driven rotation, and keep it as a playlist.</p>
       <a class="cta" href="/app.html">Open the App</a>
       <p style="margin-top:10px" class="muted">Requires internet. Apple Music subscription needed to save playlists.</p>
