@@ -245,7 +245,26 @@
           player = new YT.Player('ytp', {
             height: '360', width: '100%',
             playerVars: { playsinline: 1, rel: 0, modestbranding: 1, origin: 'https://tapedecktimemachine.com' },
-            events: { onReady: (e) => { e.target.cuePlaylist(ids, 0, 0); qs('#ytStatus').textContent = `${ids.length} videos queued.`; } }
+            events: { onReady: (e) => {
+              e.target.cuePlaylist(ids, 0, 0);
+              qs('#ytStatus').textContent = `${ids.length} videos queued.`;
+
+              // Try to extract the TLGG playlist ID for shareable link
+              try {
+                const videoUrl = player.getVideoUrl();
+                if (videoUrl) {
+                  const urlObj = new URL(videoUrl);
+                  const listParam = urlObj.searchParams.get('list');
+                  if (listParam && listParam.startsWith('TLGG')) {
+                    // Update the "Open in YouTube" link with the shareable TLGG playlist
+                    qs('#ytOpen').href = `https://www.youtube.com/playlist?list=${listParam}`;
+                    qs('#ytStatus').textContent = `${ids.length} videos queued. Shareable link ready!`;
+                  }
+                }
+              } catch (err) {
+                console.warn('Could not extract TLGG playlist ID:', err);
+              }
+            } }
           });
         } else {
           qs('#ytStatus').textContent = 'YouTube API is still loading. Use "Open in YouTube".';
