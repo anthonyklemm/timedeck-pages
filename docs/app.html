@@ -150,8 +150,8 @@
     </div>
 
     <div class="tabs">
-      <button class="tab" data-tab="yt">YouTube</button>
-      <button class="tab active" data-tab="am">Apple Music</button>
+      <button class="tab active" data-tab="yt">YouTube</button>
+      <button class="tab" data-tab="am">Apple Music</button>
       <button class="tab" data-tab="sp">Spotify</button>
     </div>
 
@@ -192,7 +192,11 @@
         <div id="ytWrap">
           <div class="muted" id="ytStatus">Waiting for a simulation…</div>
           <div id="ytp"></div>
-          <a class="btn" id="ytOpen" href="#" target="_blank" rel="noopener" style="display:none">Open in YouTube</a>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+            <a class="btn" id="ytOpen" href="#" target="_blank" rel="noopener" style="display:none">Open in YouTube</a>
+            <button class="btn" id="ytShare" style="display:none">Share Playlist 🔗</button>
+          </div>
+          <div id="ytShareMsg" class="muted" style="margin-top:6px"></div>
           <div id="ytErr" class="err"></div>
         </div>
       </div>
@@ -272,11 +276,11 @@
       repeat_gap_min:Number(qs('#gap').value||90),seed:(qs('#seed').value.trim()||undefined)?String(qs('#seed').value.trim()):undefined,limit:500};
 
     // Reset relevant UI areas before fetching
-    if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML=''; qs('#ytOpen').style.display='none';
+    if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML=''; qs('#ytOpen').style.display='none'; qs('#ytShare').style.display='none';
     qs('#list').innerHTML='<div class="muted">Generating...</div>';
     lastTracks=[]; resolvedSongIds=[];
     qs('#amMsg').textContent = ''; qs('#spMsg').textContent = '';
-    qs('#ytStatus').textContent = ''; qs('#ytErr').textContent = '';
+    qs('#ytStatus').textContent = ''; qs('#ytErr').textContent = ''; qs('#ytShareMsg').textContent = '';
 
 
     try{
@@ -367,6 +371,7 @@
 
             qs('#ytOpen').href = plUrl;
             qs('#ytOpen').style.display = 'inline-block';
+            qs('#ytShare').style.display = 'inline-block';
           },
           'onError': (e) => { qs('#ytErr').textContent = `Youtubeer Error: ${e.data}`; }
         }
@@ -666,18 +671,57 @@
     localStorage.removeItem('td_form');
 
     // Set initial tab
-    setTab(switchToSpotifyTab ? 'sp' : 'am');
+    setTab(switchToSpotifyTab ? 'sp' : 'yt');
     if (qs('.tab[data-tab="am"]').classList.contains('active') || qs('.tab[data-tab="sp"]').classList.contains('active')) {
         startViz();
     }
 
   })();
 
+  /* ===== YouTube Share Function ===== */
+  async function shareYouTubePlaylist() {
+    const url = qs('#ytOpen').href;
+    const title = `TapeDeck Time Machine - ${qs('#date').value} - ${qs('#genre').value}`;
+    const text = `Check out this playlist I made with TapeDeck Time Machine!`;
+
+    qs('#ytShareMsg').textContent = '';
+
+    try {
+      // Try Web Share API first (works on mobile)
+      if (navigator.share) {
+        await navigator.share({
+          title: title,
+          text: text,
+          url: url
+        });
+        qs('#ytShareMsg').textContent = 'Shared successfully!';
+        setTimeout(() => qs('#ytShareMsg').textContent = '', 3000);
+      } else {
+        // Fallback to clipboard copy (desktop)
+        await navigator.clipboard.writeText(url);
+        qs('#ytShareMsg').textContent = 'Link copied to clipboard!';
+        setTimeout(() => qs('#ytShareMsg').textContent = '', 3000);
+      }
+    } catch (err) {
+      // If share was cancelled or clipboard failed
+      if (err.name === 'AbortError') {
+        // User cancelled the share dialog - not an error
+        return;
+      }
+      console.error('Share failed:', err);
+      qs('#ytShareMsg').textContent = 'Could not share. Try copying the link manually.';
+      setTimeout(() => qs('#ytShareMsg').textContent = '', 5000);
+    }
+  }
+
   /* ===== Wire buttons ===== */
   qs('#go').onclick=simulate;
   // Apple Music Buttons
   qs('#amSign').onclick=amSignIn;
   qs('#amCreate').onclick=amCreatePlaylist;
+
+  // YouTube Buttons
+  qs('#ytShare').onclick=shareYouTubePlaylist;
 
   // Spotify Buttons
   qs('#spSign').onclick = () => {
