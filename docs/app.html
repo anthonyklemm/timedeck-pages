@@ -9,8 +9,9 @@
 
   <meta name="description" content="Rewind the radio you grew up with. Generate playlists from any date and genre, powered by Billboard chart data.">
   <link rel="icon" href="/logo.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/logo.svg">
-  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/logo.svg">
 
 
   <meta property="og:type" content="website">
@@ -51,9 +52,9 @@
     .grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr 1fr auto;gap:12px;align-items:end}
     label{font-size:12px;color:var(--muted);display:block;margin:0 0 6px 2px}
     input,select,button{width:100%; min-width: 0; padding:12px;border-radius:12px;border:1px solid rgba(148,163,184,.18);
-      background:#0c1422;color:var(--text);outline:none;font-size:1rem;max-width:100%}
+      background:#0c1422;color:var(--text);outline:none;font-size:1rem;max-width:100%;box-sizing:border-box}
 
-    input[type="date"] { color-scheme: dark; width:100%; max-width:100%; }
+    input[type="date"] { color-scheme: dark; width:100%; max-width:100%; min-width: 0; }
     input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.8); }
 
     button.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:0;font-weight:700;cursor:pointer}
@@ -75,7 +76,8 @@
     }
 
 
-    #ytp iframe{width:100%;height:auto;min-height:300px; aspect-ratio: 16/9; border-radius:12px;box-shadow:var(--shadow)}
+    #ytp{max-width:100%;overflow:hidden}
+    #ytp iframe{width:100%;max-width:100%;height:auto;min-height:300px; aspect-ratio: 16/9; border-radius:12px;box-shadow:var(--shadow);display:block}
     .btn{display:inline-block;margin-top:8px;padding:10px 14px;border-radius:12px;border:1px solid rgba(148,163,184,.2);
       background:#0c1422;color:#e5e7eb;text-decoration:none;font-weight:700;cursor:pointer}
     .muted{color:var(--muted)}
@@ -103,9 +105,16 @@
       .cols{grid-template-columns:1fr;}
       #pane-sp { grid-column: span 1 / span 1; }
       #pane-am-right { display: none; }
+      .wrap{padding:0 12px}
+    }
+    @media (max-width:600px){
+      .grid{grid-template-columns: 1fr; gap: 8px;}
+      input,select,button{padding:10px;font-size:0.95rem}
+      label{font-size:11px}
     }
     @media (max-width:500px){
-      .grid{grid-template-columns: 1fr;}
+      #ytp iframe{min-height:200px}
+      .panel{padding:12px}
     }
   </style>
 </head>
