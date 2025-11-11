@@ -43,7 +43,8 @@
     async function track(event,props={}){
       if(localStorage.getItem('analytics_opt_out')==='true')return;
       const body={v:1,event,ts:new Date().toISOString(),anon_user_id:getUID(),session_id:getSID(),props};
-      try{await fetch('/v1/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}catch(e){}
+      const apiUrl = 'https://timedeck-api.onrender.com';
+      try{await fetch(`${apiUrl}/v1/events`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}catch(e){}
     }
     window.TDTM={track,uid:getUID,sid:getSID};
   })();
