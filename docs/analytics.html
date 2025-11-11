@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TapeDeck Analytics</title>
+  <meta name="description" content="See what the TapeDeck Time Machine community is searching for and exporting.">
+  <link rel="icon" href="/logo.svg" type="image/svg+xml">
+
+  <style>
+    :root{--bg:#0a0f17;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#8b5cf6;--accent2:#22d3ee;--shadow:0 12px 48px rgba(2,10,20,.45)}
+    *{box-sizing:border-box}
+    body{margin:0;background:
+      radial-gradient(1200px 600px at 10% -10%, #0e1630 0%, transparent 60%),
+      radial-gradient(700px 400px at 120% 10%, #06101f 0%, transparent 60%), #0a0f17;
+      color:var(--text); font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+    .wrap{max-width:1200px;margin:40px auto;padding:0 18px}
+    .header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:32px}
+    .logo{width:36px;height:36px;border-radius:12px;background:
+      linear-gradient(135deg,#8b5cf6 0%,#22d3ee 55%,#16a34a 120%);
+      display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:var(--shadow);text-decoration:none}
+    h1{font-size:24px;margin:0}
+    .subtitle{color:var(--muted);font-size:14px;margin-left:auto}
+
+    .panel{background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.12);
+      border-radius:18px;padding:20px;box-shadow:var(--shadow)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+    .stat-box{padding:16px;background:rgba(12,20,34,.6);border:1px solid rgba(148,163,184,.12);border-radius:12px;text-align:center}
+    .stat-number{font-size:32px;font-weight:800;color:var(--accent2)}
+    .stat-label{font-size:12px;color:var(--muted);margin-top:6px}
+
+    .chart-container{margin-bottom:24px}
+    .chart-title{font-size:18px;font-weight:700;margin-bottom:12px}
+    .list-item{padding:10px 0;border-bottom:1px solid rgba(148,163,184,.08);display:flex;justify-content:space-between;align-items:center}
+    .list-item:last-child{border-bottom:none}
+    .bar-graph{display:flex;gap:4px;align-items:flex-end;height:60px}
+    .bar{background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:4px 4px 0 0;flex:1;min-height:4px}
+    .bar-label{font-size:11px;color:var(--muted);margin-top:4px;text-align:center}
+
+    .export-split{display:flex;gap:16px;align-items:center}
+    .pie-slice{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:12px}
+    .pie-spotify{background:#1DB954}
+    .pie-apple{background:#FA243C}
+
+    .activity-feed{max-height:400px;overflow-y:auto}
+    .activity-item{padding:8px;margin-bottom:8px;background:rgba(12,20,34,.4);border-radius:8px;font-size:13px;border-left:3px solid var(--accent2)}
+    .activity-ts{color:var(--muted);font-size:11px}
+    .activity-text{color:var(--text);margin-top:2px}
+
+    .loading{text-align:center;color:var(--muted);padding:20px}
+    .error{color:#fda4af;padding:16px;background:rgba(253,164,175,.1);border-radius:8px;margin-bottom:16px}
+
+    @media (max-width:768px){
+      .grid{grid-template-columns:1fr 1fr}
+      .header{flex-direction:column;align-items:flex-start}
+      .subtitle{margin-left:0;margin-top:8px}
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="header">
+    <a href="/" class="logo">TD</a>
+    <div>
+      <h1>TapeDeck Activity</h1>
+      <p style="margin:0;font-size:13px;color:var(--muted)">Real-time community insights</p>
+    </div>
+    <div class="subtitle" id="lastUpdate"></div>
+  </div>
+
+  <div id="error" class="error" style="display:none"></div>
+
+  <!-- Today's Stats -->
+  <div class="grid">
+    <div class="stat-box">
+      <div class="stat-number" id="searches">—</div>
+      <div class="stat-label">Searches Today</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-number" id="exports">—</div>
+      <div class="stat-label">Playlists Created</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-number" id="activeUsers">—</div>
+      <div class="stat-label">Active Users</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-number" id="successRate">—</div>
+      <div class="stat-label">Search Success Rate</div>
+    </div>
+  </div>
+
+  <!-- Top Searches -->
+  <div class="panel chart-container">
+    <div class="chart-title">🔍 Top Searches</div>
+    <div id="topSearches" class="loading">Loading...</div>
+  </div>
+
+  <!-- Genre & Year Breakdown -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+    <div class="panel chart-container">
+      <div class="chart-title">🎸 Popular Genres</div>
+      <div id="genreBreakdown" class="loading">Loading...</div>
+    </div>
+    <div class="panel chart-container">
+      <div class="chart-title">📅 Popular Eras</div>
+      <div id="yearBreakdown" class="loading">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Export Split & Zero-Result Rate -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">
+    <div class="panel chart-container">
+      <div class="chart-title">🎵 Export Providers</div>
+      <div id="exportSplit" class="loading">Loading...</div>
+    </div>
+    <div class="panel chart-container">
+      <div class="chart-title">⚠️ Search Quality</div>
+      <div id="qualityMetrics" class="loading">Loading...</div>
+    </div>
+  </div>
+
+  <!-- Recent Activity -->
+  <div class="panel chart-container">
+    <div class="chart-title">⏱️ Recent Activity</div>
+    <div id="recentActivity" class="activity-feed loading">Loading...</div>
+  </div>
+
+  <div style="text-align:center;margin-top:32px;color:var(--muted);font-size:12px">
+    <p>This dashboard auto-refreshes every 60 seconds. <a href="/" style="color:var(--accent2);text-decoration:none">← Back to TapeDeck</a></p>
+  </div>
+</div>
+
+<script>
+  const API = new URLSearchParams(location.search).get('api') || 'https://timedeck-api.onrender.com';
+  const REFRESH_MS = 60000;
+
+  async function fetchAnalytics() {
+    try {
+      const [stats, topSearches, genres, years, exportSplit, zeroRate, activity] = await Promise.all([
+        fetch(`${API}/v1/analytics/today-stats`).then(r => r.json()),
+        fetch(`${API}/v1/analytics/top-searches?limit=8`).then(r => r.json()),
+        fetch(`${API}/v1/analytics/genre-breakdown?limit=10`).then(r => r.json()),
+        fetch(`${API}/v1/analytics/year-breakdown?limit=10`).then(r => r.json()),
+        fetch(`${API}/v1/analytics/export-split`).then(r => r.json()),
+        fetch(`${API}/v1/analytics/zero-result-rate`).then(r => r.json()),
+        fetch(`${API}/v1/analytics/recent-activity?limit=15`).then(r => r.json()),
+      ]);
+
+      // Update today's stats
+      document.getElementById('searches').textContent = stats.searches || 0;
+      document.getElementById('exports').textContent = stats.exports || 0;
+      document.getElementById('activeUsers').textContent = stats.active_users || 0;
+
+      const successRate = zeroRate.total > 0 ? Math.round(100 - zeroRate.pct) : 0;
+      document.getElementById('successRate').textContent = successRate + '%';
+
+      // Top searches
+      const topSearchesHtml = topSearches.length ?
+        topSearches.map(s => `<div class="list-item"><span>${escapeHtml(s.query || 'Unknown')}</span><strong>${s.count}</strong></div>`).join('') :
+        '<div class="loading">No searches yet.</div>';
+      document.getElementById('topSearches').innerHTML = topSearchesHtml;
+
+      // Genre breakdown
+      const genreHtml = genres.length ?
+        `<div class="bar-graph">${genres.map((g, i) => `<div style="flex:${g.count};opacity:${0.4+0.6*(i/genres.length)}" title="${escapeHtml(g.genre)}: ${g.count}" class="bar"></div>`).join('')}</div>` +
+        genres.map((g, i) => `<div style="flex:${g.count}" class="bar-label">${truncate(g.genre, 10)}</div>`).join('').replace(/div>/g, 'span>') :
+        '<div class="loading">No data yet.</div>';
+      document.getElementById('genreBreakdown').innerHTML = genreHtml;
+
+      // Year breakdown
+      const yearHtml = years.length ?
+        years.map(y => `<div class="list-item"><span>${escapeHtml(y.year)}</span><strong>${y.count}</strong></div>`).join('') :
+        '<div class="loading">No data yet.</div>';
+      document.getElementById('yearBreakdown').innerHTML = yearHtml;
+
+      // Export split
+      const spotify = exportSplit.spotify || 0;
+      const apple = exportSplit.apple || 0;
+      const total = spotify + apple;
+      const spotifyPct = total > 0 ? Math.round(100 * spotify / total) : 0;
+      const applePct = total > 0 ? Math.round(100 * apple / total) : 0;
+      const exportHtml = total > 0 ?
+        `<div style="display:flex;gap:16px;align-items:center">
+          <div style="flex:1">
+            <div class="list-item"><span>🎵 Spotify</span><strong>${spotify}</strong></div>
+            <div class="list-item"><span>🎵 Apple Music</span><strong>${apple}</strong></div>
+          </div>
+          <div style="text-align:center">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Split</div>
+            <div style="font-size:18px;font-weight:700"><span style="color:#1DB954">${spotifyPct}%</span> / <span style="color:#FA243C">${applePct}%</span></div>
+          </div>
+        </div>` :
+        '<div class="loading">No exports yet.</div>';
+      document.getElementById('exportSplit').innerHTML = exportHtml;
+
+      // Quality metrics
+      const qualityHtml = `<div class="list-item"><span>Zero-Result Rate</span><strong style="color:#fda4af">${zeroRate.pct}%</strong></div>
+        <div class="list-item"><span>Success Rate</span><strong style="color:#86efac">${successRate}%</strong></div>
+        <div class="list-item"><span>Total Searches</span><strong>${zeroRate.total}</strong></div>`;
+      document.getElementById('qualityMetrics').innerHTML = qualityHtml;
+
+      // Recent activity
+      const activityHtml = activity.length ?
+        activity.map(a => {
+          const ts = new Date(a.ts).toLocaleTimeString();
+          const text = formatActivityEvent(a.event, a.props);
+          return `<div class="activity-item"><div class="activity-ts">${ts}</div><div class="activity-text">${text}</div></div>`;
+        }).join('') :
+        '<div class="loading">No recent activity.</div>';
+      document.getElementById('recentActivity').innerHTML = activityHtml;
+
+      // Update timestamp
+      document.getElementById('lastUpdate').textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+      document.getElementById('error').style.display = 'none';
+
+    } catch(e) {
+      console.error('Error fetching analytics:', e);
+      document.getElementById('error').textContent = `Error loading analytics: ${e.message}. Retrying in ${REFRESH_MS/1000}s...`;
+      document.getElementById('error').style.display = 'block';
+    }
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function truncate(text, len) {
+    return text.length > len ? text.substring(0, len) + '…' : text;
+  }
+
+  function formatActivityEvent(event, props) {
+    switch(event) {
+      case 'search_initiated':
+        return `🔍 Search started (${props.genre || 'unknown'})`;
+      case 'search_results':
+        return `✅ Found ${props.result_count || 0} tracks (${Math.round(props.took_ms || 0)}ms)`;
+      case 'search_zero_results':
+        return `❌ Zero results (${props.genre || 'unknown'})`;
+      case 'auth_start':
+        return `🔐 Sign in started (${props.provider || 'unknown'})`;
+      case 'auth_success':
+        return `✅ Signed in (${props.provider || 'unknown'})`;
+      case 'auth_error':
+        return `❌ Sign in failed (${props.provider || 'unknown'})`;
+      case 'export_attempt':
+        return `📤 Exporting ${props.num_tracks || 0} tracks to ${props.provider || 'unknown'}`;
+      case 'export_success':
+        return `✅ Exported ${props.num_tracks || 0} tracks (${Math.round(props.took_ms || 0)}ms)`;
+      case 'export_error':
+        return `❌ Export failed (${props.provider || 'unknown'})`;
+      default:
+        return `📊 ${event}`;
+    }
+  }
+
+  // Initial load and auto-refresh
+  fetchAnalytics();
+  setInterval(fetchAnalytics, REFRESH_MS);
+</script>
+
+</body>
+</html>

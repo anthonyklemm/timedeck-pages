@@ -33,6 +33,22 @@
     gtag('js',new Date()); gtag('config','G-HPZT6BMJVD');
   </script>
 
+  <!-- TapeDeck Analytics Tracking -->
+  <script>
+  (function(){
+    const LS_UID='tdtm_uid_v1';const LS_SID='tdtm_sid_v1';const SID_TTL_MS=30*60*1000;
+    function uuid(){return([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));}
+    function getUID(){let id=localStorage.getItem(LS_UID);if(!id){id=uuid();localStorage.setItem(LS_UID,id);}return id;}
+    function getSID(){const now=Date.now();const val=JSON.parse(localStorage.getItem(LS_SID)||'null');if(!val||(now-val.last)>SID_TTL_MS){const sid={id:uuid(),last:now};localStorage.setItem(LS_SID,JSON.stringify(sid));return sid.id;}val.last=now;localStorage.setItem(LS_SID,JSON.stringify(val));return val.id;}
+    async function track(event,props={}){
+      if(localStorage.getItem('analytics_opt_out')==='true')return;
+      const body={v:1,event,ts:new Date().toISOString(),anon_user_id:getUID(),session_id:getSID(),props};
+      try{await fetch('/v1/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}catch(e){}
+    }
+    window.TDTM={track,uid:getUID,sid:getSID};
+  })();
+  </script>
+
   <style>
     :root{--bg:#0a0f17;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#8b5cf6;--accent2:#22d3ee;--shadow:0 12px 48px rgba(2,10,20,.45)}
     *{box-sizing:border-box}
@@ -41,11 +57,15 @@
       radial-gradient(700px 400px at 120% 10%, #06101f 0%, transparent 60%), #0a0f17;
       color:var(--text); font:16px/1.5 -apple-system,system-ui,Segoe UI,Roboto,Arial,sans-serif}
     .wrap{max-width:1100px;margin:40px auto;padding:0 18px}
-    .bar{display:flex;align-items:center;gap:14px}
+    .bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
     .logo{width:36px;height:36px;border-radius:12px;background:
       linear-gradient(135deg,#8b5cf6 0%,#22d3ee 55%,#16a34a 120%);
       display:grid;place-items:center;color:#fff;font-weight:800;box-shadow:var(--shadow);text-decoration:none}
     h1{font-size:22px;margin:0}
+    .social{display:flex;gap:12px;font-size:13px;margin-left:auto}
+    .social a{text-decoration:none;opacity:0.7;transition:opacity 0.2s}
+    .social a:hover{opacity:1}
+    @media (max-width:600px){.social{margin-left:0;width:100%;margin-top:8px}}
 
     .panel{background:rgba(17,24,39,.75);border:1px solid rgba(148,163,184,.12);
       border-radius:18px;padding:16px;box-shadow:var(--shadow);overflow:hidden}
@@ -124,6 +144,10 @@
   <div class="bar" style="margin-bottom:14px">
     <a class="logo" href="/index.html" title="Back to home">TD</a>
     <h1>TapeDeck Time Machine</h1>
+    <div class="social">
+      <a href="https://medium.com/@anthony.klemm" target="_blank" rel="noopener">📝 Medium</a>
+      <a href="https://www.linkedin.com/in/anthony-klemm-57886512" target="_blank" rel="noopener">💼 LinkedIn</a>
+    </div>
   </div>
 
   <div class="panel">
@@ -138,12 +162,12 @@
       <div><label>Hours</label><select id="hours"><option>0.5</option><option selected>1</option><option>2</option><option>3</option></select></div>
       <div><label>Repeat gap (min)</label><input id="gap" type="number" value="90"></div>
       <div><label>Seed (opt)</label><input id="seed" placeholder="e.g. 20020701"></div>
-      <div><label> </label><button id="go" class="primary">Generate</button></div>
+      <div><label> </label><button id="go" class="primary">Generate</button></div>
     </div>
 
     <div class="tabs">
-      <button class="tab" data-tab="yt">YouTube</button>
-      <button class="tab active" data-tab="am">Apple Music</button>
+      <button class="tab active" data-tab="yt">YouTube</button>
+      <button class="tab" data-tab="am">Apple Music</button>
       <button class="tab" data-tab="sp">Spotify</button>
     </div>
 
@@ -184,7 +208,11 @@
         <div id="ytWrap">
           <div class="muted" id="ytStatus">Waiting for a simulation…</div>
           <div id="ytp"></div>
-          <a class="btn" id="ytOpen" href="#" target="_blank" rel="noopener" style="display:none">Open in YouTube</a>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+            <a class="btn" id="ytOpen" href="#" target="_blank" rel="noopener" style="display:none">Open in YouTube</a>
+            <button class="btn" id="ytShare" style="display:none">Share Playlist 🔗</button>
+          </div>
+          <div id="ytShareMsg" class="muted" style="margin-top:6px"></div>
           <div id="ytErr" class="err"></div>
         </div>
       </div>
@@ -263,32 +291,41 @@
     const body={date:qs('#date').value.trim(),genre:qs('#genre').value,hours:Number(qs('#hours').value||3),
       repeat_gap_min:Number(qs('#gap').value||90),seed:(qs('#seed').value.trim()||undefined)?String(qs('#seed').value.trim()):undefined,limit:500};
 
+    // Track search initiation
+    const t0=Date.now();
+    TDTM.track('search_initiated',{genre:qs('#genre').value});
+
     // Reset relevant UI areas before fetching
-    if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML=''; qs('#ytOpen').style.display='none';
+    if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML=''; qs('#ytOpen').style.display='none'; qs('#ytShare').style.display='none';
     qs('#list').innerHTML='<div class="muted">Generating...</div>';
     lastTracks=[]; resolvedSongIds=[];
     qs('#amMsg').textContent = ''; qs('#spMsg').textContent = '';
-    qs('#ytStatus').textContent = ''; qs('#ytErr').textContent = '';
+    qs('#ytStatus').textContent = ''; qs('#ytErr').textContent = ''; qs('#ytShareMsg').textContent = '';
 
 
     try{
       const r=await withTimeout(fetch(`${API}/v1/simulate`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}));
       if(!r.ok){ const txt=await r.text().catch(()=> ''); throw new Error(`simulate ${r.status}: ${txt}`); }
       const data=await r.json(); lastTracks=data.tracks||[];
+      const took_ms=Date.now()-t0;
       if(!lastTracks.length){
         qs('#list').innerHTML = '<div class="muted">No tracks returned. Try a different date/genre.</div>';
         qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned.';
         qs('#amMsg').textContent='No tracks returned.';
         qs('#spMsg').textContent='No tracks returned.';
+        TDTM.track('search_zero_results',{genre:qs('#genre').value,result_count:0,took_ms});
         return false;
       }
       renderList(lastTracks);
+      TDTM.track('search_results',{genre:qs('#genre').value,result_count:lastTracks.length,took_ms});
       return true;
     }catch(err){
+      const took_ms=Date.now()-t0;
       qs('#list').innerHTML = `<div class="err">Error generating list: ${err.message || String(err)}</div>`;
       qs('#ytStatus').textContent=''; qs('#ytErr').textContent=err.message||String(err);
       qs('#amMsg').textContent='Error generating list: '+(err.message||String(err));
       qs('#spMsg').textContent='Error generating list: '+(err.message||String(err));
+      TDTM.track('error_client',{name:'search_error',message:err.message||String(err)});
       return false;
     }
   }
@@ -339,9 +376,27 @@
         events: {
           'onReady': () => {
             qs('#ytStatus').textContent = `Playing ${ids.length} videos.`;
-            const plUrl = `https://www.youtube.com/playlist?list=${ids.join(',')}`;
+
+            // Try to extract the TLGG playlist ID from the player's video URL
+            let plUrl = `https://www.youtube.com/playlist?list=${ids.join(',')}`;
+            try {
+              const videoUrl = player.getVideoUrl();
+              if (videoUrl) {
+                const urlObj = new URL(videoUrl);
+                const listParam = urlObj.searchParams.get('list');
+                if (listParam && listParam.startsWith('TLGG')) {
+                  // Found a temporary YouTube playlist ID - use it for shareable link
+                  plUrl = `https://www.youtube.com/playlist?list=${listParam}`;
+                  qs('#ytStatus').textContent = `Playing ${ids.length} videos. Shareable link ready!`;
+                }
+              }
+            } catch (e) {
+              console.warn('Could not extract TLGG playlist ID:', e);
+            }
+
             qs('#ytOpen').href = plUrl;
             qs('#ytOpen').style.display = 'inline-block';
+            qs('#ytShare').style.display = 'inline-block';
           },
           'onError': (e) => { qs('#ytErr').textContent = `Youtubeer Error: ${e.data}`; }
         }
@@ -428,17 +483,20 @@
   
   // (Filled and adapted from old file)
   async function amSignIn(){
+    TDTM.track('auth_start',{provider:'apple'});
     qs('#amMsg').textContent = 'Signing in to Apple Music...';
     try {
       const m = await getWebMusicInstance();
       const userToken = await m.authorize(); // This triggers the popup
-      
+
       localStorage.setItem('appleMusicUserToken', userToken);
-      
+      TDTM.track('auth_success',{provider:'apple'});
+
       qs('#amMsg').textContent = 'Signed in! You can now create playlists.';
       showAmControls();
     } catch(e) {
       console.error('[AM SignIn] failed', e);
+      TDTM.track('auth_error',{provider:'apple',message:e.message||String(e)});
       qs('#amMsg').textContent = 'Sign in failed: ' + (e.message || String(e));
     }
   }
@@ -449,14 +507,22 @@
     if(!lastTracks?.length){qs('#amMsg').textContent='Generate a tracklist first.'; return;}
     qs('#amMsg').textContent='Creating playlist…';
     const btn = qs('#amCreate'); btn.disabled = true;
+    const t0 = Date.now();
+    TDTM.track('export_attempt',{provider:'apple',num_tracks:lastTracks.length});
     try{
       const name=`TapeDeckTimeMachine - ${qs('#date').value} - ${qs('#genre').value}`;
       const r=await withTimeout(fetch(`${API}/v1/apple/create-playlist`,{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({userToken,name,tracks:lastTracks.map(t=>({artist:t.artist,title:t.title}))})}));
       if(!r.ok){ const j=await r.json().catch(()=>({detail:'Unknown error during create'})); throw new Error(j.detail||`Create failed with status ${r.status}`); }
       const j=await r.json();
+      const took_ms = Date.now() - t0;
+      TDTM.track('export_success',{provider:'apple',num_tracks:j.added_count,took_ms});
       qs('#amMsg').textContent=`Playlist created! Added ${j.added_count} of ${j.total_tracks}.`;
-    }catch(e){ qs('#amMsg').textContent='Create failed: '+(e.message||String(e)); }
+    }catch(e){
+      const took_ms = Date.now() - t0;
+      TDTM.track('export_error',{provider:'apple',message:e.message||String(e)});
+      qs('#amMsg').textContent='Create failed: '+(e.message||String(e));
+    }
     finally { btn.disabled = false; }
   }
 
@@ -641,12 +707,48 @@
     localStorage.removeItem('td_form');
 
     // Set initial tab
-    setTab(switchToSpotifyTab ? 'sp' : 'am');
+    setTab(switchToSpotifyTab ? 'sp' : 'yt');
     if (qs('.tab[data-tab="am"]').classList.contains('active') || qs('.tab[data-tab="sp"]').classList.contains('active')) {
         startViz();
     }
 
   })();
+
+  /* ===== YouTube Share Function ===== */
+  async function shareYouTubePlaylist() {
+    const url = qs('#ytOpen').href;
+    const title = `TapeDeck Time Machine - ${qs('#date').value} - ${qs('#genre').value}`;
+    const text = `Check out this playlist I made with TapeDeck Time Machine!`;
+
+    qs('#ytShareMsg').textContent = '';
+
+    try {
+      // Try Web Share API first (works on mobile)
+      if (navigator.share) {
+        await navigator.share({
+          title: title,
+          text: text,
+          url: url
+        });
+        qs('#ytShareMsg').textContent = 'Shared successfully!';
+        setTimeout(() => qs('#ytShareMsg').textContent = '', 3000);
+      } else {
+        // Fallback to clipboard copy (desktop)
+        await navigator.clipboard.writeText(url);
+        qs('#ytShareMsg').textContent = 'Link copied to clipboard!';
+        setTimeout(() => qs('#ytShareMsg').textContent = '', 3000);
+      }
+    } catch (err) {
+      // If share was cancelled or clipboard failed
+      if (err.name === 'AbortError') {
+        // User cancelled the share dialog - not an error
+        return;
+      }
+      console.error('Share failed:', err);
+      qs('#ytShareMsg').textContent = 'Could not share. Try copying the link manually.';
+      setTimeout(() => qs('#ytShareMsg').textContent = '', 5000);
+    }
+  }
 
   /* ===== Wire buttons ===== */
   qs('#go').onclick=simulate;
@@ -654,8 +756,12 @@
   qs('#amSign').onclick=amSignIn;
   qs('#amCreate').onclick=amCreatePlaylist;
 
+  // YouTube Buttons
+  qs('#ytShare').onclick=shareYouTubePlaylist;
+
   // Spotify Buttons
   qs('#spSign').onclick = () => {
+      TDTM.track('auth_start',{provider:'spotify'});
       // Persist current state so we don't lose the generated list on return
       try {
         if (lastTracks?.length) {
@@ -682,6 +788,8 @@
 
       const btn = qs('#spCreate'); btn.disabled = true;
       qs('#spMsg').textContent = 'Creating Spotify playlist...';
+      const t0 = Date.now();
+      TDTM.track('export_attempt',{provider:'spotify',num_tracks:lastTracks.length});
       try {
           const name = `TapeDeckTimeMachine - ${qs('#date').value} - ${qs('#genre').value}`;
           const body = { accessToken: token, name: name, tracks: lastTracks.map(t => ({ artist: t.artist, title: t.title })) };
@@ -699,12 +807,16 @@
           }
 
           const result = await r.json();
+          const took_ms = Date.now() - t0;
+          TDTM.track('export_success',{provider:'spotify',num_tracks:result.added_count,took_ms});
           let message = `Spotify playlist created! Added ${result.added_count} of ${result.total_tracks} tracks.`;
           if(result.url) { message += ` <a href="${result.url}" target="_blank" rel="noopener" class="btn" style="padding: 6px 10px; font-size: 0.9em;">Open Playlist</a>`; }
           qs('#spMsg').innerHTML = message;
 
       } catch (e) {
+          const took_ms = Date.now() - t0;
           console.error("Spotify Create Playlist Error:", e);
+          TDTM.track('export_error',{provider:'spotify',message:e.message||String(e)});
           let msg = 'Error creating playlist: ' + (e.message || String(e));
           if ((e.message||'').includes('403')) {
             msg += ' This often means Spotify denied the profile scope (/me). Re-sign in and allow permissions (user-read-email or user-read-private) along with playlist modify scopes. If your browser blocks cookies or cross-site tracking, temporarily allow them for login.';
