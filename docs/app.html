@@ -314,11 +314,13 @@
         qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned.';
         qs('#amMsg').textContent='No tracks returned.';
         qs('#spMsg').textContent='No tracks returned.';
-        TDTM.track('search_zero_results',{genre:qs('#genre').value,result_count:0,took_ms});
+		const query = `${qs('#date').value} - ${qs('#genre').value}`;
+		TDTM.track('search_zero_results',{query,genre:qs('#genre').value,result_count:0,took_ms});
         return false;
       }
       renderList(lastTracks);
-      TDTM.track('search_results',{genre:qs('#genre').value,result_count:lastTracks.length,took_ms});
+	  const query = `${qs('#date').value} - ${qs('#genre').value}`;
+      TDTM.track('search_results',{query,genre:qs('#genre').value,result_count:lastTracks.length,took_ms});
       return true;
     }catch(err){
       const took_ms=Date.now()-t0;
