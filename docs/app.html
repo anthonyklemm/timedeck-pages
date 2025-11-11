@@ -33,6 +33,22 @@
     gtag('js',new Date()); gtag('config','G-HPZT6BMJVD');
   </script>
 
+  <!-- TapeDeck Analytics Tracking -->
+  <script>
+  (function(){
+    const LS_UID='tdtm_uid_v1';const LS_SID='tdtm_sid_v1';const SID_TTL_MS=30*60*1000;
+    function uuid(){return([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g,c=>(c^crypto.getRandomValues(new Uint8Array(1))[0]&15>>c/4).toString(16));}
+    function getUID(){let id=localStorage.getItem(LS_UID);if(!id){id=uuid();localStorage.setItem(LS_UID,id);}return id;}
+    function getSID(){const now=Date.now();const val=JSON.parse(localStorage.getItem(LS_SID)||'null');if(!val||(now-val.last)>SID_TTL_MS){const sid={id:uuid(),last:now};localStorage.setItem(LS_SID,JSON.stringify(sid));return sid.id;}val.last=now;localStorage.setItem(LS_SID,JSON.stringify(val));return val.id;}
+    async function track(event,props={}){
+      if(localStorage.getItem('analytics_opt_out')==='true')return;
+      const body={v:1,event,ts:new Date().toISOString(),anon_user_id:getUID(),session_id:getSID(),props};
+      try{await fetch('/v1/events',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}catch(e){}
+    }
+    window.TDTM={track,uid:getUID,sid:getSID};
+  })();
+  </script>
+
   <style>
     :root{--bg:#0a0f17;--panel:#111827;--muted:#94a3b8;--text:#e5e7eb;--accent:#8b5cf6;--accent2:#22d3ee;--shadow:0 12px 48px rgba(2,10,20,.45)}
     *{box-sizing:border-box}
@@ -146,7 +162,7 @@
       <div><label>Hours</label><select id="hours"><option>0.5</option><option selected>1</option><option>2</option><option>3</option></select></div>
       <div><label>Repeat gap (min)</label><input id="gap" type="number" value="90"></div>
       <div><label>Seed (opt)</label><input id="seed" placeholder="e.g. 20020701"></div>
-      <div><label> </label><button id="go" class="primary">Generate</button></div>
+      <div><label> </label><button id="go" class="primary">Generate</button></div>
     </div>
 
     <div class="tabs">
@@ -275,6 +291,10 @@
     const body={date:qs('#date').value.trim(),genre:qs('#genre').value,hours:Number(qs('#hours').value||3),
       repeat_gap_min:Number(qs('#gap').value||90),seed:(qs('#seed').value.trim()||undefined)?String(qs('#seed').value.trim()):undefined,limit:500};
 
+    // Track search initiation
+    const t0=Date.now();
+    TDTM.track('search_initiated',{genre:qs('#genre').value});
+
     // Reset relevant UI areas before fetching
     if(player){try{player.destroy();}catch{} player=null;} qs('#ytp').innerHTML=''; qs('#ytOpen').style.display='none'; qs('#ytShare').style.display='none';
     qs('#list').innerHTML='<div class="muted">Generating...</div>';
@@ -287,20 +307,25 @@
       const r=await withTimeout(fetch(`${API}/v1/simulate`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}));
       if(!r.ok){ const txt=await r.text().catch(()=> ''); throw new Error(`simulate ${r.status}: ${txt}`); }
       const data=await r.json(); lastTracks=data.tracks||[];
+      const took_ms=Date.now()-t0;
       if(!lastTracks.length){
         qs('#list').innerHTML = '<div class="muted">No tracks returned. Try a different date/genre.</div>';
         qs('#ytStatus').textContent=''; qs('#ytErr').textContent='No tracks returned.';
         qs('#amMsg').textContent='No tracks returned.';
         qs('#spMsg').textContent='No tracks returned.';
+        TDTM.track('search_zero_results',{genre:qs('#genre').value,result_count:0,took_ms});
         return false;
       }
       renderList(lastTracks);
+      TDTM.track('search_results',{genre:qs('#genre').value,result_count:lastTracks.length,took_ms});
       return true;
     }catch(err){
+      const took_ms=Date.now()-t0;
       qs('#list').innerHTML = `<div class="err">Error generating list: ${err.message || String(err)}</div>`;
       qs('#ytStatus').textContent=''; qs('#ytErr').textContent=err.message||String(err);
       qs('#amMsg').textContent='Error generating list: '+(err.message||String(err));
       qs('#spMsg').textContent='Error generating list: '+(err.message||String(err));
+      TDTM.track('error_client',{name:'search_error',message:err.message||String(err)});
       return false;
     }
   }
@@ -458,17 +483,20 @@
   
   // (Filled and adapted from old file)
   async function amSignIn(){
+    TDTM.track('auth_start',{provider:'apple'});
     qs('#amMsg').textContent = 'Signing in to Apple Music...';
     try {
       const m = await getWebMusicInstance();
       const userToken = await m.authorize(); // This triggers the popup
-      
+
       localStorage.setItem('appleMusicUserToken', userToken);
-      
+      TDTM.track('auth_success',{provider:'apple'});
+
       qs('#amMsg').textContent = 'Signed in! You can now create playlists.';
       showAmControls();
     } catch(e) {
       console.error('[AM SignIn] failed', e);
+      TDTM.track('auth_error',{provider:'apple',message:e.message||String(e)});
       qs('#amMsg').textContent = 'Sign in failed: ' + (e.message || String(e));
     }
   }
@@ -479,14 +507,22 @@
     if(!lastTracks?.length){qs('#amMsg').textContent='Generate a tracklist first.'; return;}
     qs('#amMsg').textContent='Creating playlist…';
     const btn = qs('#amCreate'); btn.disabled = true;
+    const t0 = Date.now();
+    TDTM.track('export_attempt',{provider:'apple',num_tracks:lastTracks.length});
     try{
       const name=`TapeDeckTimeMachine - ${qs('#date').value} - ${qs('#genre').value}`;
       const r=await withTimeout(fetch(`${API}/v1/apple/create-playlist`,{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({userToken,name,tracks:lastTracks.map(t=>({artist:t.artist,title:t.title}))})}));
       if(!r.ok){ const j=await r.json().catch(()=>({detail:'Unknown error during create'})); throw new Error(j.detail||`Create failed with status ${r.status}`); }
       const j=await r.json();
+      const took_ms = Date.now() - t0;
+      TDTM.track('export_success',{provider:'apple',num_tracks:j.added_count,took_ms});
       qs('#amMsg').textContent=`Playlist created! Added ${j.added_count} of ${j.total_tracks}.`;
-    }catch(e){ qs('#amMsg').textContent='Create failed: '+(e.message||String(e)); }
+    }catch(e){
+      const took_ms = Date.now() - t0;
+      TDTM.track('export_error',{provider:'apple',message:e.message||String(e)});
+      qs('#amMsg').textContent='Create failed: '+(e.message||String(e));
+    }
     finally { btn.disabled = false; }
   }
 
@@ -725,6 +761,7 @@
 
   // Spotify Buttons
   qs('#spSign').onclick = () => {
+      TDTM.track('auth_start',{provider:'spotify'});
       // Persist current state so we don't lose the generated list on return
       try {
         if (lastTracks?.length) {
@@ -751,6 +788,8 @@
 
       const btn = qs('#spCreate'); btn.disabled = true;
       qs('#spMsg').textContent = 'Creating Spotify playlist...';
+      const t0 = Date.now();
+      TDTM.track('export_attempt',{provider:'spotify',num_tracks:lastTracks.length});
       try {
           const name = `TapeDeckTimeMachine - ${qs('#date').value} - ${qs('#genre').value}`;
           const body = { accessToken: token, name: name, tracks: lastTracks.map(t => ({ artist: t.artist, title: t.title })) };
@@ -768,12 +807,16 @@
           }
 
           const result = await r.json();
+          const took_ms = Date.now() - t0;
+          TDTM.track('export_success',{provider:'spotify',num_tracks:result.added_count,took_ms});
           let message = `Spotify playlist created! Added ${result.added_count} of ${result.total_tracks} tracks.`;
           if(result.url) { message += ` <a href="${result.url}" target="_blank" rel="noopener" class="btn" style="padding: 6px 10px; font-size: 0.9em;">Open Playlist</a>`; }
           qs('#spMsg').innerHTML = message;
 
       } catch (e) {
+          const took_ms = Date.now() - t0;
           console.error("Spotify Create Playlist Error:", e);
+          TDTM.track('export_error',{provider:'spotify',message:e.message||String(e)});
           let msg = 'Error creating playlist: ' + (e.message || String(e));
           if ((e.message||'').includes('403')) {
             msg += ' This often means Spotify denied the profile scope (/me). Re-sign in and allow permissions (user-read-email or user-read-private) along with playlist modify scopes. If your browser blocks cookies or cross-site tracking, temporarily allow them for login.';
