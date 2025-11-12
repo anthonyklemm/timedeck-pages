@@ -2,17 +2,13 @@ import Foundation
 import MusicKit
 
 @MainActor
-class MusicKitManager: NSObject, ObservableObject {
+class MusicKitManager: ObservableObject {
     @Published var isInitialized = false
-    @Published var developerToken: String?
-    @Published var currentlyPlaying: Music.MediaItem?
-    @Published var isPlaying = false
     @Published var errorMessage: String?
 
-    private var musicPlayer: ApplicationMusicPlayer?
+    private let applicationMusicPlayer = ApplicationMusicPlayer.shared
 
-    override init() {
-        super.init()
+    init() {
         setupMusicPlayer()
     }
 
@@ -21,7 +17,8 @@ class MusicKitManager: NSObject, ObservableObject {
     private func setupMusicPlayer() {
         Task {
             do {
-                musicPlayer = ApplicationMusicPlayer.shared
+                // Verify music player is available
+                _ = applicationMusicPlayer
                 isInitialized = true
             } catch {
                 errorMessage = "Failed to initialize music player: \(error.localizedDescription)"
@@ -33,8 +30,7 @@ class MusicKitManager: NSObject, ObservableObject {
 
     func play() async {
         do {
-            try await musicPlayer?.play()
-            isPlaying = true
+            try await applicationMusicPlayer.play()
         } catch {
             errorMessage = "Failed to play: \(error.localizedDescription)"
         }
@@ -42,8 +38,7 @@ class MusicKitManager: NSObject, ObservableObject {
 
     func pause() async {
         do {
-            try await musicPlayer?.pause()
-            isPlaying = false
+            try await applicationMusicPlayer.pause()
         } catch {
             errorMessage = "Failed to pause: \(error.localizedDescription)"
         }
@@ -51,7 +46,7 @@ class MusicKitManager: NSObject, ObservableObject {
 
     func skipToNextItem() async {
         do {
-            try await musicPlayer?.skipToNextEntry()
+            try await applicationMusicPlayer.skipToNextEntry()
         } catch {
             errorMessage = "Failed to skip: \(error.localizedDescription)"
         }
@@ -59,30 +54,9 @@ class MusicKitManager: NSObject, ObservableObject {
 
     func skipToPreviousItem() async {
         do {
-            try await musicPlayer?.skipToPreviousEntry()
+            try await applicationMusicPlayer.skipToPreviousEntry()
         } catch {
             errorMessage = "Failed to skip back: \(error.localizedDescription)"
-        }
-    }
-
-    // MARK: - Queue Management
-
-    func setQueue(with items: [Music.MediaItem]) async {
-        do {
-            var queue = ApplicationMusicPlayer.Queue()
-            queue = queue.appending(contentsOf: items)
-            try await musicPlayer?.setQueue(queue)
-        } catch {
-            errorMessage = "Failed to set queue: \(error.localizedDescription)"
-        }
-    }
-
-    func clearQueue() async {
-        do {
-            var emptyQueue = ApplicationMusicPlayer.Queue()
-            try await musicPlayer?.setQueue(emptyQueue)
-        } catch {
-            errorMessage = "Failed to clear queue: \(error.localizedDescription)"
         }
     }
 }
