@@ -65,7 +65,10 @@ class AuthenticationManager: NSObject, ObservableObject {
             for track in tracks {
                 do {
                     // Search for the track in Apple Music catalog
-                    var request = MusicCatalogSearchRequest(term: "\(track.artist) \(track.title)")
+                    var request = MusicCatalogSearchRequest(
+                        term: "\(track.artist) \(track.title)",
+                        types: [MusicKit.Track.self]
+                    )
                     request.limit = 1
 
                     let results = try await request.response()
@@ -89,13 +92,16 @@ class AuthenticationManager: NSObject, ObservableObject {
 
             print("DEBUG AuthManager: Found \(catalogTracks.count) tracks, creating playlist")
 
-            // Create the playlist using LibraryChangeRequest
-            var changeRequest = LibraryPlaylistChangeRequest(name: name)
-            changeRequest.tracks = catalogTracks
-            let playlist = try await changeRequest.response()
+            // Create a new library playlist with the tracks
+            let playlistRequest = LibraryPlaylistRequest(name: name)
+            let createdPlaylist = try await playlistRequest.response()
 
-            print("DEBUG AuthManager: Playlist created successfully: \(playlist.name)")
-            return (true, "Playlist '\(playlist.name)' created successfully with \(catalogTracks.count) tracks!")
+            // Add tracks to the playlist
+            var addTracksRequest = LibraryPlaylistTracksRequest(playlist: createdPlaylist, tracks: catalogTracks)
+            _ = try await addTracksRequest.response()
+
+            print("DEBUG AuthManager: Playlist created successfully: \(createdPlaylist.name)")
+            return (true, "Playlist '\(createdPlaylist.name)' created successfully with \(catalogTracks.count) tracks!")
 
         } catch {
             print("DEBUG AuthManager: Error creating playlist: \(error)")
