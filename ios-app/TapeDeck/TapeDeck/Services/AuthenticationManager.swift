@@ -4,7 +4,6 @@ import MusicKit
 @MainActor
 class AuthenticationManager: NSObject, ObservableObject {
     @Published var appleMusicAuthorized = false
-    @Published var appleMusicUserToken: String?
     @Published var appleMusicDevToken: String?
     @Published var appleMusicStorefront: String?
 
@@ -16,7 +15,6 @@ class AuthenticationManager: NSObject, ObservableObject {
 
     override init() {
         super.init()
-        loadSavedTokens()
         checkMusicKitAuthorization()
     }
 
@@ -24,24 +22,88 @@ class AuthenticationManager: NSObject, ObservableObject {
         self.storageManager = manager
     }
 
-    // MARK: - Apple Music MusicKit
+    // MARK: - Apple Music MusicKit Authorization
 
     func checkMusicKitAuthorization() {
         Task {
             let status = await MusicAuthorization.request()
             DispatchQueue.main.async {
                 self.appleMusicAuthorized = status == .authorized
+                print("DEBUG AuthManager: MusicKit authorization status: \(status == .authorized)")
             }
         }
     }
 
     func requestMusicKitAuthorization() async -> Bool {
+        print("DEBUG AuthManager: Requesting MusicKit authorization")
         let status = await MusicAuthorization.request()
         DispatchQueue.main.async {
             self.appleMusicAuthorized = status == .authorized
+            print("DEBUG AuthManager: MusicKit authorization result: \(status == .authorized)")
         }
         return status == .authorized
     }
+
+    // MARK: - Create Apple Music Playlist (Using MusicKit)
+
+    func createAppleMusicPlaylist(name: String, tracks: [Track]) async -> (success: Bool, message: String) {
+        print("DEBUG AuthManager: createAppleMusicPlaylist called with \(tracks.count) tracks")
+
+        // First, ensure we have authorization
+        let authorized = await requestMusicKitAuthorization()
+        guard authorized else {
+            print("DEBUG AuthManager: User denied MusicKit authorization")
+            return (false, "Apple Music access denied. Please enable in Settings.")
+        }
+
+        print("DEBUG AuthManager: User authorized, searching for tracks")
+
+        do {
+            // Search for each track in the Apple Music catalog
+            var catalogTracks: [MusicKit.Track] = []
+
+            for track in tracks {
+                do {
+                    var request = MusicCatalogSearchRequest(
+                        term: "\(track.artist) \(track.title)",
+                        types: [MusicKit.Track.self]
+                    )
+                    request.limit = 1
+
+                    let results = try await request.response()
+
+                    if let firstTrack = results.tracks.first {
+                        catalogTracks.append(firstTrack)
+                        print("DEBUG AuthManager: Found track: \(track.title)")
+                    } else {
+                        print("DEBUG AuthManager: Could not find track: \(track.title)")
+                    }
+                } catch {
+                    print("DEBUG AuthManager: Error searching for track \(track.title): \(error)")
+                    // Continue searching for other tracks even if one fails
+                }
+            }
+
+            guard !catalogTracks.isEmpty else {
+                print("DEBUG AuthManager: No tracks found in Apple Music catalog")
+                return (false, "Could not find any of these tracks in Apple Music.")
+            }
+
+            print("DEBUG AuthManager: Found \(catalogTracks.count) tracks, creating playlist")
+
+            // Create the playlist
+            let playlist = try await LibraryPlaylistCreationRequest(name: name, items: catalogTracks).response()
+
+            print("DEBUG AuthManager: Playlist created successfully: \(playlist.name)")
+            return (true, "Playlist '\(playlist.name)' created successfully with \(catalogTracks.count) tracks!")
+
+        } catch {
+            print("DEBUG AuthManager: Error creating playlist: \(error)")
+            return (false, "Error creating playlist: \(error.localizedDescription)")
+        }
+    }
+
+    // MARK: - Dev Token (for future use or reference)
 
     func fetchAppleMusicDevToken() async {
         print("DEBUG AuthManager: fetchAppleMusicDevToken called")
@@ -68,18 +130,6 @@ class AuthenticationManager: NSObject, ObservableObject {
         }
     }
 
-    func setAppleMusicUserToken(_ token: String) {
-        self.appleMusicUserToken = token
-        storageManager?.appleMusicUserToken = token
-    }
-
-    func clearAppleMusicAuth() {
-        appleMusicUserToken = nil
-        appleMusicDevToken = nil
-        appleMusicStorefront = nil
-        storageManager?.appleMusicUserToken = nil
-    }
-
     // MARK: - Spotify
 
     func setSpotifyAccessToken(_ token: String) {
@@ -88,13 +138,5 @@ class AuthenticationManager: NSObject, ObservableObject {
 
     func clearSpotifyAuth() {
         storageManager?.spotifyAccessToken = nil
-    }
-
-    // MARK: - Private
-
-    private func loadSavedTokens() {
-        if let token = storageManager?.appleMusicUserToken {
-            appleMusicUserToken = token
-        }
     }
 }

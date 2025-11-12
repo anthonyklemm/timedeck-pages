@@ -190,21 +190,22 @@ struct GenerationView: View {
 
     private func createAppleMusicPlaylist(name: String) async {
         print("DEBUG: createAppleMusicPlaylist called with name: \(name)")
-        print("DEBUG: userToken exists: \(authManager.appleMusicUserToken != nil)")
 
-        guard let userToken = authManager.appleMusicUserToken else {
-            print("DEBUG: No user token, requesting auth")
-            await authManager.fetchAppleMusicDevToken()
-            print("DEBUG: Dev token fetched. Dev token exists: \(authManager.appleMusicDevToken != nil)")
-            return
-        }
-
-        print("DEBUG: Creating playlist with userToken")
-        await viewModel.createAppleMusicPlaylist(
-            userToken: userToken,
+        let (success, message) = await authManager.createAppleMusicPlaylist(
             name: name,
             tracks: viewModel.currentTracks
         )
+
+        DispatchQueue.main.async {
+            if success {
+                print("DEBUG: Playlist created successfully: \(message)")
+                // Show success message
+                self.viewModel.errorMessage = message
+            } else {
+                print("DEBUG: Playlist creation failed: \(message)")
+                self.viewModel.errorMessage = message
+            }
+        }
     }
 
     private func openYouTubePlaylist() {
