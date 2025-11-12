@@ -172,24 +172,34 @@ struct GenerationView: View {
     }
 
     private func createPlaylist() async {
+        print("DEBUG: createPlaylist called for provider: \(provider)")
         let playlistName = "TapeDeckTimeMachine - \(viewModel.selectedDate.formatted(date: .abbreviated, time: .omitted)) - \(viewModel.selectedGenre)"
 
         switch provider {
         case "apple":
+            print("DEBUG: Creating Apple Music playlist")
             await createAppleMusicPlaylist(name: playlistName)
         case "youtube":
+            print("DEBUG: Opening YouTube playlist")
             openYouTubePlaylist()
         default:
+            print("DEBUG: Unknown provider: \(provider)")
             break
         }
     }
 
     private func createAppleMusicPlaylist(name: String) async {
+        print("DEBUG: createAppleMusicPlaylist called with name: \(name)")
+        print("DEBUG: userToken exists: \(authManager.appleMusicUserToken != nil)")
+
         guard let userToken = authManager.appleMusicUserToken else {
+            print("DEBUG: No user token, requesting auth")
             await authManager.fetchAppleMusicDevToken()
+            print("DEBUG: Dev token fetched. Dev token exists: \(authManager.appleMusicDevToken != nil)")
             return
         }
 
+        print("DEBUG: Creating playlist with userToken")
         await viewModel.createAppleMusicPlaylist(
             userToken: userToken,
             name: name,
@@ -198,8 +208,10 @@ struct GenerationView: View {
     }
 
     private func openYouTubePlaylist() {
+        print("DEBUG: openYouTubePlaylist called")
         Task {
             await viewModel.resolveYouTubeVideos(tracks: viewModel.currentTracks)
+            print("DEBUG: Videos resolved, opening YouTube")
 
             // Open in YouTube app or Safari
             if let youtubeURL = URL(string: "https://www.youtube.com") {
