@@ -203,7 +203,7 @@ struct GenerationView: View {
 
             // Open in YouTube app or Safari
             if let youtubeURL = URL(string: "https://www.youtube.com") {
-                UIApplication.shared.open(youtubeURL)
+                await UIApplication.shared.open(youtubeURL)
             }
         }
     }
@@ -266,6 +266,20 @@ struct PlaylistView: View {
     }
 }
 
+// MARK: - Helper Functions
+
+func formatTimestamp(_ timestamp: String) -> String {
+    // Timestamp format: "2002-07-01T00:00:00Z"
+    // Extract time portion
+    let components = timestamp.split(separator: "T")
+    if components.count == 2 {
+        let timePart = components[1]
+        let timeOnly = timePart.split(separator: ":").prefix(2).joined(separator: ":")
+        return timeOnly
+    }
+    return timestamp
+}
+
 struct TrackRow: View {
     let track: Track
 
@@ -286,7 +300,7 @@ struct TrackRow: View {
 
                 Spacer()
 
-                Text(track.timestamp.formatted(date: .omitted, time: .shortened))
+                Text(formatTimestamp(track.timestamp))
                     .font(.caption2)
                     .foregroundColor(.gray)
             }
