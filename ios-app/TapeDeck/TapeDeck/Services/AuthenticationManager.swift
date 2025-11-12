@@ -44,17 +44,23 @@ class AuthenticationManager: NSObject, ObservableObject {
     }
 
     func fetchAppleMusicDevToken() async {
+        print("DEBUG AuthManager: fetchAppleMusicDevToken called")
         isAuthenticating = true
         authError = nil
 
         do {
+            print("DEBUG AuthManager: Calling API to get dev token")
             let response = try await apiClient.getAppleMusicDevToken()
+            print("DEBUG AuthManager: API response received - token length: \(response.token.count), storefront: \(response.storefront)")
             DispatchQueue.main.async {
                 self.appleMusicDevToken = response.token
                 self.appleMusicStorefront = response.storefront
                 self.isAuthenticating = false
+                print("DEBUG AuthManager: Dev token stored successfully")
             }
         } catch {
+            print("DEBUG AuthManager: Error fetching dev token: \(error)")
+            print("DEBUG AuthManager: Error type: \(type(of: error))")
             DispatchQueue.main.async {
                 self.authError = error.localizedDescription
                 self.isAuthenticating = false

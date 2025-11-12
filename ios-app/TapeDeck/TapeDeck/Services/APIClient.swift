@@ -54,7 +54,10 @@ class APIClient: ObservableObject {
     // MARK: - Apple Music
 
     func getAppleMusicDevToken() async throws -> AppleMusicTokenResponse {
-        return try await get(endpoint: "/v1/apple/dev-token")
+        print("DEBUG APIClient: Getting Apple Music dev token from \(baseURL)/v1/apple/dev-token")
+        let response: AppleMusicTokenResponse = try await get(endpoint: "/v1/apple/dev-token")
+        print("DEBUG APIClient: Dev token response received successfully")
+        return response
     }
 
     func createAppleMusicPlaylist(
@@ -116,24 +119,43 @@ class APIClient: ObservableObject {
 
     private func performRequest<T: Decodable>(_ request: URLRequest) async throws -> T {
         do {
+            print("DEBUG APIClient: Making request to \(request.url?.absoluteString ?? "unknown")")
             let (data, response) = try await session.data(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse else {
+                print("DEBUG APIClient: Response is not HTTPURLResponse")
                 throw APIError.invalidResponse
             }
 
+            print("DEBUG APIClient: HTTP Status: \(httpResponse.statusCode)")
+
             guard 200...299 ~= httpResponse.statusCode else {
+                print("DEBUG APIClient: HTTP error status code: \(httpResponse.statusCode)")
+                if let responseStr = String(data: data, encoding: .utf8) {
+                    print("DEBUG APIClient: Response body: \(responseStr)")
+                }
                 throw APIError.httpError(statusCode: httpResponse.statusCode)
+            }
+
+            print("DEBUG APIClient: Response data length: \(data.count) bytes")
+            if let responseStr = String(data: data, encoding: .utf8) {
+                print("DEBUG APIClient: Response: \(responseStr.prefix(200))")
             }
 
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .iso8601
             let decoded = try decoder.decode(T.self, from: data)
+            print("DEBUG APIClient: Decoded successfully")
             return decoded
         } catch is URLError {
+            print("DEBUG APIClient: URLError caught")
             throw APIError.networkError
         } catch is DecodingError {
+            print("DEBUG APIClient: DecodingError caught")
             throw APIError.decodingError
+        } catch {
+            print("DEBUG APIClient: Other error: \(error)")
+            throw error
         }
     }
 }
