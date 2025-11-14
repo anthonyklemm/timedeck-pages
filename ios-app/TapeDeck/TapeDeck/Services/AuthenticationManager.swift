@@ -56,26 +56,63 @@ class AuthenticationManager: NSObject, ObservableObject {
             return (false, "Apple Music access denied. Please enable in Settings.")
         }
 
-        print("DEBUG AuthManager: User authorized, searching for tracks")
+        print("DEBUG AuthManager: User authorized, searching for tracks in Apple Music catalog")
 
         do {
-            // For now, return success without actually creating the playlist
-            // This requires proper Apple Music Library access which is more complex
+            var foundTracks: [String] = []
+            var notFoundTracks: [String] = []
 
-            print("DEBUG AuthManager: Would create playlist '\(name)' with \(tracks.count) tracks")
-            print("DEBUG AuthManager: Note: Full MusicKit library access requires additional setup")
+            // Search for each track in the Apple Music catalog
+            for track in tracks {
+                do {
+                    let searchTerm = "\(track.artist) \(track.title)"
+                    print("DEBUG AuthManager: Searching for '\(track.title)' by '\(track.artist)'")
 
-            // In a production app, you would:
-            // 1. Search for each track in Apple Music catalog
-            // 2. Create a new playlist in the user's library
-            // 3. Add the found tracks to that playlist
+                    // Use MusicCatalogSearchRequest to find the track
+                    var request = MusicCatalogSearchRequest(term: searchTerm, types: [MusicKit.Song.self])
+                    request.limit = 1
 
-            // For MVP, we'll show a success message
-            return (true, "Playlist creation feature coming soon! Generated \(tracks.count) tracks ready for your library.")
+                    let results = try await request.response()
+
+                    if let firstSong = results.songs.first {
+                        foundTracks.append("\(firstSong.title) by \(firstSong.artistName)")
+                        print("DEBUG AuthManager: Found track: \(firstSong.title)")
+                    } else {
+                        notFoundTracks.append("\(track.title) by \(track.artist)")
+                        print("DEBUG AuthManager: Could not find track: \(track.title)")
+                    }
+                } catch {
+                    notFoundTracks.append("\(track.title) by \(track.artist)")
+                    print("DEBUG AuthManager: Error searching for track: \(error)")
+                }
+            }
+
+            print("DEBUG AuthManager: Found \(foundTracks.count)/\(tracks.count) tracks in Apple Music")
+
+            // Return results
+            if foundTracks.isEmpty {
+                return (false, "Could not find any of these tracks in Apple Music catalog.")
+            }
+
+            var message = "Found \(foundTracks.count) out of \(tracks.count) tracks in Apple Music.\n\n"
+            message += "Note: On your device, you can add these tracks to a playlist manually:\n"
+            message += "1. Open Apple Music app\n"
+            message += "2. Create new playlist '\(name)'\n"
+            message += "3. Add the found tracks to your playlist"
+
+            if notFoundTracks.count > 0 {
+                message += "\n\n⚠️ These tracks were not found:\n"
+                message += notFoundTracks.prefix(5).joined(separator: "\n")
+                if notFoundTracks.count > 5 {
+                    message += "\n...and \(notFoundTracks.count - 5) more"
+                }
+            }
+
+            return (true, message)
 
         } catch {
-            print("DEBUG AuthManager: Error creating playlist: \(error)")
-            return (false, "Error creating playlist: \(error.localizedDescription)")
+            print("DEBUG AuthManager: Error searching for tracks: \(error)")
+            return (false, "Error searching Apple Music catalog: \(error.localizedDescription)")
         }
     }
 
