@@ -23,150 +23,202 @@ struct GenerationView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Header
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Time Machine")
-                        .font(.title2)
-                        .fontWeight(.bold)
+        ZStack {
+            Color.tdBackground.ignoresSafeArea()
 
-                    Text("Select a date and genre to generate a playlist from that time period")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-
-                // Form Card
-                VStack(spacing: 16) {
-                    // Date Picker
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Header
                     VStack(alignment: .leading, spacing: 8) {
-                        Label("Date", systemImage: "calendar")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
+                        Text("Time Machine")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.tdTextPrimary)
 
-                        DatePicker(
-                            "Select Date",
-                            selection: $viewModel.selectedDate,
-                            in: ...Date(),
-                            displayedComponents: .date
-                        )
-                        .datePickerStyle(.graphical)
+                        Text("Select a date and genre to generate a playlist from that time period")
+                            .font(.caption)
+                            .foregroundColor(.tdTextSecondary)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
 
-                    Divider()
-
-                    // Genre Picker
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Genre", systemImage: "guitars")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-
-                        Picker("Genre", selection: $viewModel.selectedGenre) {
-                            ForEach(GenerationViewModel.GENRES, id: \.self) { genre in
-                                Text(genre).tag(genre)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                    }
-
-                    Divider()
-
-                    // Duration Picker
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("Duration", systemImage: "clock")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-
-                        Picker("Duration", selection: $viewModel.selectedDuration) {
-                            ForEach(GenerationViewModel.DURATIONS, id: \.self) { duration in
-                                Text("\(duration) hour\(duration > 1 ? "s" : "")").tag(duration)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-                    }
-
-                    Divider()
-
-                    // Repeat Gap
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack {
-                            Label("Repeat Gap", systemImage: "timer")
+                    // Form Card
+                    VStack(spacing: 16) {
+                        // Date Picker
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Date", systemImage: "calendar")
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
+                                .foregroundColor(.tdTextPrimary)
 
-                            Spacer()
-
-                            Text("\(viewModel.repeatGapMin) min")
-                                .font(.caption)
-                                .foregroundColor(.blue)
+                            DatePicker(
+                                "Select Date",
+                                selection: $viewModel.selectedDate,
+                                in: ...Date(),
+                                displayedComponents: .date
+                            )
+                            .datePickerStyle(.graphical)
+                            .tint(.tdPurple)
                         }
 
-                        Slider(
-                            value: Binding(
-                                get: { Double(viewModel.repeatGapMin) },
-                                set: { viewModel.repeatGapMin = Int($0) }
-                            ),
-                            in: 0...180,
-                            step: 15
-                        )
-                    }
+                        Divider().background(Color.tdTextSecondary.opacity(0.2))
 
-                    // Generate Button
-                    Button(action: { Task { await viewModel.generatePlaylist() } }) {
-                        if viewModel.isLoading {
-                            ProgressView()
-                                .tint(.white)
-                        } else {
-                            Label("Generate Playlist", systemImage: "sparkles")
+                        // Genre Dropdown
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Genre", systemImage: "guitars")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.tdTextPrimary)
+
+                            Menu {
+                                ForEach(GenerationViewModel.GENRES, id: \.self) { genre in
+                                    Button(genre) {
+                                        viewModel.selectedGenre = genre
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Text(viewModel.selectedGenre)
+                                        .foregroundColor(.tdTextPrimary)
+                                    Spacer()
+                                    Image(systemName: "chevron.down")
+                                        .foregroundColor(.tdCyan)
+                                }
+                                .padding()
+                                .background(Color.tdBackground)
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.tdPurple.opacity(0.3), lineWidth: 1)
+                                )
+                            }
                         }
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-                    .disabled(viewModel.isLoading)
-                }
-                .padding()
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .padding()
 
-                // Error Message
-                if let error = viewModel.errorMessage {
-                    VStack {
-                        HStack {
-                            Image(systemName: "exclamationmark.circle.fill")
-                                .foregroundColor(.red)
+                        Divider().background(Color.tdTextSecondary.opacity(0.2))
 
-                            Text(error)
-                                .font(.caption)
-                                .foregroundColor(.red)
+                        // Duration Dropdown
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("Duration", systemImage: "clock")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.tdTextPrimary)
 
-                            Spacer()
+                            Menu {
+                                ForEach(GenerationViewModel.DURATIONS, id: \.self) { duration in
+                                    Button(duration.formatDuration() + " hour\(duration > 1 ? "s" : "")") {
+                                        viewModel.selectedDuration = duration
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Text(viewModel.selectedDuration.formatDuration() + " hour\(viewModel.selectedDuration > 1 ? "s" : "")")
+                                        .foregroundColor(.tdTextPrimary)
+                                    Spacer()
+                                    Image(systemName: "chevron.down")
+                                        .foregroundColor(.tdCyan)
+                                }
+                                .padding()
+                                .background(Color.tdBackground)
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(Color.tdPurple.opacity(0.3), lineWidth: 1)
+                                )
+                            }
                         }
+
+                        Divider().background(Color.tdTextSecondary.opacity(0.2))
+
+                        // Repeat Gap
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Label("Repeat Gap", systemImage: "timer")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.tdTextPrimary)
+
+                                Spacer()
+
+                                Text("\(viewModel.repeatGapMin) min")
+                                    .font(.caption)
+                                    .foregroundColor(.tdCyan)
+                            }
+
+                            Slider(
+                                value: Binding(
+                                    get: { Double(viewModel.repeatGapMin) },
+                                    set: { viewModel.repeatGapMin = Int($0) }
+                                ),
+                                in: 0...180,
+                                step: 15
+                            )
+                            .tint(.tdPurple)
+                        }
+
+                        // Generate Button
+                        Button(action: { Task { await viewModel.generatePlaylist() } }) {
+                            if viewModel.isLoading {
+                                HStack {
+                                    ProgressView()
+                                        .tint(.white)
+                                    Text("Generating...")
+                                }
+                            } else {
+                                Label("Generate Playlist", systemImage: "sparkles")
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color(.systemRed).opacity(0.1))
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.tdPurple, Color.tdCyan]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .foregroundColor(.white)
                         .cornerRadius(8)
+                        .disabled(viewModel.isLoading)
                     }
-                    .padding(.horizontal)
-                }
-
-                // Playlist Display
-                if !viewModel.currentTracks.isEmpty {
-                    PlaylistView(
-                        tracks: viewModel.currentTracks,
-                        provider: provider,
-                        onCreatePlaylist: {
-                            Task { await createPlaylist() }
-                        }
-                    )
                     .padding()
-                }
+                    .background(Color.tdCard)
+                    .cornerRadius(12)
+                    .padding()
 
-                Spacer()
+                    // Error Message
+                    if let error = viewModel.errorMessage {
+                        VStack {
+                            HStack {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .foregroundColor(.red)
+
+                                Text(error)
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+
+                                Spacer()
+                            }
+                            .padding()
+                            .background(Color(.systemRed).opacity(0.1))
+                            .cornerRadius(8)
+                        }
+                        .padding(.horizontal)
+                    }
+
+                    // Playlist Display
+                    if !viewModel.currentTracks.isEmpty {
+                        PlaylistView(
+                            tracks: viewModel.currentTracks,
+                            provider: provider,
+                            onCreatePlaylist: {
+                                Task { await createPlaylist() }
+                            }
+                        )
+                        .padding()
+                    }
+
+                    Spacer()
+                }
             }
         }
     }
@@ -199,7 +251,6 @@ struct GenerationView: View {
         DispatchQueue.main.async {
             if success {
                 print("DEBUG: Playlist created successfully: \(message)")
-                // Show success message
                 self.viewModel.errorMessage = message
             } else {
                 print("DEBUG: Playlist creation failed: \(message)")
@@ -214,7 +265,6 @@ struct GenerationView: View {
             await viewModel.resolveYouTubeVideos(tracks: viewModel.currentTracks)
             print("DEBUG: Videos resolved, opening YouTube")
 
-            // Open in YouTube app or Safari
             if let youtubeURL = URL(string: "https://www.youtube.com") {
                 await UIApplication.shared.open(youtubeURL)
             }
@@ -230,6 +280,7 @@ struct PlaylistView: View {
     let onCreatePlaylist: () -> Void
 
     @State private var showingPlaylist = false
+    @State private var showShareSheet = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -237,22 +288,51 @@ struct PlaylistView: View {
                 Text("Generated Playlist")
                     .font(.headline)
                     .fontWeight(.semibold)
+                    .foregroundColor(.tdTextPrimary)
 
                 Spacer()
 
                 Text("\(tracks.count) tracks")
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.tdTextSecondary)
             }
 
-            // Create Playlist Button
-            Button(action: onCreatePlaylist) {
-                Label(provider == "apple" ? "Create in Apple Music" : "Open in YouTube", systemImage: provider == "apple" ? "heart" : "play.circle")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
+            // Buttons
+            VStack(spacing: 8) {
+                Button(action: onCreatePlaylist) {
+                    Label(provider == "apple" ? "Save to Apple Music" : "Open in YouTube",
+                          systemImage: provider == "apple" ? "heart.fill" : "play.circle")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.tdPurple, Color.tdCyan]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                }
+
+                if provider == "youtube" {
+                    Button(action: { showShareSheet = true }) {
+                        Label("Share Playlist", systemImage: "share")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.tdCard)
+                            .foregroundColor(.tdCyan)
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color.tdCyan.opacity(0.5), lineWidth: 1)
+                            )
+                    }
+                    .sheet(isPresented: $showShareSheet) {
+                        let message = "Check out this TapeDeck Time Machine playlist! 🎵"
+                        ShareSheet(items: [message, URL(string: "https://tapedecktimemachine.com") ?? ""])
+                    }
+                }
             }
 
             // Track List
@@ -265,7 +345,7 @@ struct PlaylistView: View {
                     Button(action: { showingPlaylist = true }) {
                         Text("View all \(tracks.count) tracks")
                             .font(.caption)
-                            .foregroundColor(.blue)
+                            .foregroundColor(.tdCyan)
                     }
                 }
             }
@@ -274,23 +354,9 @@ struct PlaylistView: View {
             }
         }
         .padding()
-        .background(Color(.systemGray6))
+        .background(Color.tdCard)
         .cornerRadius(12)
     }
-}
-
-// MARK: - Helper Functions
-
-func formatTimestamp(_ timestamp: String) -> String {
-    // Timestamp format: "2002-07-01T00:00:00Z"
-    // Extract time portion
-    let components = timestamp.split(separator: "T")
-    if components.count == 2 {
-        let timePart = components[1]
-        let timeOnly = timePart.split(separator: ":").prefix(2).joined(separator: ":")
-        return timeOnly
-    }
-    return timestamp
 }
 
 struct TrackRow: View {
@@ -303,11 +369,12 @@ struct TrackRow: View {
                     Text(track.title)
                         .font(.subheadline)
                         .fontWeight(.semibold)
+                        .foregroundColor(.tdTextPrimary)
                         .lineLimit(1)
 
                     Text(track.artist)
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(.tdTextSecondary)
                         .lineLimit(1)
                 }
 
@@ -315,10 +382,10 @@ struct TrackRow: View {
 
                 Text(formatTimestamp(track.timestamp))
                     .font(.caption2)
-                    .foregroundColor(.gray)
+                    .foregroundColor(.tdTextSecondary)
             }
 
-            Divider()
+            Divider().background(Color.tdTextSecondary.opacity(0.2))
         }
     }
 }
@@ -328,24 +395,53 @@ struct PlaylistFullView: View {
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 8) {
-                    ForEach(tracks) { track in
-                        TrackRow(track: track)
+        ZStack {
+            Color.tdBackground.ignoresSafeArea()
+
+            NavigationStack {
+                ScrollView {
+                    VStack(spacing: 8) {
+                        ForEach(tracks) { track in
+                            TrackRow(track: track)
+                        }
                     }
+                    .padding()
                 }
-                .padding()
-            }
-            .navigationTitle("Full Playlist (\(tracks.count))")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
+                .navigationTitle("Full Playlist (\(tracks.count))")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") { dismiss() }
+                            .foregroundColor(.tdCyan)
+                    }
                 }
             }
         }
     }
+}
+
+// MARK: - Helper Functions
+
+func formatTimestamp(_ timestamp: String) -> String {
+    let components = timestamp.split(separator: "T")
+    if components.count == 2 {
+        let timePart = components[1]
+        let timeOnly = timePart.split(separator: ":").prefix(2).joined(separator: ":")
+        return timeOnly
+    }
+    return timestamp
+}
+
+// MARK: - Share Sheet
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 #Preview {

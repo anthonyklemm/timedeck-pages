@@ -94,46 +94,62 @@ struct AppleMusicAuthView: View {
     @EnvironmentObject var authManager: AuthenticationManager
 
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Sign In to Apple Music")
-                .font(.title)
+        ZStack {
+            Color.tdBackground.ignoresSafeArea()
 
-            Text("Get access to create playlists and listen to your generated time machine sessions.")
-                .font(.body)
-                .foregroundColor(.gray)
+            VStack(spacing: 20) {
+                Text("Sign In to Apple Music")
+                    .font(.title)
+                    .foregroundColor(.tdTextPrimary)
 
-            Button(action: {
-                Task {
-                    _ = await authManager.requestMusicKitAuthorization()
+                Text("Get access to create playlists and listen to your generated time machine sessions.")
+                    .font(.body)
+                    .foregroundColor(.tdTextSecondary)
+
+                Button(action: {
+                    Task {
+                        _ = await authManager.requestMusicKitAuthorization()
+                    }
+                }) {
+                    Label("Sign In with Apple Music", systemImage: "music.note")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(
+                            LinearGradient(
+                                gradient: Gradient(colors: [Color.tdPurple, Color.tdCyan]),
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
                 }
-            }) {
-                Label("Sign In with Apple Music", systemImage: "music.note")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color.red)
-                    .foregroundColor(.white)
-                    .cornerRadius(8)
-            }
 
-            Spacer()
+                Spacer()
+            }
+            .padding()
         }
-        .padding()
     }
 }
 
 struct SpotifyPlaceholderView: View {
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Spotify Coming Soon")
-                .font(.title)
+        ZStack {
+            Color.tdBackground.ignoresSafeArea()
 
-            Text("Spotify integration will be available in a future update. Follow along as we expand TapeDeck to more platforms!")
-                .font(.body)
-                .foregroundColor(.gray)
+            VStack(spacing: 20) {
+                Text("Spotify Coming Soon")
+                    .font(.title)
+                    .foregroundColor(.tdTextPrimary)
 
-            Spacer()
+                Text("Spotify integration will be available in a future update. Follow along as we expand TapeDeck to more platforms!")
+                    .font(.body)
+                    .foregroundColor(.tdTextSecondary)
+
+                Spacer()
+            }
+            .padding()
         }
-        .padding()
     }
 }
 
