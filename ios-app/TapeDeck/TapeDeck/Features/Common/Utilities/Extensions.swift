@@ -31,7 +31,7 @@ extension String {
 
 extension Double {
     func formatDuration() -> String {
-        if self == Int(self) {
+        if self == Double(Int(self)) {
             return String(Int(self))
         } else {
             return String(format: "%.1f", self)
