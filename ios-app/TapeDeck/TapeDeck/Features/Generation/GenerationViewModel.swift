@@ -14,7 +14,7 @@ class GenerationViewModel: ObservableObject {
 
     // MARK: - Constants
 
-    static let GENRES = ["Hot-100", "Rock", "Hip-Hop", "R&B", "Pop", "Country"]
+    static let GENRES = ["Hot-100", "Rock", "Hip-Hop", "R&B", "Pop", "Country", "Alternative"]
     static let DURATIONS: [Double] = [0.5, 1, 2, 3]
 
     // MARK: - Private Properties

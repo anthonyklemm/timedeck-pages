@@ -14,6 +14,7 @@ struct ContentView: View {
             YouTubeView()
                 .tabItem {
                     Label("YouTube", systemImage: "play.rectangle.fill")
+                        .foregroundColor(.tdTextPrimary)
                 }
                 .tag(0)
 
@@ -21,6 +22,7 @@ struct ContentView: View {
             AppleMusicView()
                 .tabItem {
                     Label("Apple Music", systemImage: "music.note")
+                        .foregroundColor(.tdTextPrimary)
                 }
                 .tag(1)
 
@@ -28,6 +30,7 @@ struct ContentView: View {
             SpotifyPlaceholderView()
                 .tabItem {
                     Label("Spotify", systemImage: "music.note.list")
+                        .foregroundColor(.tdTextPrimary)
                 }
                 .tag(2)
         }
