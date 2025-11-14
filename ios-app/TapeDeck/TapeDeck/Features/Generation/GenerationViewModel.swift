@@ -6,7 +6,7 @@ class GenerationViewModel: ObservableObject {
 
     @Published var selectedDate = Date()
     @Published var selectedGenre = "Hot-100"
-    @Published var selectedDuration = 1
+    @Published var selectedDuration: Double = 1.0
     @Published var repeatGapMin = 90
     @Published var currentTracks: [Track] = []
     @Published var isLoading = false
@@ -15,7 +15,7 @@ class GenerationViewModel: ObservableObject {
     // MARK: - Constants
 
     static let GENRES = ["Hot-100", "Rock", "Hip-Hop", "R&B", "Pop", "Country"]
-    static let DURATIONS = [0.5, 1, 2, 3]
+    static let DURATIONS: [Double] = [0.5, 1, 2, 3]
 
     // MARK: - Private Properties
 
