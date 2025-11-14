@@ -44,7 +44,7 @@ class AuthenticationManager: NSObject, ObservableObject {
         return status == .authorized
     }
 
-    // MARK: - Create Apple Music Playlist (Using Backend API)
+    // MARK: - Create Apple Music Playlist (Using Native MusicKit)
 
     func createAppleMusicPlaylist(name: String, tracks: [Track]) async -> (success: Bool, message: String) {
         print("DEBUG AuthManager: createAppleMusicPlaylist called with \(tracks.count) tracks")
@@ -56,25 +56,70 @@ class AuthenticationManager: NSObject, ObservableObject {
             return (false, "Apple Music access denied. Please enable in Settings.")
         }
 
-        // Get the user token from MusicKit
-        guard let userToken = try? await MusicAuthorization.musicUserToken() else {
-            print("DEBUG AuthManager: Could not get Apple Music user token")
-            return (false, "Could not get Apple Music user token. Please try again.")
-        }
+        print("DEBUG AuthManager: User authorized, searching for tracks in Apple Music catalog")
 
-        print("DEBUG AuthManager: Got Apple Music user token, calling backend to create playlist")
-
-        // Call the backend to create the playlist
         do {
-            let response = try await apiClient.createAppleMusicPlaylist(
-                userToken: userToken.rawValue,
+            // First, search for all tracks in the catalog to get Song objects
+            var catalogSongs: [Song] = []
+            var notFoundTracks: [String] = []
+
+            for track in tracks {
+                do {
+                    let searchTerm = "\(track.artist) \(track.title)"
+                    print("DEBUG AuthManager: Searching for '\(track.title)' by '\(track.artist)'")
+
+                    var request = MusicCatalogSearchRequest(term: searchTerm, types: [Song.self])
+                    request.limit = 1
+
+                    let results = try await request.response()
+
+                    if let firstSong = results.songs.first {
+                        catalogSongs.append(firstSong)
+                        print("DEBUG AuthManager: Found track: \(firstSong.title)")
+                    } else {
+                        notFoundTracks.append("\(track.title) by \(track.artist)")
+                        print("DEBUG AuthManager: Could not find track: \(track.title)")
+                    }
+                } catch {
+                    print("DEBUG AuthManager: Error searching for track: \(error)")
+                    notFoundTracks.append("\(track.title) by \(track.artist)")
+                }
+            }
+
+            print("DEBUG AuthManager: Found \(catalogSongs.count)/\(tracks.count) tracks in Apple Music")
+
+            guard !catalogSongs.isEmpty else {
+                return (false, "Could not find any tracks in Apple Music catalog.")
+            }
+
+            // Create the playlist
+            print("DEBUG AuthManager: Creating playlist: \(name)")
+            let playlist = try await MusicLibrary.shared.createPlaylist(
                 name: name,
-                tracks: tracks
+                description: "Created by TapeDeck Time Machine"
             )
 
-            print("DEBUG AuthManager: Playlist created successfully")
-            let message = "Successfully created playlist '\(name)' with \(tracks.count) tracks in Apple Music!"
+            // Add each song to the playlist
+            var addedCount = 0
+            for song in catalogSongs {
+                do {
+                    _ = try await MusicLibrary.shared.add(song, to: playlist)
+                    addedCount += 1
+                    print("DEBUG AuthManager: Added '\(song.title)' to playlist")
+                } catch {
+                    print("DEBUG AuthManager: Error adding song to playlist: \(error)")
+                }
+            }
+
+            print("DEBUG AuthManager: Successfully added \(addedCount) tracks to playlist")
+
+            var message = "Successfully created playlist '\(name)' with \(addedCount) tracks in Apple Music!"
+            if notFoundTracks.count > 0 {
+                message += "\n\n⚠️ Could not find \(notFoundTracks.count) track(s) in Apple Music"
+            }
+
             return (true, message)
+
         } catch {
             print("DEBUG AuthManager: Error creating playlist: \(error)")
             return (false, "Error creating playlist: \(error.localizedDescription)")
