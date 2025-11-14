@@ -61,9 +61,10 @@ class AuthenticationManager: NSObject, ObservableObject {
         do {
             var foundTracks: [String] = []
             var notFoundTracks: [String] = []
+            var simulatorError = false
 
             // Search for each track in the Apple Music catalog
-            for track in tracks {
+            for (index, track) in tracks.enumerated() {
                 do {
                     let searchTerm = "\(track.artist) \(track.title)"
                     print("DEBUG AuthManager: Searching for '\(track.title)' by '\(track.artist)'")
@@ -82,14 +83,38 @@ class AuthenticationManager: NSObject, ObservableObject {
                         print("DEBUG AuthManager: Could not find track: \(track.title)")
                     }
                 } catch {
+                    let errorStr = error.localizedDescription
+                    if errorStr.contains("developerTokenRequestFailed") || errorStr.contains("Ventura") {
+                        simulatorError = true
+                        print("DEBUG AuthManager: Simulator limitation detected")
+                    }
                     notFoundTracks.append("\(track.title) by \(track.artist)")
                     print("DEBUG AuthManager: Error searching for track: \(error)")
+
+                    // Stop searching on first error if it's a simulator limitation
+                    if simulatorError && index > 0 {
+                        break
+                    }
                 }
             }
 
             print("DEBUG AuthManager: Found \(foundTracks.count)/\(tracks.count) tracks in Apple Music")
 
-            // Return results
+            // Handle simulator limitation
+            if simulatorError {
+                var message = "🔧 Apple Music search requires a physical iPhone or Mac with macOS Ventura+.\n\n"
+                message += "For now, you can manually add these tracks to a playlist:\n"
+                message += "1. Open Apple Music app\n"
+                message += "2. Create new playlist '\(name)'\n"
+                message += "3. Search for and add these \(tracks.count) tracks"
+                return (true, message)
+            }
+
+            // Return results if search worked
+            if foundTracks.isEmpty && notFoundTracks.isEmpty {
+                return (true, "Ready to create playlist! Add \(tracks.count) tracks to '\(name)' in Apple Music app.")
+            }
+
             if foundTracks.isEmpty {
                 return (false, "Could not find any of these tracks in Apple Music catalog.")
             }

@@ -57,8 +57,9 @@ struct GenerationView: View {
                                 in: ...Date(),
                                 displayedComponents: .date
                             )
-                            .datePickerStyle(.graphical)
-                            .tint(.tdPurple)
+                            .datePickerStyle(.compact)
+                            .tint(.tdCyan)
+                            .foregroundColor(.tdTextPrimary)
                         }
 
                         Divider().background(Color.tdTextSecondary.opacity(0.2))
@@ -317,7 +318,7 @@ struct PlaylistView: View {
 
                 if provider == "youtube" {
                     Button(action: { showShareSheet = true }) {
-                        Label("Share Playlist", systemImage: "share")
+                        Label("Share Playlist", systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background(Color.tdCard)
