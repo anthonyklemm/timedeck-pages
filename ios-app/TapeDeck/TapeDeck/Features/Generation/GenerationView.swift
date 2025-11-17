@@ -270,8 +270,19 @@ struct GenerationView: View {
 
     private func openYouTubePlaylist() {
         print("DEBUG: openYouTubePlaylist called")
+
+        // Wait for YouTube video resolution if still in progress
+        if viewModel.isResolvingYouTube {
+            print("DEBUG: YouTube videos are still resolving, waiting...")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.openYouTubePlaylist()
+            }
+            return
+        }
+
         guard !viewModel.youtubeVideoIds.isEmpty else {
-            print("DEBUG: No YouTube video IDs available")
+            print("DEBUG: No YouTube video IDs available after resolution")
+            viewModel.errorMessage = "Failed to resolve YouTube videos. Please try again."
             return
         }
 
@@ -315,13 +326,13 @@ struct PlaylistView: View {
             // Buttons
             VStack(spacing: 8) {
                 Button(action: onCreatePlaylist) {
-                    if viewModel.isCreatingPlaylist {
+                    if viewModel.isCreatingPlaylist || (provider == "youtube" && viewModel.isResolvingYouTube) {
                         HStack {
                             ProgressView()
                                 .progressViewStyle(.circular)
                                 .scaleEffect(0.8)
                                 .tint(.white)
-                            Text(provider == "apple" ? "Creating Playlist..." : "Opening...")
+                            Text(provider == "apple" ? "Creating Playlist..." : "Resolving Videos...")
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
@@ -350,7 +361,7 @@ struct PlaylistView: View {
                             .cornerRadius(8)
                     }
                 }
-                .disabled(viewModel.isCreatingPlaylist)
+                .disabled(viewModel.isCreatingPlaylist || (provider == "youtube" && viewModel.isResolvingYouTube))
 
                 if provider == "youtube" {
                     Button(action: { showShareSheet = true }) {

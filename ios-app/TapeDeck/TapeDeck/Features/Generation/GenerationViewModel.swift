@@ -12,6 +12,7 @@ class GenerationViewModel: ObservableObject {
     @Published var youtubeVideoIds: [String] = []
     @Published var isLoading = false
     @Published var isCreatingPlaylist = false
+    @Published var isResolvingYouTube = false
     @Published var errorMessage: String?
 
     // MARK: - Constants
@@ -97,6 +98,7 @@ class GenerationViewModel: ObservableObject {
     }
 
     func resolveYouTubeVideos(tracks: [Track]) async {
+        isResolvingYouTube = true
         analyticsManager.trackExportAttempt(provider: "youtube")
 
         do {
@@ -111,5 +113,7 @@ class GenerationViewModel: ObservableObject {
             analyticsManager.trackExportError(provider: "youtube", error: error.localizedDescription)
             errorMessage = "Failed to resolve YouTube videos: \(error.localizedDescription)"
         }
+
+        isResolvingYouTube = false
     }
 }
