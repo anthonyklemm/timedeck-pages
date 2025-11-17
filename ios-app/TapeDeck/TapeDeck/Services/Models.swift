@@ -78,7 +78,46 @@ struct AppleMusicCreatePlaylistResponse: Codable {
 
 struct AppleMusicTokenResponse: Codable {
     let token: String
-    let storefront: String
+    let storefront: String?
+}
+
+// MARK: - Apple Music REST API Responses
+struct AppleMusicSearchResponse: Codable {
+    let results: AppleMusicSearchResults?
+}
+
+struct AppleMusicSearchResults: Codable {
+    let songs: AppleMusicSongResults?
+}
+
+struct AppleMusicSongResults: Codable {
+    let data: [AppleMusicSong]
+}
+
+struct AppleMusicSong: Codable {
+    let id: String
+    let type: String
+    let attributes: AppleMusicSongAttributes?
+}
+
+struct AppleMusicSongAttributes: Codable {
+    let name: String
+    let artistName: String
+}
+
+struct AppleMusicPlaylistCreateResponse: Codable {
+    let data: [AppleMusicPlaylist]?
+}
+
+struct AppleMusicPlaylist: Codable {
+    let id: String
+    let type: String
+    let attributes: AppleMusicPlaylistAttributes?
+}
+
+struct AppleMusicPlaylistAttributes: Codable {
+    let name: String
+    let description: String?
 }
 
 // MARK: - Analytics
