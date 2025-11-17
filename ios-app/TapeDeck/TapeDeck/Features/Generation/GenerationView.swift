@@ -273,7 +273,7 @@ struct GenerationView: View {
             return
         }
 
-        let playlistUrl = "https://www.youtube.com/playlist?list=\(viewModel.youtubeVideoIds.joined(separator: ","))"
+        let playlistUrl = "https://www.youtube.com/watch_videos?video_ids=\(viewModel.youtubeVideoIds.joined(separator: ","))"
         print("DEBUG: Opening YouTube with URL: \(playlistUrl)")
 
         if let url = URL(string: playlistUrl) {
@@ -364,7 +364,7 @@ struct PlaylistView: View {
                             )
                     }
                     .sheet(isPresented: $showShareSheet) {
-                        let playlistUrl = "https://www.youtube.com/playlist?list=\(viewModel.youtubeVideoIds.joined(separator: ","))"
+                        let playlistUrl = "https://www.youtube.com/watch_videos?video_ids=\(viewModel.youtubeVideoIds.joined(separator: ","))"
                         let message = "Check out this TapeDeck Time Machine playlist! 🎵"
                         ShareSheet(items: [message, URL(string: playlistUrl) ?? ""])
                     }
