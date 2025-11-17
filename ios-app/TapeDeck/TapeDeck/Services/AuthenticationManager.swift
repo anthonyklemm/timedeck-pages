@@ -56,7 +56,7 @@ class AuthenticationManager: NSObject, ObservableObject {
             return (false, "Apple Music access denied. Please enable in Settings.")
         }
 
-        print("DEBUG AuthManager: User authorized, fetching dev token for REST API")
+        print("DEBUG AuthManager: User authorized, fetching tokens for REST API")
 
         do {
             // 1. Get dev token from backend
@@ -64,9 +64,12 @@ class AuthenticationManager: NSObject, ObservableObject {
             let devToken = devTokenResponse.token
             let storefront = devTokenResponse.storefront ?? "us"
 
-            print("DEBUG AuthManager: Got dev token, proceeding with REST API approach")
+            // 2. Get user token from MusicKit
+            print("DEBUG AuthManager: Fetching Music User Token from MusicKit")
+            let userToken = try await getMusicUserToken(devToken: devToken)
+            print("DEBUG AuthManager: Got Music User Token, proceeding with REST API approach")
 
-            // 2. Search for tracks using REST API and collect song IDs
+            // 3. Search for tracks using REST API and collect song IDs
             var songIdsToAdd: [(id: String, type: String)] = []
             var notFoundTracks: [String] = []
 
@@ -106,19 +109,21 @@ class AuthenticationManager: NSObject, ObservableObject {
                 return (false, "Could not find any tracks in Apple Music catalog.")
             }
 
-            // 3. Create empty playlist via REST API
+            // 4. Create empty playlist via REST API
             print("DEBUG AuthManager: Creating playlist via REST API: \(name)")
             let playlistId = try await createAppleMusicPlaylistViaREST(
                 name: name,
-                devToken: devToken
+                devToken: devToken,
+                userToken: userToken
             )
 
-            // 4. Batch add all tracks to playlist via REST API
+            // 5. Batch add all tracks to playlist via REST API
             print("DEBUG AuthManager: Batch adding \(songIdsToAdd.count) tracks to playlist")
             let addedCount = try await batchAddTracksToPlaylist(
                 playlistId: playlistId,
                 songIds: songIdsToAdd,
-                devToken: devToken
+                devToken: devToken,
+                userToken: userToken
             )
 
             print("DEBUG AuthManager: Successfully created playlist with \(addedCount) tracks")
@@ -137,6 +142,14 @@ class AuthenticationManager: NSObject, ObservableObject {
     }
 
     // MARK: - REST API Helper Methods
+
+    private func getMusicUserToken(devToken: String) async throws -> String {
+        print("DEBUG AuthManager: Getting Music User Token from MusicDataRequest.tokenProvider")
+        let provider = MusicDataRequest.tokenProvider
+        let userToken = try await provider.userToken(for: devToken, options: .init())
+        print("DEBUG AuthManager: Successfully retrieved Music User Token")
+        return userToken
+    }
 
     private func searchAppleMusicTrack(
         artist: String,
@@ -187,7 +200,8 @@ class AuthenticationManager: NSObject, ObservableObject {
 
     private func createAppleMusicPlaylistViaREST(
         name: String,
-        devToken: String
+        devToken: String,
+        userToken: String
     ) async throws -> String {
         let urlString = "https://api.music.apple.com/v1/me/library/playlists"
         guard let url = URL(string: urlString) else {
@@ -197,6 +211,7 @@ class AuthenticationManager: NSObject, ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(devToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(userToken, forHTTPHeaderField: "Music-User-Token")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 20
 
@@ -234,7 +249,8 @@ class AuthenticationManager: NSObject, ObservableObject {
     private func batchAddTracksToPlaylist(
         playlistId: String,
         songIds: [(id: String, type: String)],
-        devToken: String
+        devToken: String,
+        userToken: String
     ) async throws -> Int {
         let urlString = "https://api.music.apple.com/v1/me/library/playlists/\(playlistId)/tracks"
         guard let url = URL(string: urlString) else {
@@ -244,6 +260,7 @@ class AuthenticationManager: NSObject, ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("Bearer \(devToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(userToken, forHTTPHeaderField: "Music-User-Token")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = 30
 
