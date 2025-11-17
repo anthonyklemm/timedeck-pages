@@ -215,6 +215,7 @@ struct GenerationView: View {
                                 Task { await createPlaylist() }
                             }
                         )
+                        .environmentObject(viewModel)
                         .padding()
                     }
 
@@ -244,12 +245,17 @@ struct GenerationView: View {
     private func createAppleMusicPlaylist(name: String) async {
         print("DEBUG: createAppleMusicPlaylist called with name: \(name)")
 
+        DispatchQueue.main.async {
+            self.viewModel.isCreatingPlaylist = true
+        }
+
         let (success, message) = await authManager.createAppleMusicPlaylist(
             name: name,
             tracks: viewModel.currentTracks
         )
 
         DispatchQueue.main.async {
+            self.viewModel.isCreatingPlaylist = false
             if success {
                 print("DEBUG: Playlist created successfully: \(message)")
                 self.viewModel.errorMessage = message
@@ -282,6 +288,7 @@ struct PlaylistView: View {
 
     @State private var showingPlaylist = false
     @State private var showShareSheet = false
+    @EnvironmentObject var viewModel: GenerationViewModel
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -301,8 +308,14 @@ struct PlaylistView: View {
             // Buttons
             VStack(spacing: 8) {
                 Button(action: onCreatePlaylist) {
-                    Label(provider == "apple" ? "Save to Apple Music" : "Open in YouTube",
-                          systemImage: provider == "apple" ? "heart.fill" : "play.circle")
+                    if viewModel.isCreatingPlaylist {
+                        HStack {
+                            ProgressView()
+                                .progressViewStyle(.circular)
+                                .scaleEffect(0.8)
+                                .tint(.white)
+                            Text(provider == "apple" ? "Creating Playlist..." : "Opening...")
+                        }
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(
@@ -314,7 +327,23 @@ struct PlaylistView: View {
                         )
                         .foregroundColor(.white)
                         .cornerRadius(8)
+                    } else {
+                        Label(provider == "apple" ? "Save to Apple Music" : "Open in YouTube",
+                              systemImage: provider == "apple" ? "heart.fill" : "play.circle")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(
+                                LinearGradient(
+                                    gradient: Gradient(colors: [Color.tdPurple, Color.tdCyan]),
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
                 }
+                .disabled(viewModel.isCreatingPlaylist)
 
                 if provider == "youtube" {
                     Button(action: { showShareSheet = true }) {

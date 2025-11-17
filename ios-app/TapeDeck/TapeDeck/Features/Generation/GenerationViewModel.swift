@@ -10,6 +10,7 @@ class GenerationViewModel: ObservableObject {
     @Published var repeatGapMin = 90
     @Published var currentTracks: [Track] = []
     @Published var isLoading = false
+    @Published var isCreatingPlaylist = false
     @Published var errorMessage: String?
 
     // MARK: - Constants

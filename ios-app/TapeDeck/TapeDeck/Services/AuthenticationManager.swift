@@ -113,6 +113,10 @@ class AuthenticationManager: NSObject, ObservableObject {
 
             print("DEBUG AuthManager: Successfully added \(addedCount) tracks to playlist")
 
+            // Give tracks time to propagate in Apple Music
+            print("DEBUG AuthManager: Waiting for tracks to propagate...")
+            try await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
+
             var message = "Successfully created playlist '\(name)' with \(addedCount) tracks in Apple Music!"
             if notFoundTracks.count > 0 {
                 message += "\n\n⚠️ Could not find \(notFoundTracks.count) track(s) in Apple Music"
