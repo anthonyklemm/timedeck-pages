@@ -117,7 +117,7 @@ struct AppleMusicPlaylist: Codable {
 
 struct AppleMusicPlaylistAttributes: Codable {
     let name: String
-    let description: String?
+    let description: AnyCodable?
 }
 
 // MARK: - Analytics
