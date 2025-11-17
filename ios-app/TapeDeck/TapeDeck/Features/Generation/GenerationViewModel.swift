@@ -60,6 +60,9 @@ class GenerationViewModel: ObservableObject {
             currentTracks = tracks
             analyticsManager.trackSearchResults(count: tracks.count)
 
+            // Automatically resolve YouTube videos after generating playlist
+            await resolveYouTubeVideos(tracks: tracks)
+
             isLoading = false
         } catch {
             errorMessage = error.localizedDescription

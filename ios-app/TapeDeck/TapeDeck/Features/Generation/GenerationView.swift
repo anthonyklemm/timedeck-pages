@@ -268,17 +268,17 @@ struct GenerationView: View {
 
     private func openYouTubePlaylist() {
         print("DEBUG: openYouTubePlaylist called")
-        Task {
-            await viewModel.resolveYouTubeVideos(tracks: viewModel.currentTracks)
-            print("DEBUG: Videos resolved, opening YouTube")
+        guard !viewModel.youtubeVideoIds.isEmpty else {
+            print("DEBUG: No YouTube video IDs available")
+            return
+        }
 
-            DispatchQueue.main.async {
-                if !viewModel.youtubeVideoIds.isEmpty {
-                    let playlistUrl = "https://www.youtube.com/playlist?list=\(viewModel.youtubeVideoIds.joined(separator: ","))"
-                    if let url = URL(string: playlistUrl) {
-                        UIApplication.shared.open(url)
-                    }
-                }
+        let playlistUrl = "https://www.youtube.com/playlist?list=\(viewModel.youtubeVideoIds.joined(separator: ","))"
+        print("DEBUG: Opening YouTube with URL: \(playlistUrl)")
+
+        if let url = URL(string: playlistUrl) {
+            Task {
+                await UIApplication.shared.open(url)
             }
         }
     }
