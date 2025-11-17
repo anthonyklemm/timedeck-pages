@@ -224,6 +224,7 @@ struct GenerationView: View {
                 }
             }
         }
+        .preferredColorScheme(.dark)
     }
 
     private func createPlaylist() async {

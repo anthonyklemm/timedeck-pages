@@ -62,10 +62,11 @@ struct YouTubeView: View {
                     analyticsManager: analyticsManager,
                     provider: "youtube"
                 )
-                .navigationTitle("TapeDeck - YouTube")
-                .toolbarColorScheme(.dark, for: .navigationBar)
             }
+            .navigationTitle("TapeDeck - YouTube")
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
+        .preferredColorScheme(.dark)
     }
 }
 
@@ -85,15 +86,14 @@ struct AppleMusicView: View {
                         analyticsManager: analyticsManager,
                         provider: "apple"
                     )
-                    .navigationTitle("TapeDeck - Apple Music")
-                    .toolbarColorScheme(.dark, for: .navigationBar)
                 } else {
                     AppleMusicAuthView()
-                        .navigationTitle("TapeDeck - Apple Music")
-                        .toolbarColorScheme(.dark, for: .navigationBar)
                 }
             }
+            .navigationTitle("TapeDeck - Apple Music")
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
+        .preferredColorScheme(.dark)
     }
 }
 
