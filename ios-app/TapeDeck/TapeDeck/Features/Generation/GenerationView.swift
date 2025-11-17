@@ -60,6 +60,7 @@ struct GenerationView: View {
                             .datePickerStyle(.compact)
                             .tint(.tdCyan)
                             .foregroundColor(.tdTextPrimary)
+                            .colorScheme(.dark)
                         }
 
                         Divider().background(Color.tdTextSecondary.opacity(0.2))
