@@ -9,6 +9,7 @@ class GenerationViewModel: ObservableObject {
     @Published var selectedDuration: Double = 1.0
     @Published var repeatGapMin = 90
     @Published var currentTracks: [Track] = []
+    @Published var youtubeVideoIds: [String] = []
     @Published var isLoading = false
     @Published var isCreatingPlaylist = false
     @Published var errorMessage: String?
@@ -101,6 +102,7 @@ class GenerationViewModel: ObservableObject {
                 limit: tracks.count
             )
 
+            self.youtubeVideoIds = videoIds
             analyticsManager.trackExportSuccess(provider: "youtube", count: videoIds.count)
         } catch {
             analyticsManager.trackExportError(provider: "youtube", error: error.localizedDescription)

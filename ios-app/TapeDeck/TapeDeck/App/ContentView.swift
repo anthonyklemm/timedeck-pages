@@ -62,7 +62,7 @@ struct YouTubeView: View {
                     analyticsManager: analyticsManager,
                     provider: "youtube"
                 )
-                .navigationTitle("YouTube")
+                .navigationTitle("TapeDeck - YouTube")
             }
         }
     }
@@ -84,10 +84,10 @@ struct AppleMusicView: View {
                         analyticsManager: analyticsManager,
                         provider: "apple"
                     )
-                    .navigationTitle("Apple Music")
+                    .navigationTitle("TapeDeck - Apple Music")
                 } else {
                     AppleMusicAuthView()
-                        .navigationTitle("Apple Music")
+                        .navigationTitle("TapeDeck - Apple Music")
                 }
             }
         }

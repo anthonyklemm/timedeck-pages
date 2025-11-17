@@ -272,8 +272,13 @@ struct GenerationView: View {
             await viewModel.resolveYouTubeVideos(tracks: viewModel.currentTracks)
             print("DEBUG: Videos resolved, opening YouTube")
 
-            if let youtubeURL = URL(string: "https://www.youtube.com") {
-                await UIApplication.shared.open(youtubeURL)
+            DispatchQueue.main.async {
+                if !viewModel.youtubeVideoIds.isEmpty {
+                    let playlistUrl = "https://www.youtube.com/playlist?list=\(viewModel.youtubeVideoIds.joined(separator: ","))"
+                    if let url = URL(string: playlistUrl) {
+                        UIApplication.shared.open(url)
+                    }
+                }
             }
         }
     }
@@ -359,8 +364,9 @@ struct PlaylistView: View {
                             )
                     }
                     .sheet(isPresented: $showShareSheet) {
+                        let playlistUrl = "https://www.youtube.com/playlist?list=\(viewModel.youtubeVideoIds.joined(separator: ","))"
                         let message = "Check out this TapeDeck Time Machine playlist! 🎵"
-                        ShareSheet(items: [message, URL(string: "https://tapedecktimemachine.com") ?? ""])
+                        ShareSheet(items: [message, URL(string: playlistUrl) ?? ""])
                     }
                 }
             }
