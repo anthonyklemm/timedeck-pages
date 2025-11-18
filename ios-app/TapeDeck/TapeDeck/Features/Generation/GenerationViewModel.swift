@@ -6,16 +6,19 @@ class GenerationViewModel: ObservableObject {
 
     @Published var selectedDate = Date()
     @Published var selectedGenre = "Hot-100"
-    @Published var selectedDuration = 1
+    @Published var selectedDuration: Double = 1.0
     @Published var repeatGapMin = 90
     @Published var currentTracks: [Track] = []
+    @Published var youtubeVideoIds: [String] = []
     @Published var isLoading = false
+    @Published var isCreatingPlaylist = false
+    @Published var isResolvingYouTube = false
     @Published var errorMessage: String?
 
     // MARK: - Constants
 
-    static let GENRES = ["Hot-100", "Rock", "Hip-Hop", "R&B", "Pop", "Country"]
-    static let DURATIONS = [0.5, 1, 2, 3]
+    static let GENRES = ["Hot-100", "Rock", "Hip-Hop", "R&B", "Pop", "Country", "Alternative"]
+    static let DURATIONS: [Double] = [0.5, 1, 2, 3]
 
     // MARK: - Private Properties
 
@@ -58,6 +61,9 @@ class GenerationViewModel: ObservableObject {
             currentTracks = tracks
             analyticsManager.trackSearchResults(count: tracks.count)
 
+            // Automatically resolve YouTube videos after generating playlist
+            await resolveYouTubeVideos(tracks: tracks)
+
             isLoading = false
         } catch {
             errorMessage = error.localizedDescription
@@ -92,6 +98,7 @@ class GenerationViewModel: ObservableObject {
     }
 
     func resolveYouTubeVideos(tracks: [Track]) async {
+        isResolvingYouTube = true
         analyticsManager.trackExportAttempt(provider: "youtube")
 
         do {
@@ -100,10 +107,13 @@ class GenerationViewModel: ObservableObject {
                 limit: tracks.count
             )
 
+            self.youtubeVideoIds = videoIds
             analyticsManager.trackExportSuccess(provider: "youtube", count: videoIds.count)
         } catch {
             analyticsManager.trackExportError(provider: "youtube", error: error.localizedDescription)
             errorMessage = "Failed to resolve YouTube videos: \(error.localizedDescription)"
         }
+
+        isResolvingYouTube = false
     }
 }

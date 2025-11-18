@@ -27,13 +27,28 @@ extension String {
     }
 }
 
-// MARK: - Color Extensions
+// MARK: - Number Extensions
+
+extension Double {
+    func formatDuration() -> String {
+        if self == Double(Int(self)) {
+            return String(Int(self))
+        } else {
+            return String(format: "%.1f", self)
+        }
+    }
+}
+
+// MARK: - Color Extensions (Matching TapeDeck Website)
 
 extension Color {
-    static let appPrimary = Color(red: 0.0, green: 0.5, blue: 1.0)
-    static let appSecondary = Color(red: 1.0, green: 0.2, blue: 0.35)
-    static let appBackground = Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 0.1, alpha: 1) : UIColor(white: 0.95, alpha: 1) })
-    static let appText = Color(UIColor { $0.userInterfaceStyle == .dark ? UIColor.white : UIColor.black })
+    // Website color scheme
+    static let tdBackground = Color(red: 0.04, green: 0.06, blue: 0.09) // #0a0f17
+    static let tdCard = Color(red: 0.07, green: 0.09, blue: 0.15) // #111827
+    static let tdPurple = Color(red: 0.55, green: 0.36, blue: 0.96) // #8b5cf6
+    static let tdCyan = Color(red: 0.13, green: 0.83, blue: 0.93) // #22d3ee
+    static let tdTextPrimary = Color(red: 0.90, green: 0.91, blue: 0.93) // #e5e7eb
+    static let tdTextSecondary = Color(red: 0.58, green: 0.64, blue: 0.71) // #94a3b8
 }
 
 // MARK: - View Extensions
@@ -42,7 +57,7 @@ extension View {
     func cardStyle() -> some View {
         self
             .padding()
-            .background(Color(.systemGray6))
+            .background(Color.tdCard)
             .cornerRadius(12)
     }
 

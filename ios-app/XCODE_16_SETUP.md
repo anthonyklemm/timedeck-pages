@@ -227,13 +227,14 @@ Xcode 16 handles Info.plist slightly differently. Here's how:
 
 1. **Click on Info.plist** to open it
 2. Click the **"+"** button to add new keys
-3. Add these THREE entries:
+3. Add these FOUR entries:
 
 | Key | Type | Value |
 |-----|------|-------|
 | `NSBonjourServices` | Array | (empty array) |
 | `NSLocalNetworkUsageDescription` | String | `TapeDeck needs access to find music on your network` |
 | `NSMDNSAllowUnencryptedAccess` | Boolean | ✓ (true) |
+| `NSAppleMusicUsageDescription` | String | `TapeDeck needs access to your Apple Music library to create playlists and play music` |
 
 4. For `NSBonjourServices` array, click the arrow to expand it
 5. Click **"+"** inside it and add:
@@ -257,6 +258,8 @@ If the visual editor is confusing:
 <string>TapeDeck needs access to find music on your network</string>
 <key>NSMDNSAllowUnencryptedAccess</key>
 <true/>
+<key>NSAppleMusicUsageDescription</key>
+<string>TapeDeck needs access to your Apple Music library to create playlists and play music</string>
 ```
 
 4. Save (Cmd+S)

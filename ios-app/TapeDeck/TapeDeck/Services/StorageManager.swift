@@ -96,9 +96,8 @@ class StorageManager: ObservableObject {
 
     // MARK: - Init
 
-    override init() {
+    init() {
         self.analyticsOptOut = defaults.bool(forKey: "analytics_opt_out")
-        super.init()
     }
 
     // MARK: - Keychain Helpers
